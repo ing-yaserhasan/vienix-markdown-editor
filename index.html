@@ -18,8 +18,8 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Fira+Code:wght@400;500&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/earlyaccess/droidarabicnaskh.css">
   <link rel="stylesheet" href="assets/fonts/tajawal.css">
-  <link rel="stylesheet" href="app/css/style.css?v=chambers5">
-  <link rel="stylesheet" href="app/css/classic.css?v=chambers5">
+  <link rel="stylesheet" href="app/css/style.css?v=obsidian2">
+  <link rel="stylesheet" href="app/css/classic.css?v=obsidian2">
 </head>
 <body>
 
@@ -852,25 +852,30 @@
 
   <!-- قائمة سياقية مصغرة عند النقر بالزر الأيمن على الحجرة -->
   <div class="chamber-context-menu" id="chamber-context-menu" style="display:none;">
+    <button class="chamber-menu-item" onclick="contextSwitchChamber()">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      <span>فتح / تفعيل الحجرة</span>
+    </button>
     <button class="chamber-menu-item" onclick="contextRenameChamber()">
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       <span>إعادة تسمية مخصصة</span>
-    </button>
-    <button class="chamber-menu-item" onclick="contextOpenInExplorer()">
-      <svg class="win-folder-svg sm" viewBox="0 0 24 24" width="14" height="14" fill="none">
-        <path d="M2.5 5.5C2.5 4.39543 3.39543 3.5 4.5 3.5H9.2C9.7 3.5 10.2 3.7 10.6 4.1L12.4 5.9C12.8 6.3 13.3 6.5 13.8 6.5H19.5C20.6 6.5 21.5 7.4 21.5 8.5V10H2.5V5.5Z" fill="#D97706"/>
-        <path d="M2 9.5C2 8.67 2.67 8 3.5 8H20.5C21.33 8 22 8.67 22 9.5V18C22 19.38 20.88 20.5 19.5 20.5H4.5C3.12 20.5 2 19.38 2 18V9.5Z" fill="#F59E0B"/>
-      </svg>
-      <span>فتح في المستكشف الشجري</span>
     </button>
     <div class="context-divider"></div>
     <button class="chamber-menu-item" onclick="contextCopyChamber()">
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
       <span>نسخ محتوى الحجرة</span>
     </button>
+    <button class="chamber-menu-item" onclick="contextPasteChamber()">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>
+      <span>لصق من الحافظة</span>
+    </button>
+    <button class="chamber-menu-item" onclick="contextMoveFolderChamber()">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <span>نقل إلى مجلد آخر...</span>
+    </button>
     <button class="chamber-menu-item" onclick="contextCompareChamber()">
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/></svg>
-      <span>مقارنة مع الحجرة الحالية</span>
+      <span>مقارنة مع الحجرة النشطة</span>
     </button>
     <div class="context-divider"></div>
     <button class="chamber-menu-item danger" onclick="contextClearChamber()">
@@ -882,83 +887,93 @@
   <!-- درج مستكشف الفصول والمجلدات الشجري (Chambers & Folders Explorer Drawer) -->
   <div class="explorer-drawer-overlay" id="explorer-drawer-overlay" onclick="closeChambersExplorer(event)"></div>
   <aside class="explorer-drawer" id="explorer-drawer" role="complementary" aria-label="مستكشف الفصول والمجلدات">
-    <!-- رأس المستكشف Header -->
-    <div class="explorer-drawer-header">
-      <div class="explorer-header-brand">
-        <svg class="win-folder-svg" viewBox="0 0 24 24" width="22" height="22" fill="none">
-          <path d="M2.5 5.5C2.5 4.39543 3.39543 3.5 4.5 3.5H9.2C9.7 3.5 10.2 3.7 10.6 4.1L12.4 5.9C12.8 6.3 13.3 6.5 13.8 6.5H19.5C20.6 6.5 21.5 7.4 21.5 8.5V10H2.5V5.5Z" fill="#D97706"/>
-          <path d="M3 8.5H21V18C21 19.1 20.1 20 19 20H5C3.9 20 3 19.1 3 18V8.5Z" fill="#FDE68A"/>
-          <path d="M2 9.5C2 8.67 2.67 8 3.5 8H20.5C21.33 8 22 8.67 22 9.5V18C22 19.38 20.88 20.5 19.5 20.5H4.5C3.12 20.5 2 19.38 2 18V9.5Z" fill="url(#drawerWinFolderGrad)"/>
-          <path d="M3 9.5C3 9.2 3.2 9 3.5 9H20.5C20.8 9 21 9.2 21 9.5V10H3V9.5Z" fill="#FDE047" opacity="0.6"/>
-          <defs>
-            <linearGradient id="drawerWinFolderGrad" x1="12" y1="8" x2="12" y2="20.5" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#FBBF24"/>
-              <stop offset="1" stop-color="#F59E0B"/>
-            </linearGradient>
-          </defs>
-        </svg>
-        <div class="explorer-header-titles">
-          <h3 class="explorer-heading">مستكشف الفصول والمجلدات</h3>
-          <span class="explorer-sub">إدارة 8 فصول ومسودات مستقلة</span>
-        </div>
+    <!-- رأس المستكشف الهادئ بنمط أوبسيديان (Obsidian Minimalist Header) -->
+    <div class="explorer-drawer-header obsidian-header">
+      <div class="obsidian-title-section">
+        <span class="obsidian-title-icon">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        </span>
+        <span class="obsidian-app-title">المستكشف</span>
       </div>
-      <div class="explorer-header-actions">
-        <button type="button" class="explorer-icon-btn" id="btn-new-draft-header" onclick="openNewChamberModal()" title="إنشاء فصل / مسودة جديدة">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
+      <div class="explorer-header-actions obsidian-actions">
+        <button type="button" class="obsidian-tool-btn" id="btn-new-folder-header" onclick="openNewFolderModal()" title="إنشاء مجلد جديد">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
         </button>
-        <button type="button" class="explorer-icon-btn" id="btn-refresh-explorer-header" onclick="refreshExplorerData()" title="تحديث الإحصائيات الفورية">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-          </svg>
+        <button type="button" class="obsidian-tool-btn" id="btn-collapse-all" onclick="toggleCollapseAllFolders()" title="طي / فتح جميع المجلدات">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
         </button>
-        <button type="button" class="explorer-icon-btn explorer-close-btn" onclick="toggleChambersExplorer(false)" title="إغلاق المستكشف">
-          &times;
+        <button type="button" class="obsidian-tool-btn" id="btn-refresh-explorer-header" onclick="refreshExplorerData()" title="تحديث الإحصائيات">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
+        <button type="button" class="obsidian-tool-btn obsidian-close-btn" onclick="toggleChambersExplorer(false)" title="إغلاق المستكشف">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
     </div>
 
-    <!-- حقل البحث والتصفية السريع -->
-    <div class="explorer-search-box">
-      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+    <!-- حقل البحث والتصفية السريع بنمط أوبسيديان -->
+    <div class="explorer-search-box obsidian-search">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
       </svg>
       <input type="text" id="explorer-search-input" placeholder="بحث في الفصول والمسودات..." oninput="filterExplorerItems(this.value)" autocomplete="off" />
-      <button class="explorer-search-clear" id="explorer-search-clear" onclick="clearExplorerSearch()" title="مسح البحث" style="display:none;">&times;</button>
+      <button type="button" class="explorer-search-clear" id="explorer-search-clear" onclick="clearExplorerSearch()" title="مسح البحث" style="display:none;">&times;</button>
     </div>
 
-    <!-- شجرة التفرعات والمجلدات Tree View -->
-    <div class="explorer-tree" id="explorer-tree">
+    <!-- شجرة التفرعات والمجلدات بنمط أوبسيديان Tree View -->
+    <div class="explorer-tree obsidian-tree" id="explorer-tree">
       <!-- يتم توليد محتوى الشجرة ديناميكياً بواسطة JavaScript -->
     </div>
 
-    <!-- تذييل المستكشف: الإحصائيات الكلية وأزرار الإجراءات السريعة -->
-    <div class="explorer-drawer-footer">
-      <div class="explorer-summary-stats">
-        <div class="explorer-stat-item" title="إجمالي الكلمات المكتوبة عبر كافة الحجرات">
-          <span class="stat-num" id="explorer-total-words">0</span>
-          <span class="stat-label">إجمالي الكلمات</span>
-        </div>
-        <div class="explorer-stat-item" title="عدد الفصول والمسودات الممتلئة">
-          <span class="stat-num" id="explorer-filled-count">0/8</span>
-          <span class="stat-label">الفصول الممتلئة</span>
-        </div>
-        <div class="explorer-stat-item" title="الحجرة النشطة المفتوحة حالياً في المحرر">
-          <span class="stat-num" id="explorer-active-num">1#</span>
-          <span class="stat-label">الحجرة النشطة</span>
-        </div>
+    <!-- تذييل المستكشف الهادئ بنمط أوبسيديان -->
+    <div class="explorer-drawer-footer obsidian-footer">
+      <div class="obsidian-summary-line">
+        <span class="obsidian-stat-point" id="explorer-total-words">0 كلمة</span>
+        <span class="obsidian-stat-sep">•</span>
+        <span class="obsidian-stat-point" id="explorer-filled-count">0/8 فصول</span>
+        <span class="obsidian-stat-sep">•</span>
+        <span class="obsidian-stat-point" id="explorer-active-num">النشطة: #1</span>
       </div>
       <div class="explorer-footer-actions">
-        <button class="btn btn-sm btn-primary explorer-book-btn" onclick="openBookModal(); toggleChambersExplorer(false);" title="تجميع كل الفصول في كتاب موحد وطباعته أو تصديره فوراً">
-          📚 تجميع وطباعة الكتاب
+        <button type="button" class="btn btn-sm btn-primary obsidian-action-btn-main" onclick="openBookModal(); toggleChambersExplorer(false);" title="تجميع كل الفصول في كتاب موحد وطباعته أو تصديره فوراً">
+          تجميع الكتاب
         </button>
-        <button class="btn btn-sm btn-outline explorer-diff-btn" onclick="openChambersDiffModal(); toggleChambersExplorer(false);" title="مطابقة ومقارنة بين حجرتين">
-          🔍 مطابقة الفصول
+        <button type="button" class="btn btn-sm btn-outline obsidian-action-btn-sub" onclick="openChambersDiffModal(); toggleChambersExplorer(false);" title="مطابقة ومقارنة بين حجرتين">
+          مطابقة الفصول
         </button>
       </div>
     </div>
   </aside>
+
+  <!-- نافذة إنشاء مجلد جديد (New Folder Modal) -->
+  <div class="chamber-modal-overlay" id="new-folder-modal" style="display:none;" onclick="closeNewFolderModal(event)">
+    <div class="chamber-modal-dialog sm">
+      <div class="chamber-modal-header">
+        <div class="chamber-modal-title">
+          <svg class="win-folder-svg sm" viewBox="0 0 24 24" width="16" height="16" fill="none">
+            <path d="M2.5 5.5C2.5 4.39543 3.39543 3.5 4.5 3.5H9.2C9.7 3.5 10.2 3.7 10.6 4.1L12.4 5.9C12.8 6.3 13.3 6.5 13.8 6.5H19.5C20.6 6.5 21.5 7.4 21.5 8.5V10H2.5V5.5Z" fill="#D97706"/>
+            <path d="M2 9.5C2 8.67 2.67 8 3.5 8H20.5C21.33 8 22 8.67 22 9.5V18C22 19.38 20.88 20.5 19.5 20.5H4.5C3.12 20.5 2 19.38 2 18V9.5Z" fill="#F59E0B"/>
+          </svg>
+          <h4>إنشاء مجلد جديد</h4>
+        </div>
+        <button type="button" class="diff-modal-close" onclick="closeNewFolderModal()" title="إغلاق">&times;</button>
+      </div>
+      <div class="chamber-modal-body">
+        <div class="book-field">
+          <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:5px; color:var(--text-primary);">اسم المجلد الجديد:</label>
+          <input type="text" id="new-folder-name-input" class="book-input" placeholder="مثال: أبحاث ومراجع، مسودات الرواية..." style="width:100%;" />
+        </div>
+        <div class="book-field">
+          <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:5px; color:var(--text-primary);">وصف اختياري:</label>
+          <input type="text" id="new-folder-desc-input" class="book-input" placeholder="وصف قصير للمجلد لتنظيم الفصول" style="width:100%;" />
+        </div>
+      </div>
+      <div class="chamber-modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeNewFolderModal()">إلغاء</button>
+        <button type="button" class="btn btn-primary" onclick="confirmCreateNewFolder()">إنشاء المجلد</button>
+      </div>
+    </div>
+  </div>
 
   <!-- نافذة إنشاء مسودة / فصل جديد (New Chamber Modal) -->
   <div class="chamber-modal-overlay" id="new-chamber-modal" style="display:none;" onclick="closeNewChamberModal(event)">
@@ -1010,28 +1025,8 @@
       </div>
       <div class="chamber-modal-body">
         <p id="move-folder-chamber-desc" style="font-size:0.85rem; margin-bottom:10px; color:var(--text-secondary);"></p>
-        <div class="folder-pick-options">
-          <button type="button" class="folder-pick-btn" onclick="confirmMoveFolder('book')">
-            <span class="folder-pick-icon">📖</span>
-            <div class="folder-pick-info">
-              <strong>فصول الكتاب الرئيسي</strong>
-              <small>تُدمج تلقائياً في مجمّع الكتاب للطباعة والنشر</small>
-            </div>
-          </button>
-          <button type="button" class="folder-pick-btn" onclick="confirmMoveFolder('drafts')">
-            <span class="folder-pick-icon">📝</span>
-            <div class="folder-pick-info">
-              <strong>المسودات والأفكار السريعة</strong>
-              <small>مسودات حرة وملاحظات مؤقتة</small>
-            </div>
-          </button>
-          <button type="button" class="folder-pick-btn" onclick="confirmMoveFolder('archive')">
-            <span class="folder-pick-icon">🗄️</span>
-            <div class="folder-pick-info">
-              <strong>الأرشيف والمفرغات</strong>
-              <small>أرشفة الفصل دون ظهوره في مسودة العمل الرئيسية</small>
-            </div>
-          </button>
+        <div class="folder-pick-options" id="move-folder-options-container">
+          <!-- يتم التعبئة تلقائياً بكافة المجلدات (الافتراضية والمنشأة حديثاً) -->
         </div>
       </div>
     </div>
@@ -1091,7 +1086,7 @@
   <script src="assets/vendor/html-docx.js"></script>
 
   <!-- Application Main Script -->
-  <script src="app/js/rtlmd.js?v=chambers5"></script>
+  <script src="app/js/rtlmd.js?v=obsidian2"></script>
 
 </body>
 </html>
