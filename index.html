@@ -18,8 +18,8 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Fira+Code:wght@400;500&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/earlyaccess/droidarabicnaskh.css">
   <link rel="stylesheet" href="assets/fonts/tajawal.css">
-  <link rel="stylesheet" href="app/css/style.css?v=obsidian2">
-  <link rel="stylesheet" href="app/css/classic.css?v=obsidian2">
+  <link rel="stylesheet" href="app/css/style.css?v=obsidian3">
+  <link rel="stylesheet" href="app/css/classic.css?v=obsidian3">
 </head>
 <body>
 
@@ -884,9 +884,48 @@
     </button>
   </div>
 
+  <!-- قائمة سياقية للمجلدات عند النقر بالزر الأيمن -->
+  <div class="chamber-context-menu" id="folder-context-menu" style="display:none;">
+    <button class="chamber-menu-item" onclick="contextCreateFileInFolder()">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      <span>إنشاء ملف جديد</span>
+    </button>
+    <div class="context-divider"></div>
+    <button class="chamber-menu-item" onclick="contextRenameFolder()">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      <span>إعادة تسمية المجلد</span>
+    </button>
+    <button class="chamber-menu-item" onclick="contextCreateSubFolder()">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+      <span>إنشاء مجلد فرعي بداخله</span>
+    </button>
+    <button class="chamber-menu-item" id="folder-context-make-root-btn" onclick="contextMoveFolderToRoot()" style="display:none;">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 14 20 9 15 4"/><path d="M4 20v-7a4 4 0 0 1 4-4h12"/></svg>
+      <span>تحويل لمجلد رئيسي (مستقل)</span>
+    </button>
+    <div class="context-divider"></div>
+    <button class="chamber-menu-item" onclick="contextToggleTargetFolder()">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      <span>طي / فتح هذا المجلد</span>
+    </button>
+    <button class="chamber-menu-item" onclick="toggleCollapseAllFolders()">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+      <span>طي / فتح جميع المجلدات</span>
+    </button>
+    <div class="context-divider" id="folder-context-delete-divider"></div>
+    <button class="chamber-menu-item danger" id="folder-context-clear-content-btn" onclick="contextClearFolderContent()">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      <span>مسح محتوى المجلد كله</span>
+    </button>
+    <button class="chamber-menu-item danger" id="folder-context-delete-btn" onclick="contextDeleteFolder()">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+      <span>حذف هذا المجلد</span>
+    </button>
+  </div>
+
   <!-- درج مستكشف الفصول والمجلدات الشجري (Chambers & Folders Explorer Drawer) -->
   <div class="explorer-drawer-overlay" id="explorer-drawer-overlay" onclick="closeChambersExplorer(event)"></div>
-  <aside class="explorer-drawer" id="explorer-drawer" role="complementary" aria-label="مستكشف الفصول والمجلدات">
+  <aside class="explorer-drawer" id="explorer-drawer" role="complementary" aria-label="مستكشف الفصول والمجلدات" onclick="handleExplorerTreeBackgroundClick(event)">
     <!-- رأس المستكشف الهادئ بنمط أوبسيديان (Obsidian Minimalist Header) -->
     <div class="explorer-drawer-header obsidian-header">
       <div class="obsidian-title-section">
@@ -896,6 +935,15 @@
         <span class="obsidian-app-title">المستكشف</span>
       </div>
       <div class="explorer-header-actions obsidian-actions">
+        <button type="button" class="obsidian-tool-btn" id="btn-copy-chambers-all" onclick="duplicateChambersToNewFolder()" title="نسخ الحجرات (إنشاء مجلد متزامن حياً مع الحجرات الممتلئة)">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+        <button type="button" class="obsidian-tool-btn" id="btn-move-chambers-all" onclick="moveChambersToNewFolder()" title="نقل الحجرات (تفريغ الحجرات ونقل محتواها لمجلد جديد)">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="12 11 12 17 15 14"/></svg>
+        </button>
+        <button type="button" class="obsidian-tool-btn" id="btn-new-file-header" onclick="openNewFileModal()" title="إنشاء ملف جديد في المجلد">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        </button>
         <button type="button" class="obsidian-tool-btn" id="btn-new-folder-header" onclick="openNewFolderModal()" title="إنشاء مجلد جديد">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
         </button>
@@ -921,7 +969,7 @@
     </div>
 
     <!-- شجرة التفرعات والمجلدات بنمط أوبسيديان Tree View -->
-    <div class="explorer-tree obsidian-tree" id="explorer-tree">
+    <div class="explorer-tree obsidian-tree" id="explorer-tree" onclick="handleExplorerTreeBackgroundClick(event)" ondragover="handleRootTreeDragOver(event)" ondragleave="handleRootTreeDragLeave(event)" ondrop="handleRootTreeDrop(event)">
       <!-- يتم توليد محتوى الشجرة ديناميكياً بواسطة JavaScript -->
     </div>
 
@@ -954,11 +1002,15 @@
             <path d="M2.5 5.5C2.5 4.39543 3.39543 3.5 4.5 3.5H9.2C9.7 3.5 10.2 3.7 10.6 4.1L12.4 5.9C12.8 6.3 13.3 6.5 13.8 6.5H19.5C20.6 6.5 21.5 7.4 21.5 8.5V10H2.5V5.5Z" fill="#D97706"/>
             <path d="M2 9.5C2 8.67 2.67 8 3.5 8H20.5C21.33 8 22 8.67 22 9.5V18C22 19.38 20.88 20.5 19.5 20.5H4.5C3.12 20.5 2 19.38 2 18V9.5Z" fill="#F59E0B"/>
           </svg>
-          <h4>إنشاء مجلد جديد</h4>
+          <h4 id="new-folder-modal-heading">إنشاء مجلد جديد</h4>
         </div>
         <button type="button" class="diff-modal-close" onclick="closeNewFolderModal()" title="إغلاق">&times;</button>
       </div>
       <div class="chamber-modal-body">
+        <div class="book-field">
+          <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:5px; color:var(--text-primary);">الموقع / المجلد الأب:</label>
+          <select id="new-folder-parent-select" class="book-input" style="width:100%;"></select>
+        </div>
         <div class="book-field">
           <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:5px; color:var(--text-primary);">اسم المجلد الجديد:</label>
           <input type="text" id="new-folder-name-input" class="book-input" placeholder="مثال: أبحاث ومراجع، مسودات الرواية..." style="width:100%;" />
@@ -971,6 +1023,61 @@
       <div class="chamber-modal-footer">
         <button type="button" class="btn btn-ghost" onclick="closeNewFolderModal()">إلغاء</button>
         <button type="button" class="btn btn-primary" onclick="confirmCreateNewFolder()">إنشاء المجلد</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة إنشاء ملف جديد داخل المجلد -->
+  <div class="chamber-modal-overlay" id="new-file-modal" style="display:none;" onclick="closeNewFileModal(event)">
+    <div class="chamber-modal-dialog sm" style="max-width: 440px;">
+      <div class="chamber-modal-header">
+        <div class="chamber-modal-title" style="display: flex; align-items: center; gap: 8px;">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--brand-primary);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          <h4 id="new-file-modal-heading" style="margin: 0; font-size: 0.95rem; font-weight: 700;">إنشاء ملف جديد داخل المجلد</h4>
+        </div>
+        <button type="button" class="diff-modal-close" onclick="closeNewFileModal()" title="إغلاق">&times;</button>
+      </div>
+      <div class="chamber-modal-body" style="padding: 16px 20px;">
+        <div class="book-field" style="margin-bottom: 12px;">
+          <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:5px; color:var(--text-primary);">المجلد المستهدف:</label>
+          <input type="text" id="new-file-target-folder" class="book-input" readonly style="width:100%; opacity:0.85; background:rgba(0,0,0,0.04); cursor:not-allowed;" />
+        </div>
+        <div class="book-field">
+          <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:5px; color:var(--text-primary);">عنوان / اسم الملف الجديد:</label>
+          <input type="text" id="new-file-name-input" class="book-input" placeholder="اكتب اسم الملف هنا..." style="width:100%;" onkeydown="if(event.key==='Enter')confirmCreateNewFile()" />
+        </div>
+      </div>
+      <div class="chamber-modal-footer" style="display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px;">
+        <button type="button" class="btn btn-ghost" onclick="closeNewFileModal()">إلغاء</button>
+        <button type="button" class="btn btn-primary" onclick="confirmCreateNewFile()">إنشاء وبدء التحرير ✍️</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة التأكيد والتحذير الاحترافية (Action Confirm Modal) -->
+  <div class="chamber-modal-overlay" id="confirm-action-modal" style="display:none;" onclick="closeConfirmActionModal(event)">
+    <div class="chamber-modal-dialog sm" style="max-width: 440px;">
+      <div class="chamber-modal-header" style="border-bottom: 1px solid rgba(239, 68, 68, 0.2);">
+        <div class="chamber-modal-title" style="color: #ef4444; display: flex; align-items: center; gap: 8px;">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <h4 id="confirm-action-heading" style="margin: 0; font-size: 0.95rem; font-weight: 700;">تحذير وتأكيد الحذف</h4>
+        </div>
+        <button type="button" class="diff-modal-close" onclick="closeConfirmActionModal()" title="إلغاء">&times;</button>
+      </div>
+      <div class="chamber-modal-body" style="padding: 16px 20px;">
+        <p id="confirm-action-message" style="margin: 0; font-size: 0.88rem; line-height: 1.6; color: var(--text-primary);">
+          <!-- نص الرسالة والتحذير -->
+        </p>
+      </div>
+      <div class="chamber-modal-footer" style="display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px;">
+        <button type="button" class="btn btn-ghost" onclick="closeConfirmActionModal()">تراجع وإلغاء</button>
+        <button type="button" class="btn btn-danger" id="confirm-action-proceed-btn" onclick="executePendingConfirmedAction()" style="background: #ef4444; color: #fff; border: none; font-weight: 700;">
+          تأكيد الحذف
+        </button>
       </div>
     </div>
   </div>
@@ -996,7 +1103,7 @@
         <div class="book-field">
           <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:5px; color:var(--text-primary);">المجلد الوجهة:</label>
           <select id="new-chamber-folder-select" class="book-select" style="width:100%;">
-            <option value="book">📖 فصول الكتاب الرئيسي</option>
+            <option value="book">📁 المجلد الرئيسي</option>
             <option value="drafts" selected>📝 المسودات والأفكار السريعة</option>
           </select>
         </div>
@@ -1086,7 +1193,7 @@
   <script src="assets/vendor/html-docx.js"></script>
 
   <!-- Application Main Script -->
-  <script src="app/js/rtlmd.js?v=obsidian2"></script>
+  <script src="app/js/rtlmd.js?v=obsidian14"></script>
 
 </body>
 </html>

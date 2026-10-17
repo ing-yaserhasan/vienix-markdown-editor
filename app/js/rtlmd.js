@@ -317,6 +317,27 @@
     showToast(`تم نقل الحجرة ${chNum} إلى ${folderNames[targetFolder] || targetFolder} 📂`, 'info', 1200);
   };
 
+  // إدارة الملف المعروض حالياً في حجرة رقم 8 المخصصة
+  let activeExplorerFile = null;
+  try {
+    const savedActive = localStorage.getItem('vienix_active_explorer_file');
+    if (savedActive) activeExplorerFile = JSON.parse(savedActive);
+  } catch (e) {}
+
+  function syncActiveExplorerFile(content) {
+    if (!activeExplorerFile || !activeExplorerFile.folderKey || !activeExplorerFile.fileId) return;
+    const files = getFolderFiles(activeExplorerFile.folderKey);
+    const file = files.find(f => f.id === activeExplorerFile.fileId);
+    if (!file) return;
+    file.content = content || '';
+    const textWithoutDataUrls = (content || '').replace(/data:image\/[^"')\s]+/g, '[صورة]');
+    const trimmed = textWithoutDataUrls.trim();
+    file.words = trimmed ? (trimmed.match(/[\w\u0600-\u06FF]+/g) || []).length : 0;
+    file.chars = trimmed.length;
+    file.updatedAt = Date.now();
+    saveFolderFiles(activeExplorerFile.folderKey, files);
+  }
+
   // حفظ محتوى حجرة معينة وتحديث الإحصائيات
   function setChamberContent(chNum, content) {
     safeSaveToStorage('vienix_chamber_' + chNum, content);
@@ -326,6 +347,13 @@
       safeSaveToStorage('yaser_md_content', content);
     }
     updateChamberMetaStats(chNum, content);
+    if (typeof syncLinkedFolderFiles === 'function') {
+      syncLinkedFolderFiles(chNum, content);
+    }
+    // مزامنة فورية إذا كان التعديل في حجرة 8 المخصصة للملفات
+    if (chNum === 8 && typeof syncActiveExplorerFile === 'function') {
+      syncActiveExplorerFile(content);
+    }
     if (typeof isExplorerOpen !== 'undefined' && isExplorerOpen && typeof renderChambersExplorerTree === 'function') {
       renderChambersExplorerTree();
     }
@@ -595,8 +623,11 @@
 
   // Update Document Statistics
   function updateStats(text) {
+    if (typeof text !== 'string') {
+      text = isClassicMode ? (classicEditor?.value || editor?.value || '') : (editor?.value || '');
+    }
     // تنظيف روابط الصور المضمنة base64 من النص قبل حساب الكلمات لمنع أي تجميد أو استهلاك غير مبرر للذاكرة
-    const textWithoutDataUrls = text.replace(/data:image\/[^"')\s]+/g, '[صورة]');
+    const textWithoutDataUrls = (text || '').replace(/data:image\/[^"')\s]+/g, '[صورة]');
     const trimmed = textWithoutDataUrls.trim();
     const chars = trimmed.length;
     // Arabic + English words
@@ -1476,7 +1507,15 @@
       btn.id = 'chamber-btn-' + i;
       btn.setAttribute('data-chamber', i);
       btn.setAttribute('type', 'button');
-      btn.innerHTML = `<span class="chamber-num">${i}</span><span class="chamber-dot"></span>`;
+
+      if (i === 8) {
+        // الحجرة رقم 8 مخصصة لعرض ملفات المستكشف (بدون رقم 8، مع نقطة خضراء)
+        btn.classList.add('chamber-file-dedicated');
+        btn.innerHTML = `<span class="chamber-green-dot"></span>`;
+        btn.setAttribute('title', 'حجرة مخصصة لعرض وتحرير ملفات المستكشف 🟢');
+      } else {
+        btn.innerHTML = `<span class="chamber-num">${i}</span><span class="chamber-dot"></span>`;
+      }
 
       btn.addEventListener('click', () => {
         window.switchChamber(i);
@@ -1510,12 +1549,30 @@
       btn.classList.toggle('filled', isFilled);
       btn.classList.toggle('empty', !isFilled);
 
-      if (isActive) {
-        btn.setAttribute('title', `حجرة ${i} (النشطة حالياً) • ${isFilled ? title : 'جاهزة للكتابة'}`);
-      } else if (isFilled) {
-        btn.setAttribute('title', `حجرة ${i} (ممتلئة) • ${title} (اضغط للتبديل إليها)`);
+      if (i === 8) {
+        btn.classList.add('chamber-file-dedicated');
+        if (!btn.querySelector('.chamber-green-dot')) {
+          btn.innerHTML = `<span class="chamber-green-dot"></span>`;
+        }
+        let activeFileTitle = '';
+        if (activeExplorerFile && activeExplorerFile.title) {
+          activeFileTitle = activeExplorerFile.title;
+        } else if (isFilled) {
+          activeFileTitle = title;
+        }
+        if (isActive) {
+          btn.setAttribute('title', `حجرة عرض الملفات (النشطة حالياً 🟢) • ${activeFileTitle || 'جاهزة لفتح أي ملف من المستكشف'}`);
+        } else {
+          btn.setAttribute('title', `حجرة عرض الملفات 🟢 • ${activeFileTitle ? `معروض فيها: "${activeFileTitle}"` : 'جاهزة لعرض أي ملف عند النقر عليه'}`);
+        }
       } else {
-        btn.setAttribute('title', `حجرة ${i} (فارغة) • اضغط للكتابة هنا دون مسح حجرة ${activeChamber}`);
+        if (isActive) {
+          btn.setAttribute('title', `حجرة ${i} (النشطة حالياً) • ${isFilled ? title : 'جاهزة للكتابة'}`);
+        } else if (isFilled) {
+          btn.setAttribute('title', `حجرة ${i} (ممتلئة) • ${title} (اضغط للتبديل إليها)`);
+        } else {
+          btn.setAttribute('title', `حجرة ${i} (فارغة) • اضغط للكتابة هنا دون مسح حجرة ${activeChamber}`);
+        }
       }
     }
 
@@ -1568,12 +1625,17 @@
   // ==========================================
   let contextTargetChamber = null;
 
+  let contextTargetFolderKey = null;
+
   function setupChamberContextMenu() {
-    const menu = document.getElementById('chamber-context-menu');
-    if (!menu) return;
+    const cMenu = document.getElementById('chamber-context-menu');
+    const fMenu = document.getElementById('folder-context-menu');
     document.addEventListener('click', (e) => {
-      if (!e.target.closest('#chamber-context-menu')) {
-        menu.style.display = 'none';
+      if (cMenu && !e.target.closest('#chamber-context-menu')) {
+        cMenu.style.display = 'none';
+      }
+      if (fMenu && !e.target.closest('#folder-context-menu')) {
+        fMenu.style.display = 'none';
       }
     });
   }
@@ -1582,6 +1644,8 @@
     if (e && e.preventDefault) e.preventDefault();
     contextTargetChamber = chNum;
     const menu = document.getElementById('chamber-context-menu');
+    const fMenu = document.getElementById('folder-context-menu');
+    if (fMenu) fMenu.style.display = 'none';
     if (!menu) return;
     menu.style.display = 'block';
 
@@ -1598,6 +1662,245 @@
     menu.style.left = x + 'px';
     menu.style.top = y + 'px';
   }
+
+  window.handleFolderContextMenu = function (e, folderKey) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+    contextTargetFolderKey = folderKey;
+    const cMenu = document.getElementById('chamber-context-menu');
+    if (cMenu) cMenu.style.display = 'none';
+    const menu = document.getElementById('folder-context-menu');
+    if (!menu) return;
+
+    let isCustom = false;
+    let hasParent = false;
+    try {
+      const customFolders = JSON.parse(localStorage.getItem('vienix_custom_folders') || '[]');
+      const target = customFolders.find(f => f.key === folderKey);
+      isCustom = !!target;
+      hasParent = !!(target && target.parent);
+    } catch (err) {}
+
+    const deleteBtn = document.getElementById('folder-context-delete-btn');
+    const deleteDivider = document.getElementById('folder-context-delete-divider');
+    const clearContentBtn = document.getElementById('folder-context-clear-content-btn');
+    const makeRootBtn = document.getElementById('folder-context-make-root-btn');
+
+    if (deleteBtn) deleteBtn.style.display = 'flex';
+    if (deleteDivider) deleteDivider.style.display = 'block';
+    if (clearContentBtn) clearContentBtn.style.display = 'flex';
+    if (makeRootBtn) makeRootBtn.style.display = (isCustom && hasParent) ? 'flex' : 'none';
+
+    menu.style.display = 'block';
+    const menuW = 205;
+    const menuH = 295;
+    let x = e ? e.clientX : window.innerWidth / 2;
+    let y = e ? e.clientY : window.innerHeight / 2;
+    if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 10;
+    if (y + menuH > window.innerHeight) y = window.innerHeight - menuH - 10;
+    if (x < 10) x = 10;
+    if (y < 10) y = 10;
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+  };
+
+  // إنشاء ملف جديد داخل المجلد عبر نافذة احترافية منبثقة
+  let pendingNewFileFolderKey = null;
+
+  window.openNewFileModal = function (folderKey) {
+    const curMeta = getChamberMeta(activeChamber);
+    const fallbackFolder = curMeta.folder || (activeChamber <= 5 ? 'book' : 'drafts');
+    pendingNewFileFolderKey = folderKey || contextTargetFolderKey || fallbackFolder;
+
+    const modal = document.getElementById('new-file-modal');
+    const folderInput = document.getElementById('new-file-target-folder');
+    const nameInput = document.getElementById('new-file-name-input');
+    const heading = document.getElementById('new-file-modal-heading');
+
+    const allFolders = getAppFolders();
+    const folder = allFolders.find(f => f.key === pendingNewFileFolderKey);
+    const folderName = folder ? folder.name : pendingNewFileFolderKey;
+
+    if (!modal) {
+      // بديل تلقائي في حال عدم وجود النافذة
+      const title = prompt(`أدخل اسم الملف الجديد داخل مجلد "${folderName}":`, 'ملف جديد');
+      if (!title || !title.trim()) return;
+      return createNewFileInFolderDirect(pendingNewFileFolderKey, title.trim());
+    }
+
+    if (heading) heading.textContent = `إنشاء ملف جديد داخل مجلد "${folderName}"`;
+    if (folderInput) folderInput.value = `📁 ${folderName}`;
+    if (nameInput) {
+      nameInput.value = '';
+      nameInput.placeholder = 'مثال: مقدمة، أفكار أولية، ملخص...';
+    }
+
+    modal.style.display = 'flex';
+    setTimeout(() => {
+      if (nameInput) nameInput.focus();
+    }, 80);
+  };
+
+  window.closeNewFileModal = function (e) {
+    if (e && e.target && e.target.id !== 'new-file-modal' && !e.target.classList.contains('diff-modal-close') && e.target.tagName !== 'BUTTON') {
+      return;
+    }
+    const modal = document.getElementById('new-file-modal');
+    if (modal) modal.style.display = 'none';
+  };
+
+  function createNewFileInFolderDirect(targetKey, title) {
+    const allFolders = getAppFolders();
+    const folder = allFolders.find(f => f.key === targetKey);
+    const folderName = folder ? folder.name : targetKey;
+
+    const files = getFolderFiles(targetKey);
+    const newFile = {
+      id: 'file_' + targetKey + '_' + Date.now().toString(36),
+      num: files.length + 1,
+      title: title || 'ملف جديد',
+      content: '',
+      words: 0,
+      chars: 0,
+      updatedAt: Date.now(),
+      linkedChamber: null
+    };
+    files.push(newFile);
+    saveFolderFiles(targetKey, files);
+
+    // نضمن فتح المجلد كي يظهر الملف الجديد فوراً
+    collapsedFolders[targetKey] = false;
+    renderChambersExplorerTree();
+
+    // نفتح الملف فوراً في الحجرة النشطة للكتابة فيه مباشرة
+    window.handleFolderFileClick(targetKey, newFile.id);
+    showToast(`تم إنشاء ملف "${newFile.title}" داخل مجلد "${folderName}" والبدء بالكتابة! 📄✨`, 'success', 2000);
+  }
+
+  window.confirmCreateNewFile = function () {
+    const modal = document.getElementById('new-file-modal');
+    const nameInput = document.getElementById('new-file-name-input');
+    const rawTitle = nameInput ? nameInput.value.trim() : '';
+    const title = rawTitle || 'ملف جديد';
+
+    const targetKey = pendingNewFileFolderKey || 'book';
+    if (modal) modal.style.display = 'none';
+    createNewFileInFolderDirect(targetKey, title);
+  };
+
+  window.contextCreateFileInFolder = function () {
+    const menu = document.getElementById('folder-context-menu');
+    if (menu) menu.style.display = 'none';
+    if (!contextTargetFolderKey) return;
+    window.openNewFileModal(contextTargetFolderKey);
+  };
+
+  window.contextMoveFolderToRoot = function () {
+    const menu = document.getElementById('folder-context-menu');
+    if (menu) menu.style.display = 'none';
+    if (!contextTargetFolderKey) return;
+    let customFolders = [];
+    try {
+      customFolders = JSON.parse(localStorage.getItem('vienix_custom_folders') || '[]');
+    } catch (e) {}
+    const target = customFolders.find(f => f.key === contextTargetFolderKey);
+    if (!target) return;
+    target.parent = null;
+    try {
+      localStorage.setItem('vienix_custom_folders', JSON.stringify(customFolders));
+    } catch (e) {}
+    renderChambersExplorerTree();
+    showToast(`تم تحويل مجلد "${target.name}" إلى مجلد رئيسي مستقل! 📁`, 'success', 1600);
+  };
+
+  window.contextRenameFolder = function () {
+    const menu = document.getElementById('folder-context-menu');
+    if (menu) menu.style.display = 'none';
+    if (!contextTargetFolderKey) return;
+    const allFolders = getAppFolders();
+    const target = allFolders.find(f => f.key === contextTargetFolderKey);
+    const currentName = target ? target.name : '';
+    const newName = prompt('أدخل الاسم الجديد للمجلد:', currentName);
+    if (newName && newName.trim() && newName.trim() !== currentName) {
+      const overrides = getFolderOverrides();
+      overrides[contextTargetFolderKey] = newName.trim();
+      saveFolderOverrides(overrides);
+      renderChambersExplorerTree();
+      showToast(`تمت إعادة تسمية المجلد إلى "${newName.trim()}" 📁`, 'success', 1500);
+    }
+  };
+
+  window.contextCreateSubFolder = function () {
+    const menu = document.getElementById('folder-context-menu');
+    if (menu) menu.style.display = 'none';
+    if (!contextTargetFolderKey) return;
+    window.openNewFolderModal(contextTargetFolderKey);
+  };
+
+  window.contextToggleTargetFolder = function () {
+    const menu = document.getElementById('folder-context-menu');
+    if (menu) menu.style.display = 'none';
+    if (!contextTargetFolderKey) return;
+    window.toggleTreeFolder(contextTargetFolderKey);
+  };
+
+  // مسح جميع محتويات المجلد المحدد
+  window.contextClearFolderContent = function () {
+    const menu = document.getElementById('folder-context-menu');
+    if (menu) menu.style.display = 'none';
+    if (!contextTargetFolderKey) return;
+
+    const allFolders = getAppFolders();
+    const target = allFolders.find(f => f.key === contextTargetFolderKey);
+    const folderName = target ? target.name : contextTargetFolderKey;
+
+    window.openActionConfirmModal(
+      '⚠️ تأكيد تفريغ ومسح محتوى المجلد',
+      `هل أنت متأكد من مسح وإفراغ جميع محتويات مجلد <strong>"${escapeHtml(folderName)}"</strong> بالكامل؟<br><span style="color:#ef4444; font-size:0.82rem; margin-top:6px; display:inline-block;">سيتم حذف جميع ملفاته وتفريغ الحجرات المنتمية إليه بالكامل!</span>`,
+      'نعم، امسح كل المحتويات',
+      () => {
+        // 1. مسح جميع ملفات المجلد المحفوظة
+        saveFolderFiles(contextTargetFolderKey, []);
+
+        // 2. تفريغ الحجرات التابعة لهذا المجلد
+        for (let i = 1; i <= TOTAL_CHAMBERS; i++) {
+          const meta = getChamberMeta(i);
+          const assigned = meta.folder || (i <= 5 ? 'book' : 'drafts');
+          if (assigned === contextTargetFolderKey) {
+            detachChamberFromLinkedFiles(i);
+            setChamberContent(i, '');
+            meta.customTitle = '';
+            meta.words = 0;
+            meta.chars = 0;
+            saveChamberMeta(i, meta);
+          }
+        }
+
+        // إذا كانت الحجرة النشطة الحالية تنتمي لهذا المجلد، نفرغ المحرر
+        const curMeta = getChamberMeta(activeChamber);
+        const curAssigned = curMeta.folder || (activeChamber <= 5 ? 'book' : 'drafts');
+        if (curAssigned === contextTargetFolderKey) {
+          editor.value = '';
+          if (classicEditor) classicEditor.value = '';
+          initHistoryWithContent('');
+          if (isClassicMode) renderClassicMarkdown(); else renderMarkdown();
+          updateStats();
+        }
+
+        renderChambersExplorerTree();
+        updateChambersUI();
+        showToast(`تم مسح وتفريغ جميع محتويات مجلد "${folderName}" بنجاح! 🧹`, 'success', 2000);
+      }
+    );
+  };
+
+  // حذف المجلد بالكامل مع التحذير والتأكيد
+  window.contextDeleteFolder = function () {
+    const menu = document.getElementById('folder-context-menu');
+    if (menu) menu.style.display = 'none';
+    if (!contextTargetFolderKey) return;
+    window.deleteCustomFolder(contextTargetFolderKey);
+  };
 
   window.handleTreeItemContextMenu = function (e, chNum) {
     if (e && e.preventDefault) e.preventDefault();
@@ -1645,6 +1948,10 @@
     if (menu) menu.style.display = 'none';
     if (!contextTargetChamber) return;
 
+    if (typeof detachChamberFromLinkedFiles === 'function') {
+      detachChamberFromLinkedFiles(contextTargetChamber);
+    }
+
     if (contextTargetChamber === activeChamber) {
       window.clearWorkspaceContent();
     } else {
@@ -1687,6 +1994,19 @@
   const collapsedFolders = { archive: true };
   let moveFolderTargetChamber = null;
 
+  window.updateDrawerOverlayBounds = function () {
+    const overlay = document.getElementById('explorer-drawer-overlay');
+    const panelEditor = document.getElementById('panel-editor');
+    if (!overlay || !panelEditor) return;
+    const rect = panelEditor.getBoundingClientRect();
+    overlay.style.top = rect.top + 'px';
+    overlay.style.left = rect.left + 'px';
+    overlay.style.width = rect.width + 'px';
+    overlay.style.height = rect.height + 'px';
+    overlay.style.right = 'auto';
+    overlay.style.bottom = 'auto';
+  };
+
   window.toggleChambersExplorer = function (forceState) {
     const drawer = document.getElementById('explorer-drawer');
     const overlay = document.getElementById('explorer-drawer-overlay');
@@ -1696,6 +2016,10 @@
       isExplorerOpen = forceState;
     } else {
       isExplorerOpen = !isExplorerOpen;
+    }
+
+    if (isExplorerOpen) {
+      window.updateDrawerOverlayBounds();
     }
 
     drawer.classList.toggle('active', isExplorerOpen);
@@ -1713,6 +2037,24 @@
     if (e && e.target && e.target.id !== 'explorer-drawer-overlay') return;
     window.toggleChambersExplorer(false);
   };
+
+  window.addEventListener('resize', () => {
+    if (isExplorerOpen) window.updateDrawerOverlayBounds();
+  });
+
+  document.addEventListener('mousedown', (e) => {
+    if (!isExplorerOpen) return;
+    if (e.target.closest('#explorer-drawer') || 
+        e.target.closest('#btn-open-explorer-header') || 
+        e.target.closest('#btn-chambers-manager') ||
+        e.target.closest('#chamber-context-menu') ||
+        e.target.closest('#folder-context-menu') ||
+        e.target.closest('.chamber-modal-dialog') ||
+        e.target.closest('.chamber-modal-overlay')) {
+      return;
+    }
+    window.toggleChambersExplorer(false);
+  });
 
   window.refreshExplorerData = function () {
     const refreshBtn = document.getElementById('btn-refresh-explorer-header');
@@ -1739,10 +2081,10 @@
   };
 
   window.toggleCollapseAllFolders = function () {
-    const keys = ['book', 'drafts', 'archive'];
-    const allCollapsed = keys.every(k => !!collapsedFolders[k]);
-    keys.forEach(k => {
-      collapsedFolders[k] = !allCollapsed;
+    const allFolders = getAppFolders();
+    const allCollapsed = allFolders.every(f => !!collapsedFolders[f.key]);
+    allFolders.forEach(f => {
+      collapsedFolders[f.key] = !allCollapsed;
     });
     renderChambersExplorerTree();
   };
@@ -1769,6 +2111,7 @@
     const modal = document.getElementById('new-chamber-modal');
     const select = document.getElementById('new-chamber-target-select');
     const titleInput = document.getElementById('new-chamber-title-input');
+    const folderSelect = document.getElementById('new-chamber-folder-select');
     if (!modal || !select) return;
 
     select.innerHTML = '';
@@ -1789,6 +2132,14 @@
 
     if (firstEmptyChamber === null) {
       select.value = activeChamber;
+    }
+
+    if (folderSelect) {
+      const allFolders = getAppFolders();
+      folderSelect.innerHTML = allFolders.map(f => {
+        const indent = f.parent ? '&nbsp;&nbsp;└── ' : '';
+        return `<option value="${f.key}">${indent}📁 ${escapeHtml(f.name)}</option>`;
+      }).join('');
     }
 
     if (titleInput) {
@@ -1843,27 +2194,460 @@
   // ==========================================
   // إدارة المجلدات الديناميكية (Dynamic Folders System)
   // ==========================================
-  function getAppFolders() {
-    const defaultFolders = [
-      { key: 'book', name: 'فصول الكتاب الرئيسي', desc: 'مخصصة للتجميع والطباعة' },
-      { key: 'drafts', name: 'المسودات والأفكار السريعة', desc: 'مسودات وملاحظات حرة' },
-      { key: 'archive', name: 'الأرشيف والمفرغات', desc: 'المحفوظات الاحتياطية' }
-    ];
+  function getFolderOverrides() {
+    try {
+      const saved = localStorage.getItem('vienix_folder_name_overrides');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {};
+  }
+
+  function saveFolderOverrides(overrides) {
+    try {
+      localStorage.setItem('vienix_folder_name_overrides', JSON.stringify(overrides));
+    } catch (e) {}
+  }
+
+  // ==========================================
+  // نظام ملفات المجلدات وتكرار/نقل الحجرات (Chambers Copy & Move System)
+  // ==========================================
+
+  function getFolderFiles(folderKey) {
+    try {
+      const saved = localStorage.getItem('vienix_folder_files_' + folderKey);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [];
+  }
+
+  function saveFolderFiles(folderKey, files) {
+    try {
+      localStorage.setItem('vienix_folder_files_' + folderKey, JSON.stringify(files));
+    } catch (e) {}
+  }
+
+  // الحصول على الرقم التلقائي المتصاعد للمجلدات الجديدة (1، 2، 3...)
+  function getNextAutoFolderName() {
+    const allFolders = getAppFolders();
+    let maxNum = 0;
+    allFolders.forEach(f => {
+      const trimmed = (f.name || '').trim();
+      const n = parseInt(trimmed, 10);
+      if (!isNaN(n) && n.toString() === trimmed) {
+        if (n > maxNum) maxNum = n;
+      }
+    });
+    return (maxNum + 1).toString();
+  }
+
+  // مزامنة التعديلات الحية على الحجرات مع الملفات المنسوخة المرتبطة بها
+  function syncLinkedFolderFiles(chNum, content) {
+    chNum = parseInt(chNum, 10);
+    const allFolders = getAppFolders();
+    allFolders.forEach(f => {
+      let files = getFolderFiles(f.key);
+      let changed = false;
+      files.forEach(file => {
+        if (file.linkedChamber === chNum) {
+          file.content = content;
+          file.title = getChamberTitle(chNum);
+          const textWithoutDataUrls = (content || '').replace(/data:image\/[^"')\s]+/g, '[صورة]');
+          const trimmed = textWithoutDataUrls.trim();
+          file.words = trimmed ? (trimmed.match(/[\w\u0600-\u06FF]+/g) || []).length : 0;
+          file.chars = trimmed.length;
+          file.updatedAt = Date.now();
+          changed = true;
+        }
+      });
+      if (changed) {
+        saveFolderFiles(f.key, files);
+      }
+    });
+  }
+
+  // فك ارتباط الحجرة عند التفريغ الرسمي للاحتفاظ بمحتواها في المجلدات المنسوخة
+  function detachChamberFromLinkedFiles(chNum) {
+    chNum = parseInt(chNum, 10);
+    const allFolders = getAppFolders();
+    allFolders.forEach(f => {
+      let files = getFolderFiles(f.key);
+      let changed = false;
+      files.forEach(file => {
+        if (file.linkedChamber === chNum) {
+          // فك الارتباط ليبقى محتوى الملف آمناً ولا يُمسح أبداً
+          file.linkedChamber = null;
+          changed = true;
+        }
+      });
+      if (changed) {
+        saveFolderFiles(f.key, files);
+      }
+    });
+  }
+
+  // زر نسخ الحجرات (Duplicate Chambers - Live Sync)
+  window.duplicateChambersToNewFolder = function () {
+    // حفظ المحرر الحالي أولاً لضمان وجود أحدث نص
+    const currentVal = isClassicMode ? (classicEditor?.value || editor.value) : editor.value;
+    setChamberContent(activeChamber, currentVal);
+
+    // جمع الحجرات الممتلئة فقط من 1 إلى 7 (حجرة 8 مخصصة لعرض الملفات)
+    const filledChambers = [];
+    for (let i = 1; i <= 7; i++) {
+      const content = getChamberContent(i) || '';
+      if (content.trim().length > 0) {
+        filledChambers.push({
+          num: i,
+          title: getChamberTitle(i),
+          content: content,
+          meta: getChamberMeta(i)
+        });
+      }
+    }
+
+    if (filledChambers.length === 0) {
+      showToast('لا توجد أي حجرة (1-7) مكتوب فيها ليتم نسخها!', 'info', 2200);
+      return;
+    }
+
+    const folderName = getNextAutoFolderName();
+    const folderKey = 'custom_' + Date.now().toString(36);
+
+    // 1. إنشاء المجلد الجديد
     let customFolders = [];
     try {
       const saved = localStorage.getItem('vienix_custom_folders');
       if (saved) customFolders = JSON.parse(saved);
     } catch (e) {}
-    return [...defaultFolders, ...customFolders];
+    customFolders.push({
+      key: folderKey,
+      name: folderName,
+      desc: 'مجلد محفوظات الحجرات المنسوخة',
+      isCustom: true,
+      parent: null
+    });
+    try {
+      localStorage.setItem('vienix_custom_folders', JSON.stringify(customFolders));
+    } catch (e) {}
+
+    // 2. إنشاء ملفات الحجرات الممتلئة كملفات عادية داخل المجلد
+    const files = filledChambers.map((ch, idx) => ({
+      id: 'file_' + folderKey + '_' + (idx + 1),
+      num: idx + 1,
+      title: ch.title,
+      content: ch.content,
+      words: ch.meta.words || 0,
+      chars: ch.meta.chars || 0,
+      updatedAt: ch.meta.updatedAt || Date.now(),
+      linkedChamber: null
+    }));
+    saveFolderFiles(folderKey, files);
+
+    collapsedFolders[folderKey] = false;
+    renderChambersExplorerTree();
+    showToast(`تم نسخ ${files.length} حجرة إلى مجلد "${folderName}" كملفات مستقلة! 📋✨`, 'success', 2200);
+  };
+
+  // زر نقل الحجرات (Move Chambers - Archive & Empty)
+  window.moveChambersToNewFolder = function () {
+    const currentVal = isClassicMode ? (classicEditor?.value || editor.value) : editor.value;
+    setChamberContent(activeChamber, currentVal);
+
+    // جمع الحجرات الممتلئة فقط من 1 إلى 7
+    const filledChambers = [];
+    for (let i = 1; i <= 7; i++) {
+      const content = getChamberContent(i) || '';
+      if (content.trim().length > 0) {
+        filledChambers.push({
+          num: i,
+          title: getChamberTitle(i),
+          content: content,
+          meta: getChamberMeta(i)
+        });
+      }
+    }
+
+    if (filledChambers.length === 0) {
+      showToast('لا توجد أي حجرة (1-7) مكتوب فيها ليتم نقلها!', 'info', 2200);
+      return;
+    }
+
+    if (!confirm(`هل أنت متأكد من نقل محتوى (${filledChambers.length}) حجرة إلى مجلد جديد وتفريغ الحجرات الحالية للبدء من جديد؟`)) {
+      return;
+    }
+
+    const folderName = getNextAutoFolderName();
+    const folderKey = 'custom_' + Date.now().toString(36);
+
+    // 1. إنشاء المجلد الجديد
+    let customFolders = [];
+    try {
+      const saved = localStorage.getItem('vienix_custom_folders');
+      if (saved) customFolders = JSON.parse(saved);
+    } catch (e) {}
+    customFolders.push({
+      key: folderKey,
+      name: folderName,
+      desc: 'مجلد محفوظات الحجرات المنقولة',
+      isCustom: true,
+      parent: null
+    });
+    try {
+      localStorage.setItem('vienix_custom_folders', JSON.stringify(customFolders));
+    } catch (e) {}
+
+    // 2. نسخ محتويات الحجرات كملفات محفوظة داخل المجلد
+    const files = filledChambers.map((ch, idx) => ({
+      id: 'file_' + folderKey + '_' + (idx + 1),
+      num: idx + 1,
+      title: ch.title,
+      content: ch.content,
+      words: ch.meta.words || 0,
+      chars: ch.meta.chars || 0,
+      updatedAt: ch.meta.updatedAt || Date.now(),
+      linkedChamber: null
+    }));
+    saveFolderFiles(folderKey, files);
+
+    // 3. تفريغ الحجرات 1 إلى 7
+    for (let i = 1; i <= 7; i++) {
+      detachChamberFromLinkedFiles(i);
+      setChamberContent(i, '');
+      const meta = getChamberMeta(i);
+      meta.customTitle = '';
+      meta.words = 0;
+      meta.chars = 0;
+      saveChamberMeta(i, meta);
+    }
+
+    // تفريغ المحرر النشط فوراً وتحديث الحالة
+    editor.value = '';
+    if (classicEditor) classicEditor.value = '';
+    initHistoryWithContent('');
+    if (isClassicMode) {
+      renderClassicMarkdown();
+    } else {
+      renderMarkdown();
+    }
+    updateStats();
+
+    activeChamber = 1;
+    safeSaveToStorage('vienix_active_chamber', 1);
+    safeSaveToStorage('yaser_active_chamber', 1);
+
+    collapsedFolders[folderKey] = false;
+    updateChambersUI();
+    renderChambersExplorerTree();
+    showToast(`تم نقل ${files.length} حجرة إلى مجلد "${folderName}" وتفريغ الحجرات! 📦`, 'success', 2200);
+  };
+
+  // إلغاء تحديد العناصر عند النقر في المساحة الفارغة
+  window.handleExplorerTreeBackgroundClick = function (e) {
+    if (!e || !e.target) return;
+    if (e.target.closest('.obsidian-tree-item') ||
+        e.target.closest('.obsidian-folder-header') ||
+        e.target.closest('button') ||
+        e.target.closest('input') ||
+        e.target.closest('.chamber-context-menu') ||
+        e.target.closest('.obsidian-header') ||
+        e.target.closest('.obsidian-search') ||
+        e.target.closest('.obsidian-footer')) {
+      return;
+    }
+    document.querySelectorAll('.obsidian-tree-item.active').forEach(el => {
+      el.classList.remove('active');
+    });
+    const activeNumEl = document.getElementById('explorer-active-num');
+    if (activeNumEl) {
+      activeNumEl.textContent = 'لا يوجد تحديد';
+    }
+  };
+
+  // تفاعل النقر على ملف داخل مجلد: يُعرض دائماً في الحجرة رقم 8 المخصصة بعلامة النقطة الخضراء
+  window.handleFolderFileClick = function (folderKey, fileId) {
+    const files = getFolderFiles(folderKey);
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+
+    // 1. تحديد بيانات الملف المعروض حالياً
+    activeExplorerFile = {
+      folderKey: folderKey,
+      fileId: file.id,
+      title: file.title
+    };
+    try {
+      localStorage.setItem('vienix_active_explorer_file', JSON.stringify(activeExplorerFile));
+    } catch (e) {}
+
+    // 2. إذا كنا في حجرة أخرى (1-7)، نحفظ محتواها قبل الانتقال لحجرة 8
+    if (activeChamber !== 8) {
+      const curVal = isClassicMode ? (classicEditor?.value || editor.value) : editor.value;
+      setChamberContent(activeChamber, curVal);
+    }
+
+    // 3. نعيّن حجرة 8 كالحجرة النشطة المخصصة لعرض الملف
+    activeChamber = 8;
+    setChamberContent(8, file.content || '');
+    setChamberCustomTitle(8, file.title || 'ملف المستكشف');
+
+    // 4. تحميل النص في المحرر فوراً
+    if (isClassicMode && classicEditor) {
+      classicEditor.value = file.content || '';
+    } else if (editor) {
+      editor.value = file.content || '';
+    }
+
+    initHistoryWithContent(file.content || '');
+    if (isClassicMode) renderClassicMarkdown(); else renderMarkdown();
+    updateStats();
+    updateChambersUI();
+    renderChambersExplorerTree();
+
+    showToast(`تم عرض "${file.title}" في حجرة الملفات 🟢`, 'success', 1600);
+  };
+
+  window.startFolderFileRename = function (e, folderKey, fileId) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const files = getFolderFiles(folderKey);
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+    const newName = prompt('أدخل الاسم الجديد للملف:', file.title);
+    if (newName && newName.trim() && newName.trim() !== file.title) {
+      file.title = newName.trim();
+      saveFolderFiles(folderKey, files);
+      if (activeExplorerFile && activeExplorerFile.folderKey === folderKey && activeExplorerFile.fileId === fileId) {
+        activeExplorerFile.title = file.title;
+        try { localStorage.setItem('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (err) {}
+        if (activeChamber === 8) {
+          setChamberCustomTitle(8, file.title);
+        }
+      }
+      renderChambersExplorerTree();
+      updateChambersUI();
+      showToast(`تمت إعادة تسمية الملف إلى "${newName.trim()}" ✏️`, 'success', 1200);
+    }
+  };
+
+  window.copyFolderFileContent = function (e, folderKey, fileId) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const files = getFolderFiles(folderKey);
+    const file = files.find(f => f.id === fileId);
+    if (!file || !file.content || file.content.trim() === '') {
+      showToast('الملف فارغ، لا يوجد محتوى لنسخه!', 'info', 1200);
+      return;
+    }
+    navigator.clipboard.writeText(file.content).then(() => {
+      showToast(`تم نسخ محتوى "${file.title}" للحافظة! 📋`, 'success', 1200);
+    }).catch(() => {
+      fallbackCopyText(file.content, file.num);
+    });
+  };
+
+  window.deleteFolderFile = function (e, folderKey, fileId) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    let files = getFolderFiles(folderKey);
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+    if (!confirm(`هل أنت متأكد من حذف ملف "${file.title}" من هذا المجلد؟`)) return;
+    files = files.filter(f => f.id !== fileId);
+    saveFolderFiles(folderKey, files);
+
+    // إذا كان الملف المحذوف هو المعروض حالياً في حجرة 8، نفرغها
+    if (activeExplorerFile && activeExplorerFile.folderKey === folderKey && activeExplorerFile.fileId === fileId) {
+      activeExplorerFile = null;
+      try { localStorage.removeItem('vienix_active_explorer_file'); } catch (err) {}
+      if (activeChamber === 8) {
+        setChamberContent(8, '');
+        setChamberCustomTitle(8, '');
+        if (isClassicMode && classicEditor) classicEditor.value = '';
+        else if (editor) editor.value = '';
+        if (isClassicMode) renderClassicMarkdown(); else renderMarkdown();
+        updateStats();
+      }
+    }
+    renderChambersExplorerTree();
+    updateChambersUI();
+    showToast(`تم حذف ملف "${file.title}" من المجلد`, 'info', 1200);
+  };
+
+  function getDeletedDefaultFolders() {
+    try {
+      const saved = localStorage.getItem('vienix_deleted_default_folders');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [];
   }
 
-  window.openNewFolderModal = function () {
+  function saveDeletedDefaultFolders(list) {
+    try {
+      localStorage.setItem('vienix_deleted_default_folders', JSON.stringify(list));
+    } catch (e) {}
+  }
+
+  function getAppFolders() {
+    const overrides = getFolderOverrides();
+    const deletedDefaults = getDeletedDefaultFolders();
+    const defaultFolders = [
+      { key: 'book', name: overrides['book'] || 'المجلد الرئيسي', desc: 'المجلد الرئيسي المخصص للتجميع والعمل', parent: null },
+      { key: 'drafts', name: overrides['drafts'] || 'المسودات والأفكار السريعة', desc: 'مسودات وملاحظات حرة', parent: null },
+      { key: 'archive', name: overrides['archive'] || 'الأرشيف والمفرغات', desc: 'المحفوظات الاحتياطية', parent: null }
+    ].filter(df => !deletedDefaults.includes(df.key));
+
+    let customFolders = [];
+    try {
+      const saved = localStorage.getItem('vienix_custom_folders');
+      if (saved) customFolders = JSON.parse(saved);
+    } catch (e) {}
+
+    let dirty = false;
+    customFolders.forEach(f => {
+      if (overrides[f.key]) f.name = overrides[f.key];
+      // في حال أنشأ المستخدم مجلداً باسم 33 دون تحديد مجلد أب، نربطه بالمجلد الرئيسي فوراً إذا لم يكن محذوفاً
+      if (f.name === '33' && !f.parent && !deletedDefaults.includes('book')) {
+        f.parent = 'book';
+        dirty = true;
+      }
+    });
+    if (dirty) {
+      try {
+        localStorage.setItem('vienix_custom_folders', JSON.stringify(customFolders));
+      } catch (e) {}
+    }
+    return [...defaultFolders, ...customFolders];
+  }
+  window.getAppFolders = getAppFolders;
+
+  window.openNewFolderModal = function (parentKey) {
     const modal = document.getElementById('new-folder-modal');
     const input = document.getElementById('new-folder-name-input');
     const desc = document.getElementById('new-folder-desc-input');
+    const parentSelect = document.getElementById('new-folder-parent-select');
+    const heading = document.getElementById('new-folder-modal-heading');
     if (!modal) return;
     if (input) input.value = '';
     if (desc) desc.value = '';
+
+    const allFolders = getAppFolders();
+    const targetParent = parentKey ? allFolders.find(f => f.key === parentKey) : null;
+
+    if (heading) {
+      heading.textContent = targetParent ? `إنشاء مجلد فرعي داخل: "${targetParent.name}"` : 'إنشاء مجلد جديد';
+    }
+
+    if (parentSelect) {
+      let opts = `<option value="">📁 (مجلد رئيسي مستقل - المستوى الأعلى)</option>`;
+      allFolders.forEach(f => {
+        const indent = f.parent ? '&nbsp;&nbsp;&nbsp;&nbsp;└── ' : '';
+        opts += `<option value="${f.key}">${indent}📁 ${escapeHtml(f.name)}</option>`;
+      });
+      parentSelect.innerHTML = opts;
+      if (parentKey) {
+        parentSelect.value = parentKey;
+      } else {
+        parentSelect.value = '';
+      }
+    }
+
     modal.style.display = 'flex';
     setTimeout(() => input?.focus(), 100);
   };
@@ -1880,53 +2664,376 @@
     const modal = document.getElementById('new-folder-modal');
     const input = document.getElementById('new-folder-name-input');
     const descInput = document.getElementById('new-folder-desc-input');
+    const parentSelect = document.getElementById('new-folder-parent-select');
     const name = (input?.value || '').trim();
     if (!name) {
       showToast('يرجى إدخال اسم المجلد!', 'warning', 1500);
       input?.focus();
       return;
     }
-    const desc = (descInput?.value || '').trim() || 'مجلد مخصص';
+    const parentKey = (parentSelect?.value || '').trim() || null;
+    const desc = (descInput?.value || '').trim() || (parentKey ? 'مجلد فرعي' : 'مجلد مخصص');
     const key = 'custom_' + Date.now().toString(36);
     let customFolders = [];
     try {
       const saved = localStorage.getItem('vienix_custom_folders');
       if (saved) customFolders = JSON.parse(saved);
     } catch (e) {}
-    customFolders.push({ key, name, desc, isCustom: true });
+    customFolders.push({ key, name, desc, isCustom: true, parent: parentKey });
     try {
       localStorage.setItem('vienix_custom_folders', JSON.stringify(customFolders));
     } catch (e) {}
 
+    // نضمن فتح المجلد الأب كي يظهر المجلد الفرعي فوراً
+    if (parentKey) {
+      collapsedFolders[parentKey] = false;
+    }
+
     if (modal) modal.style.display = 'none';
     renderChambersExplorerTree();
-    showToast(`تم إنشاء مجلد "${name}" بنجاح! 📁`, 'success', 1800);
+    showToast(`تم إنشاء المجلد "${name}" بنجاح! 📁`, 'success', 1800);
+  };
+
+  let pendingActionCallback = null;
+
+  window.openActionConfirmModal = function (title, message, buttonText, onConfirm) {
+    const modal = document.getElementById('confirm-action-modal');
+    const heading = document.getElementById('confirm-action-heading');
+    const msgEl = document.getElementById('confirm-action-message');
+    const btn = document.getElementById('confirm-action-proceed-btn');
+    if (!modal) {
+      if (confirm(message.replace(/<[^>]+>/g, ''))) onConfirm();
+      return;
+    }
+    if (heading) heading.textContent = title;
+    if (msgEl) msgEl.innerHTML = message;
+    if (btn) btn.textContent = buttonText || 'تأكيد الحذف';
+    pendingActionCallback = onConfirm;
+    modal.style.display = 'flex';
+  };
+
+  window.closeConfirmActionModal = function (e) {
+    if (e && e.target && e.target.id !== 'confirm-action-modal' && !e.target.classList.contains('diff-modal-close') && e.target.tagName !== 'BUTTON') {
+      return;
+    }
+    const modal = document.getElementById('confirm-action-modal');
+    if (modal) modal.style.display = 'none';
+    pendingActionCallback = null;
+  };
+
+  window.executePendingConfirmedAction = function () {
+    const modal = document.getElementById('confirm-action-modal');
+    if (modal) modal.style.display = 'none';
+    if (typeof pendingActionCallback === 'function') {
+      const cb = pendingActionCallback;
+      pendingActionCallback = null;
+      cb();
+    }
   };
 
   window.deleteCustomFolder = function (folderKey, e) {
     if (e && e.stopPropagation) e.stopPropagation();
-    let customFolders = [];
-    try {
-      const saved = localStorage.getItem('vienix_custom_folders');
-      if (saved) customFolders = JSON.parse(saved);
-    } catch (e) {}
-    const target = customFolders.find(f => f.key === folderKey);
-    if (!target) return;
-    if (!confirm(`هل أنت متأكد من حذف مجلد "${target.name}"؟ سيتم نقل أي حجرات بداخله إلى مجلد المسودات.`)) return;
+    const allFolders = getAppFolders();
+    const target = allFolders.find(f => f.key === folderKey);
+    const folderName = target ? target.name : folderKey;
 
-    for (let i = 1; i <= TOTAL_CHAMBERS; i++) {
-      const meta = getChamberMeta(i);
-      if (meta.folder === folderKey) {
-        meta.folder = 'drafts';
-        saveChamberMeta(i, meta);
+    window.openActionConfirmModal(
+      '⚠️ تأكيد حذف المجلد نهائياً',
+      `هل أنت متأكد تماماً من حذف مجلد <strong>"${escapeHtml(folderName)}"</strong> نهائياً؟<br><span style="color:#ef4444; font-size:0.82rem; margin-top:6px; display:inline-block;">سيتم حذف هذا المجلد وجميع الملفات المحفوظة بداخله وإعادة الحجرات للمجلد الرئيسي!</span>`,
+      'نعم، احذف المجلد نهائياً',
+      () => {
+        // 1. حذف ملفات المجلد من التخزين
+        try {
+          localStorage.removeItem('vienix_folder_files_' + folderKey);
+        } catch (e) {}
+
+        // 2. إذا كان مجلداً أساسياً أولياً (مثل المجلد الرئيسي، المسودات، الأرشيف)
+        const defaultKeys = ['book', 'drafts', 'archive'];
+        if (defaultKeys.includes(folderKey)) {
+          const deletedDefaults = getDeletedDefaultFolders();
+          if (!deletedDefaults.includes(folderKey)) {
+            deletedDefaults.push(folderKey);
+            saveDeletedDefaultFolders(deletedDefaults);
+          }
+        }
+
+        // 3. حذف المجلد من مصفوفة المجلدات المخصصة
+        let customFolders = [];
+        try {
+          const saved = localStorage.getItem('vienix_custom_folders');
+          if (saved) customFolders = JSON.parse(saved);
+        } catch (e) {}
+        customFolders = customFolders.filter(f => f.key !== folderKey);
+        try {
+          localStorage.setItem('vienix_custom_folders', JSON.stringify(customFolders));
+        } catch (e) {}
+
+        // 4. تحديد المجلد البديل لإعادة الحجرات إليه (المجلد الرئيسي إذا كان موجوداً، أو أول مجلد متاح)
+        const remainingFolders = getAppFolders();
+        let fallbackFolder = remainingFolders.find(f => f.key === 'book' || (f.name && f.name.includes('الرئيسي')));
+        if (!fallbackFolder && remainingFolders.length > 0) {
+          fallbackFolder = remainingFolders[0];
+        }
+        const fallbackKey = fallbackFolder ? fallbackFolder.key : 'book';
+
+        // إعادة أي حجرات كانت تابعة لهذا المجلد إلى المجلد البديل
+        for (let i = 1; i <= TOTAL_CHAMBERS; i++) {
+          const meta = getChamberMeta(i);
+          const assigned = meta.folder || (i <= 5 ? 'book' : 'drafts');
+          if (assigned === folderKey) {
+            meta.folder = fallbackKey;
+            saveChamberMeta(i, meta);
+          }
+        }
+
+        // إعادة توجيه المجلدات الفرعية للأب
+        customFolders.forEach(f => {
+          if (f.parent === folderKey) {
+            f.parent = target && target.parent ? target.parent : (fallbackFolder ? fallbackFolder.key : null);
+          }
+        });
+        try {
+          localStorage.setItem('vienix_custom_folders', JSON.stringify(customFolders));
+        } catch (e) {}
+
+        renderChambersExplorerTree();
+        updateChambersUI();
+        showToast(`تم حذف مجلد "${folderName}" بنجاح! 🗑️`, 'info', 1800);
+      }
+    );
+  };
+
+  // ==========================================
+  // نظام سحب وإفلات الحجرات والمجلدات (Drag and Drop)
+  // ==========================================
+  let draggedChamberNum = null;
+  let draggedFolderKey = null;
+
+  function isDescendantFolder(parentKey, testKey) {
+    if (parentKey === testKey) return true;
+    const all = getAppFolders();
+    let current = all.find(f => f.key === testKey);
+    while (current && current.parent) {
+      if (current.parent === parentKey) return true;
+      current = all.find(f => f.key === current.parent);
+    }
+    return false;
+  }
+
+  function getChambersOrder() {
+    try {
+      const saved = localStorage.getItem('vienix_chambers_order');
+      if (saved) {
+        const arr = JSON.parse(saved);
+        if (Array.isArray(arr) && arr.length === TOTAL_CHAMBERS) return arr;
+      }
+    } catch (e) {}
+    const defOrder = [];
+    for (let i = 1; i <= TOTAL_CHAMBERS; i++) defOrder.push(i);
+    return defOrder;
+  }
+
+  function saveChambersOrder(order) {
+    try {
+      localStorage.setItem('vienix_chambers_order', JSON.stringify(order));
+    } catch (e) {}
+  }
+
+  function clearAllDragClasses() {
+    document.querySelectorAll('.obsidian-tree-item').forEach(el => {
+      el.classList.remove('is-dragging', 'drag-over-top', 'drag-over-bottom');
+    });
+    document.querySelectorAll('.obsidian-folder-children, .obsidian-folder-header').forEach(el => {
+      el.classList.remove('folder-drag-over');
+    });
+    document.querySelectorAll('.obsidian-folder').forEach(el => {
+      el.classList.remove('is-folder-dragging');
+    });
+    document.getElementById('explorer-tree')?.classList.remove('root-drag-over');
+  }
+
+  window.handleFolderDragStart = function (e, folderKey) {
+    draggedFolderKey = folderKey;
+    draggedChamberNum = null;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', folderKey);
+    setTimeout(() => {
+      const el = document.getElementById('obsidian-folder-' + folderKey);
+      if (el) el.classList.add('is-folder-dragging');
+    }, 0);
+  };
+
+  window.handleFolderDragEnd = function (e) {
+    clearAllDragClasses();
+    draggedFolderKey = null;
+  };
+
+  window.handleItemDragStart = function (e, chNum) {
+    draggedChamberNum = chNum;
+    draggedFolderKey = null;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', chNum.toString());
+    setTimeout(() => {
+      const el = document.getElementById('tree-item-' + chNum);
+      if (el) el.classList.add('is-dragging');
+    }, 0);
+  };
+
+  window.handleItemDragOver = function (e, targetChNum) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const targetEl = document.getElementById('tree-item-' + targetChNum);
+    if (targetEl && targetChNum !== draggedChamberNum) {
+      const rect = targetEl.getBoundingClientRect();
+      const isTopHalf = (e.clientY - rect.top) < (rect.height / 2);
+      targetEl.classList.toggle('drag-over-top', isTopHalf);
+      targetEl.classList.toggle('drag-over-bottom', !isTopHalf);
+    }
+  };
+
+  window.handleItemDragLeave = function (e) {
+    if (e.currentTarget) {
+      e.currentTarget.classList.remove('drag-over-top', 'drag-over-bottom');
+    }
+  };
+
+  window.handleItemDrop = function (e, targetChNum, targetFolderKey) {
+    e.preventDefault();
+    e.stopPropagation();
+    clearAllDragClasses();
+    if (!draggedChamberNum || draggedChamberNum === targetChNum) return;
+
+    // 1. نقل إلى المجلد في حال كان مختلفاً
+    const meta = getChamberMeta(draggedChamberNum);
+    const prevFolder = meta.folder || (draggedChamberNum <= 5 ? 'book' : 'drafts');
+    if (prevFolder !== targetFolderKey) {
+      meta.folder = targetFolderKey;
+      saveChamberMeta(draggedChamberNum, meta);
+    }
+
+    // 2. إعادة ترتيب الحجرات بالترتيب الجديد
+    const order = getChambersOrder().filter(n => n !== draggedChamberNum);
+    const targetIndex = order.indexOf(targetChNum);
+    const targetEl = document.getElementById('tree-item-' + targetChNum);
+    const rect = targetEl ? targetEl.getBoundingClientRect() : null;
+    const isTopHalf = rect ? ((e.clientY - rect.top) < (rect.height / 2)) : true;
+
+    const insertIndex = isTopHalf ? targetIndex : targetIndex + 1;
+    order.splice(insertIndex, 0, draggedChamberNum);
+    saveChambersOrder(order);
+
+    renderChambersExplorerTree();
+    showToast(`تم تغيير ترتيب الحجرة #${draggedChamberNum} بنجاح! ⇅`, 'info', 1200);
+    draggedChamberNum = null;
+  };
+
+  window.handleFolderDragOver = function (e, folderKey) {
+    if (draggedFolderKey) {
+      if (draggedFolderKey === folderKey || isDescendantFolder(draggedFolderKey, folderKey)) {
+        return;
       }
     }
-    customFolders = customFolders.filter(f => f.key !== folderKey);
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const folderEl = document.getElementById('obsidian-folder-' + folderKey);
+    if (folderEl) {
+      const header = folderEl.querySelector('.obsidian-folder-header');
+      if (header) header.classList.add('folder-drag-over');
+    }
+  };
+
+  window.handleFolderDragLeave = function (e, folderKey) {
+    const folderEl = document.getElementById('obsidian-folder-' + folderKey);
+    if (folderEl) {
+      const header = folderEl.querySelector('.obsidian-folder-header');
+      if (header) header.classList.remove('folder-drag-over');
+    }
+  };
+
+  window.handleFolderDrop = function (e, targetFolderKey) {
+    e.preventDefault();
+    e.stopPropagation();
+    clearAllDragClasses();
+
+    // 1. معالجة سحب وإفلات مجلد داخل مجلد آخر
+    if (draggedFolderKey) {
+      if (draggedFolderKey === targetFolderKey || isDescendantFolder(draggedFolderKey, targetFolderKey)) {
+        draggedFolderKey = null;
+        return;
+      }
+      let customFolders = [];
+      try {
+        customFolders = JSON.parse(localStorage.getItem('vienix_custom_folders') || '[]');
+      } catch (err) {}
+      const target = customFolders.find(f => f.key === draggedFolderKey);
+      if (target) {
+        target.parent = targetFolderKey;
+        try {
+          localStorage.setItem('vienix_custom_folders', JSON.stringify(customFolders));
+        } catch (err) {}
+        collapsedFolders[targetFolderKey] = false;
+        renderChambersExplorerTree();
+        const all = getAppFolders();
+        const dest = all.find(f => f.key === targetFolderKey);
+        showToast(`تم نقل مجلد "${target.name}" إلى داخل "${dest ? dest.name : ''}"! 📁`, 'success', 1600);
+      }
+      draggedFolderKey = null;
+      return;
+    }
+
+    // 2. معالجة سحب وإفلات حجرة داخل مجلد
+    if (!draggedChamberNum) return;
+    const meta = getChamberMeta(draggedChamberNum);
+    const prevFolder = meta.folder || (draggedChamberNum <= 5 ? 'book' : 'drafts');
+    if (prevFolder !== targetFolderKey) {
+      meta.folder = targetFolderKey;
+      saveChamberMeta(draggedChamberNum, meta);
+      renderChambersExplorerTree();
+      showToast(`تم نقل الحجرة #${draggedChamberNum} إلى المجلد! 📁`, 'success', 1400);
+    }
+    draggedChamberNum = null;
+  };
+
+  window.handleRootTreeDragOver = function (e) {
+    if (!draggedFolderKey) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const treeEl = document.getElementById('explorer-tree');
+    if (treeEl) treeEl.classList.add('root-drag-over');
+  };
+
+  window.handleRootTreeDragLeave = function (e) {
+    const treeEl = document.getElementById('explorer-tree');
+    if (treeEl && e.relatedTarget && !treeEl.contains(e.relatedTarget)) {
+      treeEl.classList.remove('root-drag-over');
+    }
+  };
+
+  window.handleRootTreeDrop = function (e) {
+    if (!draggedFolderKey) return;
+    e.preventDefault();
+    clearAllDragClasses();
+
+    let customFolders = [];
     try {
-      localStorage.setItem('vienix_custom_folders', JSON.stringify(customFolders));
-    } catch (e) {}
-    renderChambersExplorerTree();
-    showToast(`تم حذف مجلد "${target.name}"`, 'info', 1500);
+      customFolders = JSON.parse(localStorage.getItem('vienix_custom_folders') || '[]');
+    } catch (err) {}
+    const target = customFolders.find(f => f.key === draggedFolderKey);
+    if (target && target.parent) {
+      target.parent = null;
+      try {
+        localStorage.setItem('vienix_custom_folders', JSON.stringify(customFolders));
+      } catch (err) {}
+      renderChambersExplorerTree();
+      showToast(`تم تحويل مجلد "${target.name}" إلى مجلد رئيسي مستقل! 📁`, 'success', 1600);
+    }
+    draggedFolderKey = null;
+  };
+
+  window.handleItemDragEnd = function (e) {
+    clearAllDragClasses();
+    draggedChamberNum = null;
+    draggedFolderKey = null;
   };
 
   // ==========================================
@@ -1947,15 +3054,19 @@
 
     if (container) {
       const allFolders = getAppFolders();
-      container.innerHTML = allFolders.map(f => `
-        <button type="button" class="folder-pick-btn" onclick="confirmMoveFolder('${f.key}')">
-          <span class="folder-pick-icon">${f.key === 'archive' ? '🗄️' : (f.key === 'book' ? '📖' : '📁')}</span>
-          <div class="folder-pick-info">
-            <strong>${escapeHtml(f.name)}</strong>
-            <small>${escapeHtml(f.desc)}</small>
-          </div>
-        </button>
-      `).join('');
+      container.innerHTML = allFolders.map(f => {
+        const parentFolder = f.parent ? allFolders.find(p => p.key === f.parent) : null;
+        const prefix = parentFolder ? `<span style="color:#d97706; font-size:0.75rem;">${escapeHtml(parentFolder.name)} / </span>` : '';
+        return `
+          <button type="button" class="folder-pick-btn" onclick="confirmMoveFolder('${f.key}')">
+            <span class="folder-pick-icon">${f.key === 'archive' ? '🗄️' : (f.key === 'book' ? '📖' : '📁')}</span>
+            <div class="folder-pick-info">
+              <strong>${f.parent ? '&nbsp;&nbsp;└── ' : ''}${prefix}${escapeHtml(f.name)}</strong>
+              <small>${escapeHtml(f.desc)}</small>
+            </div>
+          </button>
+        `;
+      }).join('');
     }
 
     modal.style.display = 'flex';
@@ -1984,13 +3095,14 @@
     if (!treeEl) return;
 
     const foldersDef = getAppFolders();
+    const chambersOrder = getChambersOrder();
 
     let totalProjectWords = 0;
     let filledChambersCount = 0;
     const folderBuckets = {};
     foldersDef.forEach(f => { folderBuckets[f.key] = []; });
 
-    for (let i = 1; i <= TOTAL_CHAMBERS; i++) {
+    for (let i = 1; i <= 7; i++) {
       const content = getChamberContent(i);
       const isFilled = content.trim().length > 0;
       const meta = getChamberMeta(i);
@@ -2032,20 +3144,138 @@
       });
     }
 
+    // ترتيب الحجرات داخل كل مجلد حسب الترتيب المخصص بالسحب والإفلات
+    Object.keys(folderBuckets).forEach(k => {
+      folderBuckets[k].sort((a, b) => {
+        return chambersOrder.indexOf(a.num) - chambersOrder.indexOf(b.num);
+      });
+    });
+
     const totalWordsEl = document.getElementById('explorer-total-words');
     const filledCountEl = document.getElementById('explorer-filled-count');
     const activeNumEl = document.getElementById('explorer-active-num');
     // استخدام الأرقام اللاتينية بشكل صارم (Western Latin Numerals 1, 2, 3...)
     if (totalWordsEl) totalWordsEl.textContent = `${totalProjectWords.toLocaleString('en-US')} كلمة`;
-    if (filledCountEl) filledCountEl.textContent = `${filledChambersCount}/${TOTAL_CHAMBERS} فصول`;
-    if (activeNumEl) activeNumEl.textContent = `النشطة: #${activeChamber}`;
+    if (filledCountEl) filledCountEl.textContent = `${filledChambersCount}/7 فصول`;
+    if (activeNumEl) activeNumEl.textContent = activeChamber === 8 ? 'المستعرض: 🟢 ملف' : `النشطة: #${activeChamber}`;
 
-    let treeHTML = '';
+    // حساب عدد الحجرات التراكمي للمجلد والمجلدات المتفرعة منه
+    function getFolderTotalCount(folderKey) {
+      let count = (folderBuckets[folderKey] || []).length;
+      count += getFolderFiles(folderKey).length;
+      const subFolders = foldersDef.filter(f => f.parent === folderKey);
+      subFolders.forEach(sub => {
+        count += getFolderTotalCount(sub.key);
+      });
+      return count;
+    }
 
-    foldersDef.forEach(f => {
+    // رندرة عنصر الحجرة الشجري
+    function renderItemHTML(item, parentFolderKey) {
+      const relTime = formatRelativeTimeArabic(item.updatedAt);
+      const wordsStr = item.isFilled ? `${item.words.toLocaleString('en-US')} كلمة` : 'فارغة';
+
+      const editIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+      const clearIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+
+      return `
+        <div class="obsidian-tree-item ${item.isActive ? 'active' : ''}"
+             id="tree-item-${item.num}"
+             draggable="true"
+             ondragstart="handleItemDragStart(event, ${item.num})"
+             ondragover="handleItemDragOver(event, ${item.num})"
+             ondragleave="handleItemDragLeave(event)"
+             ondrop="handleItemDrop(event, ${item.num}, '${parentFolderKey}')"
+             ondragend="handleItemDragEnd(event)"
+             onclick="handleTreeItemClick(event, ${item.num})"
+             oncontextmenu="handleTreeItemContextMenu(event, ${item.num})">
+          <span class="obsidian-item-num" title="رقم الحجرة">#${item.num}</span>
+          <div class="obsidian-item-content">
+            <div class="obsidian-item-title-row" id="tree-title-row-${item.num}">
+              <span class="obsidian-item-title" id="tree-title-${item.num}" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</span>
+              ${item.isActive ? '<span class="obsidian-active-indicator" title="الحجرة النشطة"></span>' : ''}
+            </div>
+            <div class="obsidian-item-meta">
+              <span class="obsidian-dot ${item.isFilled ? 'filled' : 'empty'}"></span>
+              <span class="obsidian-item-words">${wordsStr}</span>
+              <span class="obsidian-meta-sep">•</span>
+              <span class="obsidian-item-time" title="وقت آخر تعديل">${relTime}</span>
+            </div>
+          </div>
+          <div class="obsidian-item-actions">
+            <button type="button" class="obsidian-action-btn" onclick="startTreeInlineRename(event, ${item.num})" title="إعادة تسمية مخصصة">
+              ${editIcon}
+            </button>
+            <button type="button" class="obsidian-action-btn danger" onclick="clearChamberFromTree(event, ${item.num})" title="تفريغ الحجرة">
+              ${clearIcon}
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // رندرة ملفات المجلد المستنسخة أو المنقولة أو المنشأة
+    function renderFolderFileHTML(file, parentFolderKey) {
+      const relTime = formatRelativeTimeArabic(file.updatedAt || Date.now());
+      const wordsStr = `${(file.words || 0).toLocaleString('en-US')} كلمة`;
+      const isViewingInChamber8 = (activeChamber === 8 && activeExplorerFile && activeExplorerFile.folderKey === parentFolderKey && activeExplorerFile.fileId === file.id);
+
+      const editIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+      const copyIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+      const deleteIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+
+      return `
+        <div class="obsidian-tree-item is-folder-file ${isViewingInChamber8 ? 'active active-in-preview' : ''}"
+             id="tree-file-${file.id}"
+             onclick="handleFolderFileClick('${parentFolderKey}', '${file.id}')">
+          <span class="obsidian-item-num" title="ملف محفوظ • انقر للعرض في حجرة الملفات 🟢">
+            #${file.num}
+          </span>
+          <div class="obsidian-item-content">
+            <div class="obsidian-item-title-row">
+              <span class="obsidian-item-title" title="${escapeHtml(file.title)}">${escapeHtml(file.title)}</span>
+              ${isViewingInChamber8 ? '<span class="obsidian-file-viewing-badge" title="معروض حالياً في حجرة الملفات">🟢 قيد العرض</span>' : ''}
+            </div>
+            <div class="obsidian-item-meta">
+              <span class="obsidian-dot ${file.content && file.content.trim() ? 'filled' : 'empty'}"></span>
+              <span class="obsidian-item-words">${wordsStr}</span>
+              <span class="obsidian-meta-sep">•</span>
+              <span class="obsidian-item-time" title="وقت الحفظ">${relTime}</span>
+            </div>
+          </div>
+          <div class="obsidian-item-actions">
+            <button type="button" class="obsidian-action-btn" onclick="startFolderFileRename(event, '${parentFolderKey}', '${file.id}')" title="إعادة تسمية الملف">
+              ${editIcon}
+            </button>
+            <button type="button" class="obsidian-action-btn" onclick="copyFolderFileContent(event, '${parentFolderKey}', '${file.id}')" title="نسخ المحتوى">
+              ${copyIcon}
+            </button>
+            <button type="button" class="obsidian-action-btn danger" onclick="deleteFolderFile(event, '${parentFolderKey}', '${file.id}')" title="حذف الملف من المجلد">
+              ${deleteIcon}
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // رندرة شجرة المجلد بما فيها التفرعات الداخلية
+    function renderFolderNode(f, depth) {
       const items = folderBuckets[f.key] || [];
+      const folderFiles = getFolderFiles(f.key);
+      const subFolders = foldersDef.filter(child => child.parent === f.key);
       const isCollapsed = !!collapsedFolders[f.key];
-      const count = items.length;
+      const count = getFolderTotalCount(f.key);
+      const isSub = depth > 0;
+
+      let filteredFiles = folderFiles;
+      if (explorerSearchFilter) {
+        filteredFiles = folderFiles.filter(file => {
+          const matchTitle = (file.title || '').toLowerCase().includes(explorerSearchFilter);
+          const matchContent = (file.content || '').toLowerCase().includes(explorerSearchFilter);
+          const matchNum = file.num.toString() === explorerSearchFilter;
+          return matchTitle || matchContent || matchNum;
+        });
+      }
 
       const folderSvg = `
         <svg class="win-folder-svg sm" viewBox="0 0 24 24" width="16" height="16" fill="none">
@@ -2055,88 +3285,74 @@
         </svg>
       `;
 
-      const deleteFolderBtn = f.isCustom ? `
-        <button type="button" class="obsidian-action-btn danger" onclick="deleteCustomFolder('${f.key}', event)" title="حذف هذا المجلد">
-          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      ` : '';
+      // لا يظهر الرقم إلا إذا تجاوز عدد المحتويات 10 عناصر
+      const countBadge = count > 10 ? `<span class="obsidian-folder-count">${count}</span>` : '';
 
-      treeHTML += `
-        <div class="obsidian-folder ${isCollapsed ? 'collapsed' : ''}" id="obsidian-folder-${f.key}">
-          <div class="obsidian-folder-header" onclick="toggleTreeFolder('${f.key}')" title="${f.desc}">
+      let nodeHTML = `
+        <div class="obsidian-folder ${isSub ? 'sub-folder' : ''} ${isCollapsed ? 'collapsed' : ''}" id="obsidian-folder-${f.key}" data-folder-key="${f.key}">
+          <div class="obsidian-folder-header"
+               draggable="true"
+               ondragstart="handleFolderDragStart(event, '${f.key}')"
+               ondragend="handleFolderDragEnd(event)"
+               onclick="toggleTreeFolder('${f.key}')"
+               oncontextmenu="handleFolderContextMenu(event, '${f.key}')"
+               ondragover="handleFolderDragOver(event, '${f.key}')"
+               ondragleave="handleFolderDragLeave(event, '${f.key}')"
+               ondrop="handleFolderDrop(event, '${f.key}')"
+               title="${f.desc}">
             <span class="obsidian-folder-arrow">
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
             </span>
             <span class="obsidian-folder-icon">
               ${folderSvg}
             </span>
-            <span class="obsidian-folder-name">${f.name}</span>
-            <span class="obsidian-folder-count">${count}</span>
-            ${deleteFolderBtn}
+            <span class="obsidian-folder-name" id="folder-name-${f.key}">${f.name}</span>
+            ${countBadge}
           </div>
-          <div class="obsidian-folder-children" id="obsidian-children-${f.key}">
+          <div class="obsidian-folder-children" id="obsidian-children-${f.key}" ondragover="handleFolderDragOver(event, '${f.key}')" ondragleave="handleFolderDragLeave(event, '${f.key}')" ondrop="handleFolderDrop(event, '${f.key}')">
       `;
 
-      if (items.length === 0) {
-        treeHTML += `
-          <div style="padding: 6px 12px; font-size: 0.74rem; color: #94a3b8; text-align: center; font-style: italic;">
-            لا توجد حجرات هنا حالياً
-          </div>
-        `;
-      } else {
-        items.forEach(item => {
-          const relTime = formatRelativeTimeArabic(item.updatedAt);
-          // الأرقام لاتينية 100%
-          const wordsStr = item.isFilled ? `${item.words.toLocaleString('en-US')} كلمة` : 'فارغة';
-
-          // أيقونات الإجراءات بنظام SVG فائق الدقة والخفة
-          const editIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
-          const moveIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
-          const copyIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
-          const pasteIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 12h6"/><path d="M9 16h6"/></svg>`;
-          const clearIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
-
-          treeHTML += `
-            <div class="obsidian-tree-item ${item.isActive ? 'active' : ''}" id="tree-item-${item.num}" onclick="handleTreeItemClick(event, ${item.num})" oncontextmenu="handleTreeItemContextMenu(event, ${item.num})">
-              <span class="obsidian-item-num" title="رقم الحجرة">#${item.num}</span>
-              <div class="obsidian-item-content">
-                <div class="obsidian-item-title-row" id="tree-title-row-${item.num}">
-                  <span class="obsidian-item-title" id="tree-title-${item.num}" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</span>
-                  ${item.isActive ? '<span class="obsidian-active-indicator" title="الحجرة النشطة"></span>' : ''}
-                </div>
-                <div class="obsidian-item-meta">
-                  <span class="obsidian-dot ${item.isFilled ? 'filled' : 'empty'}"></span>
-                  <span class="obsidian-item-words">${wordsStr}</span>
-                  <span class="obsidian-meta-sep">•</span>
-                  <span class="obsidian-item-time" title="وقت آخر تعديل">${relTime}</span>
-                </div>
-              </div>
-              <div class="obsidian-item-actions">
-                <button type="button" class="obsidian-action-btn" onclick="startTreeInlineRename(event, ${item.num})" title="إعادة تسمية مخصصة">
-                  ${editIcon}
-                </button>
-                <button type="button" class="obsidian-action-btn" onclick="openMoveFolderModal(${item.num}, event)" title="نقل لمجلد آخر">
-                  ${moveIcon}
-                </button>
-                <button type="button" class="obsidian-action-btn" onclick="copyChamberFromTree(event, ${item.num})" title="نسخ المحتوى">
-                  ${copyIcon}
-                </button>
-                <button type="button" class="obsidian-action-btn" onclick="pasteToChamberFromTree(event, ${item.num})" title="لصق من الحافظة">
-                  ${pasteIcon}
-                </button>
-                <button type="button" class="obsidian-action-btn danger" onclick="clearChamberFromTree(event, ${item.num})" title="تفريغ الحجرة">
-                  ${clearIcon}
-                </button>
-              </div>
-            </div>
-          `;
+      // 1. رندرة المجلدات الفرعية داخل هذا المجلد أولاً
+      if (subFolders.length > 0) {
+        subFolders.forEach(sub => {
+          nodeHTML += renderFolderNode(sub, depth + 1);
         });
       }
 
-      treeHTML += `
+      // 2. رندرة ملفات المجلد المستنسخة / المنقولة
+      if (filteredFiles.length > 0) {
+        filteredFiles.forEach(file => {
+          nodeHTML += renderFolderFileHTML(file, f.key);
+        });
+      }
+
+      // 3. رندرة الحجرات المنتمية مباشرة لهذا المجلد
+      if (items.length > 0) {
+        items.forEach(item => {
+          nodeHTML += renderItemHTML(item, f.key);
+        });
+      }
+
+      if (items.length === 0 && subFolders.length === 0 && filteredFiles.length === 0) {
+        nodeHTML += `
+          <div style="padding: 6px 12px; font-size: 0.74rem; color: #94a3b8; text-align: center; font-style: italic;">
+            لا توجد محتويات هنا حالياً
+          </div>
+        `;
+      }
+
+      nodeHTML += `
           </div>
         </div>
       `;
+      return nodeHTML;
+    }
+
+    // رندرة المجلدات الأساسية التي لا تمتلك مجلداً أباً
+    const rootFolders = foldersDef.filter(f => !f.parent);
+    let treeHTML = '';
+    rootFolders.forEach(rf => {
+      treeHTML += renderFolderNode(rf, 0);
     });
 
     treeEl.innerHTML = treeHTML;
@@ -2270,6 +3486,10 @@
 
     const title = getChamberTitle(chNum);
     if (!confirm(`هل أنت متأكد من تفريغ الحجرة ${chNum} (${title})؟`)) return;
+
+    if (typeof detachChamberFromLinkedFiles === 'function') {
+      detachChamberFromLinkedFiles(chNum);
+    }
 
     if (chNum === activeChamber) {
       window.clearWorkspaceContent();
@@ -3486,6 +4706,10 @@
       return;
     }
 
+    if (typeof detachChamberFromLinkedFiles === 'function') {
+      detachChamberFromLinkedFiles(activeChamber);
+    }
+
     // حفظ النص الحالي أولاً في undoStack حتى يتمكن المستخدم من التراجع فوراً
     recordHistorySnapshot(true);
 
@@ -4382,6 +5606,9 @@
       pct = Math.max(15, Math.min(85, pct));
 
       workspaceContainer.style.setProperty('--editor-pane-width', `${pct}%`);
+      if (typeof window.updateDrawerOverlayBounds === 'function') {
+        window.updateDrawerOverlayBounds();
+      }
       try {
         localStorage.setItem('vienix_split_pct', pct.toFixed(1));
         localStorage.setItem('yaser_split_pct', pct.toFixed(1));
@@ -4433,6 +5660,9 @@
     const workspaceContainer = document.getElementById('workspace');
     if (!workspaceContainer) return;
     workspaceContainer.style.setProperty('--editor-pane-width', '50%');
+    if (typeof window.updateDrawerOverlayBounds === 'function') {
+      window.updateDrawerOverlayBounds();
+    }
     try {
       localStorage.setItem('vienix_split_pct', '50');
       localStorage.setItem('yaser_split_pct', '50');

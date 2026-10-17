@@ -2413,6 +2413,61 @@ body.is-resizing-workspace .workspace-resizer {
   box-shadow: 0 0 5px rgba(255, 255, 255, 0.9);
 }
 
+/* الحجرة المخصصة لعرض ملفات المستكشف (رقم 8 سابقاً بدون رقم مع نقطة خضراء) */
+.chamber-btn.chamber-file-dedicated {
+  border: 1.5px solid rgba(16, 185, 129, 0.45) !important;
+  background: rgba(16, 185, 129, 0.08) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.chamber-btn.chamber-file-dedicated:hover {
+  border-color: #10b981 !important;
+  background: rgba(16, 185, 129, 0.16) !important;
+  transform: translateY(-1px);
+}
+.chamber-btn.chamber-file-dedicated.active {
+  background: #059669 !important;
+  border-color: #059669 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.45) !important;
+}
+.chamber-green-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.8);
+  display: inline-block;
+  transition: all 0.2s ease;
+}
+.chamber-btn.chamber-file-dedicated.active .chamber-green-dot {
+  background: #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.95);
+  transform: scale(1.15);
+}
+
+.obsidian-tree-item.is-folder-file.active-in-preview {
+  background: rgba(16, 185, 129, 0.12) !important;
+  border-inline-end: 3px solid #10b981 !important;
+}
+.obsidian-file-viewing-badge {
+  font-size: 0.68rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(16, 185, 129, 0.18);
+  color: #059669;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-inline-start: 6px;
+}
+[data-theme="dark"] .obsidian-file-viewing-badge {
+  background: rgba(16, 185, 129, 0.25);
+  color: #34d399;
+}
+
 /* زر المقارنة والمطابقة */
 .chamber-diff-btn {
   height: 26px;
@@ -2571,14 +2626,15 @@ body.is-resizing-workspace .workspace-resizer {
 
 .explorer-drawer-overlay {
   position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 9998;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.25s ease, visibility 0.25s ease;
+  pointer-events: auto;
+  border-radius: 4px;
 }
 
 .explorer-drawer-overlay.active {
@@ -2872,6 +2928,26 @@ body.is-resizing-workspace .workspace-resizer {
   display: none;
 }
 
+/* المجلدات الفرعية المتفرعة (Sub-folders inside Tree) */
+.obsidian-folder.sub-folder {
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
+.obsidian-folder.sub-folder .obsidian-folder-header {
+  padding: 4px 6px;
+  font-size: 0.79rem;
+  border-radius: 4px;
+}
+
+.obsidian-folder.sub-folder .obsidian-folder-header:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .obsidian-folder.sub-folder .obsidian-folder-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
 /* عنصر الحجرة الشجري بنمط أوبسيديان Obsidian Tree Item */
 .obsidian-tree-item {
   display: flex;
@@ -2891,6 +2967,73 @@ body.is-resizing-workspace .workspace-resizer {
 
 [data-theme="dark"] .obsidian-tree-item:hover {
   background: rgba(255, 255, 255, 0.05);
+}
+
+/* سحب وإفلات الملفات لتغيير ترتيبها ومجلدها Drag and Drop */
+.obsidian-tree-item[draggable="true"] {
+  cursor: grab;
+}
+
+.obsidian-tree-item.is-dragging {
+  opacity: 0.35;
+  background: rgba(37, 99, 235, 0.08) !important;
+  outline: 1.5px dashed #2563eb;
+  cursor: grabbing;
+}
+
+.obsidian-tree-item.drag-over-top {
+  border-top: 2px solid #2563eb !important;
+  transform: translateY(1px);
+}
+
+.obsidian-tree-item.drag-over-bottom {
+  border-bottom: 2px solid #2563eb !important;
+  transform: translateY(-1px);
+}
+
+.obsidian-folder-children.folder-drag-over,
+.obsidian-folder-header.folder-drag-over {
+  background: rgba(37, 99, 235, 0.08);
+  border-radius: 4px;
+}
+
+/* سحب وإفلات المجلدات (Folder Drag & Drop) */
+.obsidian-folder-header[draggable="true"] {
+  cursor: grab;
+}
+
+.obsidian-folder-header[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.obsidian-folder.is-folder-dragging {
+  opacity: 0.45;
+  outline: 1.5px dashed #2563eb;
+  border-radius: 6px;
+}
+
+.obsidian-tree.root-drag-over {
+  background: rgba(37, 99, 235, 0.04);
+  outline: 2px dashed rgba(37, 99, 235, 0.4);
+  outline-offset: -2px;
+}
+
+/* شارة الحجرة المتزامنة حياً */
+.obsidian-link-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.1);
+  padding: 1px 5px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+[data-theme="dark"] .obsidian-link-badge {
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.18);
 }
 
 /* تمييز الحجرة النشطة بالنمط الهادئ */
