@@ -227,7 +227,7 @@
   }
 
   // ==========================================
-  // CHAMBERS CORE STORAGE & HELPERS
+  // CHAMBERS CORE STORAGE & METADATA HELPERS
   // ==========================================
 
   // الحصول على محتوى حجرة معينة
@@ -245,7 +245,79 @@
     return content !== null ? content : '';
   }
 
-  // حفظ محتوى حجرة معينة
+  // الحصول على الميتاداتا والتسمية المخصصة والمجلد لكل حجرة
+  function getChamberMeta(chNum) {
+    chNum = parseInt(chNum, 10);
+    const raw = getStored('vienix_chamber_meta_' + chNum, 'yaser_chamber_meta_' + chNum);
+    let meta = null;
+    if (raw) {
+      try {
+        meta = JSON.parse(raw);
+      } catch (e) {
+        meta = null;
+      }
+    }
+    if (!meta || typeof meta !== 'object') {
+      meta = {
+        customTitle: '',
+        folder: chNum <= 5 ? 'book' : 'drafts',
+        updatedAt: Date.now() - (TOTAL_CHAMBERS - chNum) * 120000,
+        words: 0,
+        chars: 0
+      };
+    }
+    return meta;
+  }
+
+  // حفظ الميتاداتا
+  function saveChamberMeta(chNum, meta) {
+    chNum = parseInt(chNum, 10);
+    const jsonStr = JSON.stringify(meta);
+    safeSaveToStorage('vienix_chamber_meta_' + chNum, jsonStr);
+    safeSaveToStorage('yaser_chamber_meta_' + chNum, jsonStr);
+  }
+
+  // تحديث إحصائيات الحجرة التلقائية
+  function updateChamberMetaStats(chNum, content) {
+    chNum = parseInt(chNum, 10);
+    const text = typeof content === 'string' ? content : (getChamberContent(chNum) || '');
+    const meta = getChamberMeta(chNum);
+    const textWithoutDataUrls = text.replace(/data:image\/[^"')\s]+/g, '[صورة]');
+    const trimmed = textWithoutDataUrls.trim();
+    const words = trimmed ? (trimmed.match(/[\w\u0600-\u06FF]+/g) || []).length : 0;
+    meta.words = words;
+    meta.chars = trimmed.length;
+    meta.updatedAt = Date.now();
+    saveChamberMeta(chNum, meta);
+  }
+
+  // تعيين اسم مخصص للحجرة
+  window.setChamberCustomTitle = function (chNum, newTitle) {
+    chNum = parseInt(chNum, 10);
+    const meta = getChamberMeta(chNum);
+    meta.customTitle = (newTitle || '').trim();
+    saveChamberMeta(chNum, meta);
+    updateChambersUI();
+    if (typeof renderChambersExplorerTree === 'function') {
+      renderChambersExplorerTree();
+    }
+    showToast(`تم حفظ مسمى الحجرة ${chNum} بنجاح! ✏️`, 'success', 1200);
+  };
+
+  // نقل الحجرة بين المجلدات (book, drafts, archive)
+  window.moveChamberToFolder = function (chNum, targetFolder) {
+    chNum = parseInt(chNum, 10);
+    const meta = getChamberMeta(chNum);
+    meta.folder = targetFolder;
+    saveChamberMeta(chNum, meta);
+    if (typeof renderChambersExplorerTree === 'function') {
+      renderChambersExplorerTree();
+    }
+    const folderNames = { book: 'فصول الكتاب', drafts: 'المسودات', archive: 'الأرشيف' };
+    showToast(`تم نقل الحجرة ${chNum} إلى ${folderNames[targetFolder] || targetFolder} 📂`, 'info', 1200);
+  };
+
+  // حفظ محتوى حجرة معينة وتحديث الإحصائيات
   function setChamberContent(chNum, content) {
     safeSaveToStorage('vienix_chamber_' + chNum, content);
     safeSaveToStorage('yaser_chamber_' + chNum, content);
@@ -253,10 +325,20 @@
       safeSaveToStorage('vienix_md_content', content);
       safeSaveToStorage('yaser_md_content', content);
     }
+    updateChamberMetaStats(chNum, content);
+    if (typeof isExplorerOpen !== 'undefined' && isExplorerOpen && typeof renderChambersExplorerTree === 'function') {
+      renderChambersExplorerTree();
+    }
   }
 
-  // استخراج عنوان الحجرة الذكي من أول سطر أو عنوان
-  function getChamberTitle(chNum) {
+  // استخراج عنوان الحجرة الذكي أو المخصص
+  function getChamberTitle(chNum, fallbackToAuto = true) {
+    const meta = getChamberMeta(chNum);
+    if (meta && meta.customTitle && meta.customTitle.trim().length > 0) {
+      return meta.customTitle.trim();
+    }
+    if (!fallbackToAuto) return '';
+
     const text = getChamberContent(chNum).trim();
     if (!text) return 'فارغة';
     const lines = text.split('\n');
@@ -265,10 +347,36 @@
       if (!line) continue;
       const clean = line.replace(/^[#\-*>]+\s*/, '').replace(/[*_~`]/g, '').trim();
       if (clean) {
-        return clean.length > 22 ? clean.substring(0, 22) + '...' : clean;
+        return clean.length > 25 ? clean.substring(0, 25) + '...' : clean;
       }
     }
     return `محتوى (${text.length} حرف)`;
+  }
+
+  // دالة تحويل التوقيت إلى صيغة نسبية باللغة العربية
+  function formatRelativeTimeArabic(timestamp) {
+    if (!timestamp) return 'الآن';
+    const now = Date.now();
+    const diffMs = now - timestamp;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHour / 24);
+
+    if (diffSec < 45) return 'الآن';
+    if (diffMin === 1) return 'منذ دقيقة';
+    if (diffMin === 2) return 'منذ دقيقتين';
+    if (diffMin < 11) return `منذ ${diffMin} دقائق`;
+    if (diffMin < 60) return `منذ ${diffMin} دقيقة`;
+    if (diffHour === 1) return 'منذ ساعة';
+    if (diffHour === 2) return 'منذ ساعتين';
+    if (diffHour < 24) return `منذ ${diffHour} ساعة`;
+    if (diffDays === 1) return 'أمس';
+    if (diffDays === 2) return 'منذ يومين';
+    if (diffDays < 7) return `منذ ${diffDays} أيام`;
+
+    const d = new Date(timestamp);
+    return `${d.getDate()}/${d.getMonth() + 1}`;
   }
 
   // Load Initial Content
@@ -1412,6 +1520,9 @@
     }
 
     updateBookChambersList();
+    if (typeof isExplorerOpen !== 'undefined' && isExplorerOpen && typeof renderChambersExplorerTree === 'function') {
+      renderChambersExplorerTree();
+    }
   }
 
   // التبديل بين الحجرات بسلاسة وحفظ فوري
@@ -1479,6 +1590,23 @@
     menu.style.top = y + 'px';
   }
 
+  window.contextRenameChamber = function () {
+    const menu = document.getElementById('chamber-context-menu');
+    if (menu) menu.style.display = 'none';
+    if (!contextTargetChamber) return;
+    const currentName = getChamberTitle(contextTargetChamber);
+    const newName = prompt(`أدخل المسمى المخصص للحجرة ${contextTargetChamber}:`, currentName === 'فارغة' ? '' : currentName);
+    if (newName !== null) {
+      window.setChamberCustomTitle(contextTargetChamber, newName);
+    }
+  };
+
+  window.contextOpenInExplorer = function () {
+    const menu = document.getElementById('chamber-context-menu');
+    if (menu) menu.style.display = 'none';
+    window.toggleChambersExplorer(true);
+  };
+
   window.contextClearChamber = function () {
     const menu = document.getElementById('chamber-context-menu');
     if (menu) menu.style.display = 'none';
@@ -1489,6 +1617,9 @@
     } else {
       setChamberContent(contextTargetChamber, '');
       updateChambersUI();
+      if (typeof renderChambersExplorerTree === 'function') {
+        renderChambersExplorerTree();
+      }
       showToast(`تم إفراغ الحجرة ${contextTargetChamber}`, 'info', 1200);
     }
   };
@@ -1512,6 +1643,456 @@
     if (menu) menu.style.display = 'none';
     if (!contextTargetChamber) return;
     window.openChambersDiffModal(activeChamber, contextTargetChamber);
+  };
+
+  // ==========================================
+  // CHAMBERS EXPLORER DRAWER CONTROLLER (مستكشف الفصول والمجلدات)
+  // ==========================================
+
+  let isExplorerOpen = false;
+  let explorerSearchFilter = '';
+  const collapsedFolders = { archive: true };
+  let moveFolderTargetChamber = null;
+
+  window.toggleChambersExplorer = function (forceState) {
+    const drawer = document.getElementById('explorer-drawer');
+    const overlay = document.getElementById('explorer-drawer-overlay');
+    if (!drawer || !overlay) return;
+
+    if (typeof forceState === 'boolean') {
+      isExplorerOpen = forceState;
+    } else {
+      isExplorerOpen = !isExplorerOpen;
+    }
+
+    drawer.classList.toggle('active', isExplorerOpen);
+    overlay.classList.toggle('active', isExplorerOpen);
+
+    if (isExplorerOpen) {
+      renderChambersExplorerTree();
+      setTimeout(() => {
+        document.getElementById('explorer-search-input')?.focus();
+      }, 100);
+    }
+  };
+
+  window.closeChambersExplorer = function (e) {
+    if (e && e.target && e.target.id !== 'explorer-drawer-overlay') return;
+    window.toggleChambersExplorer(false);
+  };
+
+  window.refreshExplorerData = function () {
+    const refreshBtn = document.getElementById('btn-refresh-explorer-header');
+    if (refreshBtn) {
+      refreshBtn.classList.add('spinning');
+      setTimeout(() => {
+        refreshBtn.classList.remove('spinning');
+      }, 600);
+    }
+
+    // إعادة مسح وحساب إحصائيات كافة الحجرات
+    for (let i = 1; i <= TOTAL_CHAMBERS; i++) {
+      updateChamberMetaStats(i);
+    }
+
+    renderChambersExplorerTree();
+    updateChambersUI();
+    showToast('تم تحديث وإعادة حساب إحصائيات المستكشف! 🔄', 'info', 1200);
+  };
+
+  window.toggleTreeFolder = function (folderKey) {
+    collapsedFolders[folderKey] = !collapsedFolders[folderKey];
+    renderChambersExplorerTree();
+  };
+
+  window.filterExplorerItems = function (keyword) {
+    explorerSearchFilter = (keyword || '').trim().toLowerCase();
+    const clearBtn = document.getElementById('explorer-search-clear');
+    if (clearBtn) {
+      clearBtn.style.display = explorerSearchFilter.length > 0 ? 'block' : 'none';
+    }
+    renderChambersExplorerTree();
+  };
+
+  window.clearExplorerSearch = function () {
+    const input = document.getElementById('explorer-search-input');
+    if (input) input.value = '';
+    window.filterExplorerItems('');
+  };
+
+  // ==========================================
+  // نافذة إنشاء فصل / مسودة جديدة (New Chamber Modal)
+  // ==========================================
+  window.openNewChamberModal = function () {
+    const modal = document.getElementById('new-chamber-modal');
+    const select = document.getElementById('new-chamber-target-select');
+    const titleInput = document.getElementById('new-chamber-title-input');
+    if (!modal || !select) return;
+
+    select.innerHTML = '';
+    let firstEmptyChamber = null;
+
+    for (let i = 1; i <= TOTAL_CHAMBERS; i++) {
+      const isFilled = getChamberContent(i).trim().length > 0;
+      const title = getChamberTitle(i);
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `حجرة ${i}: ${isFilled ? `(ممتلئة - ${title})` : '✨ (فارغة ومتاحة)'}`;
+      if (!isFilled && firstEmptyChamber === null) {
+        firstEmptyChamber = i;
+        opt.selected = true;
+      }
+      select.appendChild(opt);
+    }
+
+    if (firstEmptyChamber === null) {
+      select.value = activeChamber;
+    }
+
+    if (titleInput) {
+      titleInput.value = '';
+    }
+
+    modal.style.display = 'flex';
+    setTimeout(() => {
+      titleInput?.focus();
+    }, 100);
+  };
+
+  window.closeNewChamberModal = function (e) {
+    if (e && e.target && e.target.id !== 'new-chamber-modal' && !e.target.classList.contains('diff-modal-close') && e.target.tagName !== 'BUTTON') {
+      return;
+    }
+    const modal = document.getElementById('new-chamber-modal');
+    if (modal) modal.style.display = 'none';
+  };
+
+  window.confirmCreateNewChamber = function () {
+    const modal = document.getElementById('new-chamber-modal');
+    const titleInput = document.getElementById('new-chamber-title-input');
+    const folderSelect = document.getElementById('new-chamber-folder-select');
+    const targetSelect = document.getElementById('new-chamber-target-select');
+
+    const targetChamber = parseInt(targetSelect?.value || '1', 10);
+    const chosenFolder = folderSelect?.value || 'drafts';
+    const customTitle = (titleInput?.value || '').trim() || `مسودة حجرة ${targetChamber}`;
+
+    // تحديث الميتاداتا
+    const meta = getChamberMeta(targetChamber);
+    meta.customTitle = customTitle;
+    meta.folder = chosenFolder;
+    meta.updatedAt = Date.now();
+    saveChamberMeta(targetChamber, meta);
+
+    // إذا كانت الحجرة فارغة ولم يكتب فيها بعد، نضع عنواناً مبدئياً
+    if (getChamberContent(targetChamber).trim().length === 0) {
+      const initialText = `# ${customTitle}\n\nاكتب هنا محتوى ${customTitle}...`;
+      setChamberContent(targetChamber, initialText);
+    }
+
+    // التبديل إلى الحجرة فوراً
+    window.switchChamber(targetChamber);
+
+    if (modal) modal.style.display = 'none';
+    renderChambersExplorerTree();
+    showToast(`تم إنشاء "${customTitle}" في الحجرة ${targetChamber} بنجاح! ✨`, 'success', 1800);
+  };
+
+  // ==========================================
+  // نافذة نقل الحجرة إلى مجلد آخر (Move Folder Modal)
+  // ==========================================
+  window.openMoveFolderModal = function (chNum, e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    moveFolderTargetChamber = parseInt(chNum, 10);
+    const modal = document.getElementById('move-folder-modal');
+    const desc = document.getElementById('move-folder-chamber-desc');
+    if (!modal) return;
+
+    const title = getChamberTitle(moveFolderTargetChamber);
+    if (desc) {
+      desc.textContent = `اختر المجلد الذي ترغب بنقل (حجرة ${moveFolderTargetChamber}: ${title}) إليه:`;
+    }
+
+    modal.style.display = 'flex';
+  };
+
+  window.closeMoveFolderModal = function (e) {
+    if (e && e.target && e.target.id !== 'move-folder-modal' && !e.target.classList.contains('diff-modal-close')) {
+      return;
+    }
+    const modal = document.getElementById('move-folder-modal');
+    if (modal) modal.style.display = 'none';
+  };
+
+  window.confirmMoveFolder = function (targetFolder) {
+    if (!moveFolderTargetChamber) return;
+    window.moveChamberToFolder(moveFolderTargetChamber, targetFolder);
+    const modal = document.getElementById('move-folder-modal');
+    if (modal) modal.style.display = 'none';
+  };
+
+  // ==========================================
+  // رندرة شجرة المجلدات والفصول (Explorer Tree View)
+  // ==========================================
+  function renderChambersExplorerTree() {
+    const treeEl = document.getElementById('explorer-tree');
+    if (!treeEl) return;
+
+    const foldersDef = [
+      { key: 'book', name: 'فصول الكتاب الرئيسي', desc: 'مخصصة للتجميع والطباعة' },
+      { key: 'drafts', name: 'المسودات والأفكار السريعة', desc: 'مسودات وملاحظات حرة' },
+      { key: 'archive', name: 'الأرشيف والمفرغات', desc: 'المحفوظات الاحتياطية' }
+    ];
+
+    let totalProjectWords = 0;
+    let filledChambersCount = 0;
+    const folderBuckets = { book: [], drafts: [], archive: [] };
+
+    for (let i = 1; i <= TOTAL_CHAMBERS; i++) {
+      const content = getChamberContent(i);
+      const isFilled = content.trim().length > 0;
+      const meta = getChamberMeta(i);
+      const title = getChamberTitle(i);
+      const words = meta.words || 0;
+      const chars = meta.chars || 0;
+      const updatedAt = meta.updatedAt || Date.now();
+      const isActive = i === activeChamber;
+
+      if (isFilled) {
+        filledChambersCount++;
+        totalProjectWords += words;
+      }
+
+      if (explorerSearchFilter) {
+        const matchTitle = title.toLowerCase().includes(explorerSearchFilter);
+        const matchContent = content.toLowerCase().includes(explorerSearchFilter);
+        const matchNum = i.toString() === explorerSearchFilter;
+        if (!matchTitle && !matchContent && !matchNum) {
+          continue;
+        }
+      }
+
+      let assignedFolder = meta.folder || (i <= 5 ? 'book' : 'drafts');
+      if (!folderBuckets[assignedFolder]) assignedFolder = 'drafts';
+
+      folderBuckets[assignedFolder].push({
+        num: i,
+        title,
+        isCustom: !!(meta.customTitle && meta.customTitle.trim()),
+        content,
+        isFilled,
+        isActive,
+        words,
+        chars,
+        updatedAt,
+        folder: assignedFolder
+      });
+    }
+
+    const totalWordsEl = document.getElementById('explorer-total-words');
+    const filledCountEl = document.getElementById('explorer-filled-count');
+    const activeNumEl = document.getElementById('explorer-active-num');
+    if (totalWordsEl) totalWordsEl.textContent = totalProjectWords.toLocaleString('ar-EG');
+    if (filledCountEl) filledCountEl.textContent = `${filledChambersCount}/${TOTAL_CHAMBERS}`;
+    if (activeNumEl) activeNumEl.textContent = `#${activeChamber}`;
+
+    let treeHTML = '';
+
+    foldersDef.forEach(f => {
+      const items = folderBuckets[f.key] || [];
+      const isCollapsed = !!collapsedFolders[f.key];
+      const count = items.length;
+
+      const folderSvg = `
+        <svg class="win-folder-svg sm" viewBox="0 0 24 24" width="16" height="16" fill="none">
+          <path d="M2.5 5.5C2.5 4.39543 3.39543 3.5 4.5 3.5H9.2C9.7 3.5 10.2 3.7 10.6 4.1L12.4 5.9C12.8 6.3 13.3 6.5 13.8 6.5H19.5C20.6 6.5 21.5 7.4 21.5 8.5V10H2.5V5.5Z" fill="${f.key === 'archive' ? '#64748b' : '#D97706'}"/>
+          <path d="M3 8.5H21V18C21 19.1 20.1 20 19 20H5C3.9 20 3 19.1 3 18V8.5Z" fill="${f.key === 'archive' ? '#cbd5e1' : '#FDE68A'}"/>
+          <path d="M2 9.5C2 8.67 2.67 8 3.5 8H20.5C21.33 8 22 8.67 22 9.5V18C22 19.38 20.88 20.5 19.5 20.5H4.5C3.12 20.5 2 19.38 2 18V9.5Z" fill="${f.key === 'archive' ? '#94a3b8' : '#F59E0B'}"/>
+        </svg>
+      `;
+
+      treeHTML += `
+        <div class="tree-folder ${isCollapsed ? 'collapsed' : ''}" id="tree-folder-${f.key}">
+          <div class="tree-folder-header" onclick="toggleTreeFolder('${f.key}')" title="${f.desc}">
+            <span class="folder-caret">${isCollapsed ? '◀' : '▼'}</span>
+            ${folderSvg}
+            <span class="folder-name">${f.name}</span>
+            <span class="folder-count">${count}</span>
+          </div>
+          <div class="tree-folder-children" id="tree-children-${f.key}">
+      `;
+
+      if (items.length === 0) {
+        treeHTML += `
+          <div style="padding: 10px 14px; font-size: 0.76rem; color: #94a3b8; text-align: center;">
+            لا توجد حجرات هنا حالياً
+          </div>
+        `;
+      } else {
+        items.forEach(item => {
+          const relTime = formatRelativeTimeArabic(item.updatedAt);
+          const wordsStr = item.isFilled ? `${item.words.toLocaleString('ar-EG')} كلمة` : 'فارغة';
+
+          // أيقونات الإجراءات بنظام SVG فائق الوضوح
+          const editIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+          const moveIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
+          const copyIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+          const clearIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+
+          treeHTML += `
+            <div class="tree-item ${item.isActive ? 'active' : ''}" id="tree-item-${item.num}" onclick="handleTreeItemClick(event, ${item.num})">
+              <span class="tree-item-num" title="رقم الحجرة">${item.num}</span>
+              <div class="tree-item-main">
+                <div class="tree-item-title-row" id="tree-title-row-${item.num}">
+                  <span class="tree-item-title" id="tree-title-${item.num}" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</span>
+                  ${item.isActive ? '<span class="tree-item-badge-active">النشطة</span>' : ''}
+                </div>
+                <div class="tree-item-meta">
+                  <span class="stat-dot ${item.isFilled ? 'filled' : 'empty'}"></span>
+                  <span>${wordsStr}</span>
+                  <span>•</span>
+                  <span title="وقت آخر تعديل">${relTime}</span>
+                </div>
+              </div>
+              <div class="tree-item-actions">
+                <button type="button" class="tree-action-btn" onclick="startTreeInlineRename(event, ${item.num})" title="إعادة تسمية مخصصة">
+                  ${editIcon}
+                </button>
+                <button type="button" class="tree-action-btn" onclick="openMoveFolderModal(${item.num}, event)" title="نقل لمجلد آخر">
+                  ${moveIcon}
+                </button>
+                <button type="button" class="tree-action-btn" onclick="copyChamberFromTree(event, ${item.num})" title="نسخ المحتوى">
+                  ${copyIcon}
+                </button>
+                <button type="button" class="tree-action-btn danger" onclick="clearChamberFromTree(event, ${item.num})" title="تفريغ الحجرة">
+                  ${clearIcon}
+                </button>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      treeHTML += `
+          </div>
+        </div>
+      `;
+    });
+
+    treeEl.innerHTML = treeHTML;
+  }
+
+  window.handleTreeItemClick = function (e, chNum) {
+    if (e.target.closest('.tree-item-actions') || e.target.closest('.tree-inline-edit-box')) {
+      return;
+    }
+    window.switchChamber(chNum);
+    renderChambersExplorerTree();
+  };
+
+  // ==========================================
+  // إعادة التسمية التفاعلية المباشرة (Inline Rename)
+  // ==========================================
+  window.startTreeInlineRename = function (e, chNum) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const titleRow = document.getElementById('tree-title-row-' + chNum);
+    if (!titleRow) return;
+
+    const currentTitle = getChamberTitle(chNum);
+    const initialVal = (currentTitle === 'فارغة' || currentTitle.startsWith('محتوى (')) ? '' : currentTitle;
+
+    titleRow.innerHTML = `
+      <div class="tree-inline-edit-box" onclick="event.stopPropagation()">
+        <input type="text" class="tree-rename-input" id="tree-rename-input-${chNum}" value="${escapeHtml(initialVal)}" placeholder="اكتب اسم الحجرة..." />
+        <button type="button" class="tree-edit-save-btn" onclick="saveTreeInlineRename(event, ${chNum})" title="حفظ الاسم">✓</button>
+        <button type="button" class="tree-edit-cancel-btn" onclick="cancelTreeInlineRename(event)" title="إلغاء">✕</button>
+      </div>
+    `;
+
+    const input = document.getElementById('tree-rename-input-' + chNum);
+    if (input) {
+      input.focus();
+      input.select();
+      input.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          window.saveTreeInlineRename(ev, chNum);
+        } else if (ev.key === 'Escape') {
+          ev.preventDefault();
+          window.cancelTreeInlineRename(ev);
+        }
+      });
+    }
+  };
+
+  window.saveTreeInlineRename = function (e, chNum) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const input = document.getElementById('tree-rename-input-' + chNum);
+    const val = input ? input.value.trim() : '';
+    window.setChamberCustomTitle(chNum, val);
+  };
+
+  window.cancelTreeInlineRename = function (e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    renderChambersExplorerTree();
+  };
+
+  // ==========================================
+  // نسخ وتفريغ الحجرة من الشجرة
+  // ==========================================
+  window.copyChamberFromTree = function (e, chNum) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const val = getChamberContent(chNum);
+    if (!val || val.trim() === '') {
+      showToast(`الحجرة ${chNum} فارغة حالياً، لا يوجد نص لنسخه!`, 'info', 1600);
+      return;
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(val).then(() => {
+        showToast(`تم نسخ محتوى الحجرة ${chNum} للحافظة بنجاح! 📋`, 'success', 1500);
+      }).catch(() => {
+        fallbackCopyText(val, chNum);
+      });
+    } else {
+      fallbackCopyText(val, chNum);
+    }
+  };
+
+  function fallbackCopyText(text, chNum) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast(`تم نسخ محتوى الحجرة ${chNum}! 📋`, 'success', 1500);
+  }
+
+  window.clearChamberFromTree = function (e, chNum) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const val = getChamberContent(chNum);
+    if (!val || val.trim() === '') {
+      showToast(`الحجرة ${chNum} فارغة بالفعل! ✨`, 'info', 1400);
+      return;
+    }
+
+    const title = getChamberTitle(chNum);
+    if (!confirm(`هل أنت متأكد من تفريغ الحجرة ${chNum} (${title})؟`)) return;
+
+    if (chNum === activeChamber) {
+      window.clearWorkspaceContent();
+    } else {
+      setChamberContent(chNum, '');
+      const meta = getChamberMeta(chNum);
+      meta.customTitle = '';
+      meta.words = 0;
+      meta.chars = 0;
+      saveChamberMeta(chNum, meta);
+      updateChambersUI();
+      renderChambersExplorerTree();
+      showToast(`تم إفراغ الحجرة ${chNum} بنجاح 🗑️`, 'info', 1500);
+    }
   };
 
   // ==========================================
