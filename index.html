@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Vienix Markdown Editor - محرر ماركداون احترافي يدعم اللغة العربية والكتابة من اليمين لليسار، المخططات التفاعلية، وتصدير PDF و DOCX و HTML">
+  <meta name="keywords" content="Markdown, Arabic, RTL, Mermaid, Editor, PDF, DOCX, محرر ماركداون, مخططات">
+  <meta name="author" content="Vienix / Yaser Hasan">
+
+  <title>Vienix Markdown Editor | محرر ماركداون الاحترافي</title>
+
+  <!-- Local Fonts & Styles -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233b82f6'><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/><polyline points='14 2 14 8 20 8' fill='%232563eb'/></svg>">
+  <!-- Typography & Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Fira+Code:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/earlyaccess/droidarabicnaskh.css">
+  <link rel="stylesheet" href="assets/fonts/tajawal.css">
+  <link rel="stylesheet" href="app/css/style.css?v=chambers3">
+  <link rel="stylesheet" href="app/css/classic.css?v=chambers3">
+</head>
+<body>
+
+  <div class="app-wrapper" id="modern-app-wrapper">
+
+    <!-- Header Section -->
+    <header class="app-header">
+      <div class="brand-section">
+        <div class="brand-logo" title="Vienix Markdown Editor">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </div>
+        <div class="brand-titles">
+          <div class="brand-title">
+            <span>Vienix Markdown Editor</span>
+            <span class="badge-tag">RTL Pro</span>
+          </div>
+          <p class="brand-subtitle">محرر ماركداون عربي احترافي • مخططات ذكية • تصدير مباشر</p>
+        </div>
+      </div>
+
+      <!-- Main Action Controls: Copy & Export & Classic Mode -->
+      <div class="header-actions">
+
+        <!-- زر التبديل إلى الوضع الكلاسيكي (Classic Mode) -->
+        <button class="btn btn-outline-classic" id="btn-toggle-classic" onclick="toggleClassicMode()" title="التبديل إلى الوضع الكلاسيكي القديم (Classic 2014)">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
+          </svg>
+          <span class="btn-text">الوضع الكلاسيكي</span>
+        </button>
+
+        <!-- 1. زر النسخ (Copy Group) -->
+        <div class="dropdown-container" id="copy-dropdown-container">
+          <button class="btn btn-primary" onclick="copyMarkdown()" title="نسخ كود الماركداون مباشرة (أو افتح السهم لخيارات أخرى)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span class="btn-text">نسخ المحتوى</span>
+          </button>
+          <button class="btn btn-primary" style="padding: 7px 8px; margin-left: -4px; border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 1px solid rgba(255,255,255,0.25);" onclick="toggleDropdown('copy-dropdown-container', event)" title="خيارات نسخ إضافية">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="dropdown-menu">
+            <button class="dropdown-item" onclick="copyMarkdown()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+              <span>نسخ كود الماركداون (.md)</span>
+            </button>
+            <button class="dropdown-item" onclick="copyHTML()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+              <span>نسخ كود HTML المعروض</span>
+            </button>
+            <button class="dropdown-item" onclick="copyRichText()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span>نسخ كنص منسق (جاهز للصق بالوورد)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. قائمة التصدير والتحميل (Export Group: PDF, DOCX, HTML, MD) -->
+        <div class="dropdown-container" id="export-dropdown-container">
+          <button class="btn btn-success" onclick="toggleDropdown('export-dropdown-container', event)" title="تصدير المستند بصيغ متعددة">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span class="btn-text">تصدير وتحميل</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;margin-right:2px;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <div class="dropdown-menu">
+            <!-- PDF Export -->
+            <button class="dropdown-item" onclick="exportPDF()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><text x="8" y="18" font-size="6" font-weight="bold" fill="#ef4444">PDF</text></svg>
+              <span>تصدير ملف PDF عالي الجودة (.pdf)</span>
+            </button>
+            <!-- DOCX Export -->
+            <button class="dropdown-item" onclick="exportDOCX()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><text x="6.5" y="18" font-size="5" font-weight="bold" fill="#2563eb">DOC</text></svg>
+              <span>تصدير مستند Word (.docx)</span>
+            </button>
+            <!-- HTML Export -->
+            <button class="dropdown-item" onclick="exportHTML()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+              <span>تصدير صفحة ويب مستقلة (.html)</span>
+            </button>
+            <div class="dropdown-divider"></div>
+            <!-- Markdown Export -->
+            <button class="dropdown-item" onclick="saveMarkdownFile()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>حفظ كملف Markdown (.md)</span>
+            </button>
+            <!-- High Quality Print -->
+            <button class="dropdown-item" onclick="printPDF()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+              <span>طباعة المستند مباشرة 🖨️</span>
+            </button>
+            <div class="dropdown-divider"></div>
+            <!-- Book Export -->
+            <button class="dropdown-item" onclick="openBookModal()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+              <span>📖 تصدير ككتاب احترافي (PDF Book)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Theme Toggle -->
+        <button class="btn btn-ghost btn-icon-only" onclick="toggleTheme()" title="تبديل الوضع الليلي / النهاري" id="theme-toggle-btn">
+          <span id="theme-toggle-icon">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </span>
+        </button>
+
+      </div>
+    </header>
+
+    <!-- Toolbar Section (Markdown Formatting & View Controls) -->
+    <div class="toolbar-container">
+      <div class="toolbar-group">
+        <!-- Bold -->
+        <button class="tool-btn" onclick="insertFormat('**', '**', 'نص عريض')" title="عريض (Ctrl+B)">
+          <strong>B</strong>
+        </button>
+        <!-- Italic -->
+        <button class="tool-btn" onclick="insertFormat('*', '*', 'نص مائل')" title="مائل (Ctrl+I)">
+          <em>I</em>
+        </button>
+        <!-- Strikethrough -->
+        <button class="tool-btn" onclick="insertFormat('~~', '~~', 'نص مشطوب')" title="يتوسطه خط">
+          <s>S</s>
+        </button>
+
+        <div class="toolbar-divider"></div>
+
+        <!-- Headings -->
+        <button class="tool-btn" onclick="insertHeading(1)" title="عنوان رئيسي H1">H1</button>
+        <button class="tool-btn" onclick="insertHeading(2)" title="عنوان فرعي H2">H2</button>
+        <button class="tool-btn" onclick="insertHeading(3)" title="عنوان ثالث H3">H3</button>
+
+        <div class="toolbar-divider"></div>
+
+        <!-- Lists -->
+        <button class="tool-btn" onclick="insertList(false)" title="قائمة نقطية">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+        </button>
+        <button class="tool-btn" onclick="insertList(true)" title="قائمة رقمية">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="10" y1="6" x2="21" y2="6"></line><line x1="10" y1="12" x2="21" y2="12"></line><line x1="10" y1="18" x2="21" y2="18"></line><path d="M4 6h1v4"></path><path d="M4 10h2"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg>
+        </button>
+        <button class="tool-btn" onclick="insertTask()" title="قائمة مهام قابلة للتحديد">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+        </button>
+
+        <div class="toolbar-divider"></div>
+
+        <!-- Blockquote -->
+        <button class="tool-btn" onclick="insertFormat('> ', '', 'اقتباس مميز')" title="اقتباس">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path></svg>
+        </button>
+        <!-- Code block -->
+        <button class="tool-btn" onclick="insertCodeBlock()" title="كتلة كود برمجي">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+        </button>
+        <!-- Table -->
+        <button class="tool-btn" onclick="insertTable()" title="إدراج جدول">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+        </button>
+        <!-- Link -->
+        <button class="tool-btn" onclick="insertLink()" title="إدراج رابط">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+        </button>
+        <!-- Image -->
+        <button class="tool-btn" onclick="insertImage()" title="إدراج صورة">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        </button>
+        <!-- Horizontal Rule -->
+        <button class="tool-btn" onclick="insertHorizontalRule()" title="إدراج خط فاصل (---)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+
+        <div class="toolbar-divider"></div>
+
+        <!-- DIAGRAMS DROPDOWN (دعم المخططات) -->
+        <div class="dropdown-container" id="diagram-dropdown-container">
+          <button class="btn btn-ghost" style="padding: 4px 10px; font-size: 0.85rem; border: 1px solid var(--border-color);" onclick="toggleDropdown('diagram-dropdown-container', event)" title="إدراج مخططات ورسوم بيانية Mermaid">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:#3b82f6;"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            <span style="font-weight:600;">المخططات (Mermaid) ▾</span>
+          </button>
+          <div class="dropdown-menu">
+            <button class="dropdown-item" onclick="insertDiagram('flowchart')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><path d="M10 6.5h4a2 2 0 0 1 2 2v5.5"></path></svg>
+              <span>مخطط تدفق العمليات (Flowchart)</span>
+            </button>
+            <button class="dropdown-item" onclick="insertDiagram('sequence')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="3" x2="6" y2="21"></line><line x1="18" y1="3" x2="18" y2="21"></line><line x1="6" y1="8" x2="18" y2="8"></line><polyline points="15 5 18 8 15 11"></polyline></svg>
+              <span>مخطط تسلسل الأحداث (Sequence)</span>
+            </button>
+            <button class="dropdown-item" onclick="insertDiagram('mindmap')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="8"></line><line x1="12" y1="16" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"></line><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"></line></svg>
+              <span>خريطة ذهنية ذكية (Mindmap)</span>
+            </button>
+            <button class="dropdown-item" onclick="insertDiagram('pie')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+              <span>مخطط دائري بياني (Pie Chart)</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="toolbar-divider"></div>
+
+        <!-- 1. مسح وتصفير المحتوى -->
+        <button class="tool-btn danger" id="btn-top-clear" onclick="clearWorkspaceContent()" title="تصفير (مسح المحتوى الحالي)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <line x1="10" y1="11" x2="10" y2="17"></line>
+            <line x1="14" y1="11" x2="14" y2="17"></line>
+          </svg>
+        </button>
+
+        <!-- 2. لصق من الحافظة -->
+        <button class="tool-btn" id="btn-top-paste" onclick="pasteWorkspaceContent()" title="لصق من الحافظة (Ctrl+V)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+          </svg>
+        </button>
+
+        <div class="toolbar-divider"></div>
+
+        <!-- نظام الحجرات التخزينية (Chambers 1-8) والمطابقة -->
+        <div class="chambers-container" id="chambers-container" role="region" aria-label="الحجرات التخزينية">
+          <span class="chambers-label" title="الحجرات: تتيح لك العمل على عدة مسودات ومطابقتها وفصول للكتاب دون مسح العمل">الحجرات:</span>
+          <div class="chambers-list" id="chambers-list">
+            <!-- سيتم توليد الأزرار من 1 إلى 8 ديناميكياً مع مؤشرات الامتلاء والفراغ -->
+          </div>
+          <button class="tool-btn chamber-diff-btn" id="btn-chamber-diff" onclick="openChambersDiffModal()" title="مطابقة ومقارنة محتوى حجرتين جنباً إلى جنب">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 3h5v5"></path>
+              <path d="M4 20L21 3"></path>
+              <path d="M21 16v5h-5"></path>
+              <path d="M15 15l6 6"></path>
+              <path d="M4 4l5 5"></path>
+            </svg>
+            <span class="chamber-diff-label">مطابقة</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- View Controls & Utilities -->
+      <div class="toolbar-group">
+        <!-- 1. زر إعادة تنصيف موقع الخط الفاصل (50% / 50%) -->
+        <button class="tool-btn" id="btn-reset-split" onclick="resetSplitPercentage()" title="إعادة تنصيف موقع الخط الفاصل (50% / 50%)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="12" y1="3" x2="12" y2="21"></line>
+            <polyline points="7 10 9 12 7 14"></polyline>
+            <polyline points="17 10 15 12 17 14"></polyline>
+          </svg>
+        </button>
+
+        <!-- 2. زر تبديل مظهر الخط الفاصل (خط رفيع / مقبض بارز) -->
+        <button class="tool-btn" id="btn-toggle-resizer-style" onclick="toggleResizerStyle()" title="تبديل مظهر الخط الفاصل (خط رفيع / مقبض بارز)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="3" x2="12" y2="21"></line>
+            <rect x="10" y="8" width="4" height="8" rx="1"></rect>
+            <line x1="4" y1="12" x2="7" y2="12"></line>
+            <line x1="17" y1="12" x2="20" y2="12"></line>
+          </svg>
+        </button>
+
+        <div class="toolbar-divider"></div>
+
+        <!-- Workspace Zoom Controls (تكبير وتصغير مساحات العمل) -->
+        <button class="tool-btn" id="btn-zoom-out" onclick="zoomWorkspace(-1)" title="تصغير مساحة العمل (Ctrl+ -)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+        </button>
+        <button class="tool-btn" id="btn-zoom-in" onclick="zoomWorkspace(1)" title="تكبير مساحة العمل (Ctrl+ +)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+        </button>
+
+        <div class="toolbar-divider"></div>
+
+        <!-- Synchronized Scroll Toggle -->
+        <button class="tool-btn active" id="btn-sync-scroll" onclick="toggleSyncScroll()" title="تفعيل/تعطيل التمرير المتزامن">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 8 3 12 7 16"></polyline><polyline points="17 8 21 12 17 16"></polyline><line x1="3" y1="12" x2="21" y2="12"></line></svg>
+        </button>
+
+        <div class="toolbar-divider"></div>
+
+        <!-- Split / Full Editor / Full Preview Views -->
+        <button class="tool-btn view-toggle-btn active" id="btn-mode-split" onclick="setViewMode('split')" title="عرض مزدوج (محرر + معاينة)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="3" x2="12" y2="21"></line></svg>
+        </button>
+        <button class="tool-btn view-toggle-btn" id="btn-mode-editor" onclick="setViewMode('editor')" title="محرر فقط (وضع التركيز بالكتابة)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="8" y1="9" x2="16" y2="9"></line><line x1="8" y1="13" x2="16" y2="13"></line></svg>
+        </button>
+        <button class="tool-btn view-toggle-btn" id="btn-mode-preview" onclick="setViewMode('preview')" title="معاينة فقط (وضع القراءة)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        </button>
+
+        <div class="toolbar-divider"></div>
+
+        <!-- Reset to Sample -->
+        <button class="tool-btn" onclick="resetToSample()" title="استعادة النموذج التجريبي والشرح">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.2"/></svg>
+        </button>
+
+        <!-- Clear -->
+        <button class="tool-btn" onclick="clearEditor()" title="مسح النص بالكامل">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile View Tabs Switcher (Visible on <= 768px) -->
+    <div class="mobile-tabs-bar" id="mobile-tabs-bar">
+      <button class="mobile-tab-btn active" id="mobile-tab-editor" onclick="setViewMode('editor')" title="عرض المحرر">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+        <span>المحرر</span>
+      </button>
+      <button class="mobile-tab-btn" id="mobile-tab-preview" onclick="setViewMode('preview')" title="عرض المعاينة المباشرة">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        <span>المعاينة المباشرة</span>
+      </button>
+    </div>
+
+    <!-- Workspace (Editor & Live Preview Split) -->
+    <main class="workspace-container" id="workspace">
+
+      <!-- Editor Panel -->
+      <section class="panel panel-editor" id="panel-editor">
+        <div class="panel-header">
+          <span>محرر الماركداون (Markdown RTL)</span>
+          <span class="badge" id="save-status">تم الحفظ تلقائياً ✓</span>
+        </div>
+        <div class="editor-wrapper">
+          <textarea id="markdown-input" class="editor-textarea" placeholder="اكتب نص الماركداون هنا باللغة العربية... تدعم المخططات التفاعلية والأكواد والجداول" spellcheck="false"></textarea>
+
+          <!-- أدوات التحرير السريعة بأسفل يسار المحرر (التالي، السابق، تصفير) -->
+          <div class="editor-floating-actions" id="editor-floating-actions">
+            <!-- 1. التالي (Redo) -->
+            <button class="floating-tool-btn" id="btn-redo" onclick="redoAction()" title="التالي (إعادة الخطوة - Ctrl+Y)">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 14 20 9 15 4"></polyline>
+                <path d="M4 20v-7a4 4 0 0 1 4-4h12"></path>
+              </svg>
+            </button>
+            <!-- 2. السابق (Undo) -->
+            <button class="floating-tool-btn" id="btn-undo" onclick="undoAction()" title="السابق (تراجع - Ctrl+Z)">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 14 4 9 9 4"></polyline>
+                <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+              </svg>
+            </button>
+            <!-- 3. تصفير (مسح المحتوى الحالي) -->
+            <button class="floating-tool-btn danger" id="btn-clear-canvas" onclick="clearWorkspaceContent()" title="تصفير (مسح المحتوى الحالي)">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+              </svg>
+            </button>
+            <!-- 4. لصق (لصق من الحافظة) -->
+            <button class="floating-tool-btn" id="btn-paste-canvas" onclick="pasteWorkspaceContent()" title="لصق من الحافظة (Ctrl+V)">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Split Resizer Gutter (خط فاصل قابل للسحب لتعديل مقاس القسمين) -->
+      <div class="workspace-resizer" id="workspace-resizer" role="separator" aria-orientation="vertical" tabindex="0" title="اسحب لتعديل عرض المحرر والمعاينة (أو انقر نقراً مزدوجاً لإعادة التوسيط 50%)">
+        <div class="resizer-handle-line"></div>
+      </div>
+
+      <!-- Live Preview Panel -->
+      <section class="panel panel-preview" id="panel-preview">
+        <div class="panel-header">
+          <span>المعاينة المباشرة (Live Preview)</span>
+          <span class="badge">Mermaid & HTML</span>
+        </div>
+        <div class="preview-container" id="preview-output">
+          <article class="markdown-body" id="preview-content">
+            <!-- Rendered Output -->
+          </article>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Status Bar -->
+    <footer class="status-bar">
+      <div class="status-group">
+        <div class="status-item">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
+          <span id="stat-words">0 كلمة</span>
+        </div>
+        <div class="status-item">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <span id="stat-chars">0 حرف</span>
+        </div>
+        <div class="status-item">
+          <span id="stat-reading-time">دقيقة قراءة: ~0</span>
+        </div>
+      </div>
+
+      <div class="status-group status-copyright">
+        <span>جميع الحقوق محفوظة لـ <strong>Vienix Markdown Editor</strong> © 2026</span>
+      </div>
+
+      <div class="status-group status-left-group">
+        <span>جاهز للعمل بدون إنترنت 100% ⚡</span>
+        <span class="status-sep">|</span>
+        <div class="legal-dropdown-wrap" id="legal-dropdown-wrap">
+          <button type="button" class="legal-btn" id="legal-btn" onclick="toggleLegalMenu(event)" title="الصفحات القانونية والسياسات (AdSense Ready)">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            <span>Legal Pages</span>
+            <svg class="legal-caret" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
+          </button>
+          
+          <div class="legal-popover" id="legal-popover">
+            <div class="legal-popover-header">
+              <span>الصفحات القانونية والسياسات</span>
+              <a href="legal/index.html" target="_blank" title="فتح الفهرس في صفحة كاملة" class="legal-popover-all">عرض الكل ↗</a>
+            </div>
+            <div class="legal-popover-list">
+              <a href="legal/privacy.html" class="legal-popover-item" onclick="openLegalModal(event, 'privacy')">
+                <span class="legal-popover-icon">🛡️</span>
+                <span class="legal-popover-texts">
+                  <span class="legal-popover-title">سياسة الخصوصية</span>
+                  <span class="legal-popover-desc">Privacy Policy (AdSense & GDPR)</span>
+                </span>
+              </a>
+              <a href="legal/terms.html" class="legal-popover-item" onclick="openLegalModal(event, 'terms')">
+                <span class="legal-popover-icon">📜</span>
+                <span class="legal-popover-texts">
+                  <span class="legal-popover-title">شروط الاستخدام</span>
+                  <span class="legal-popover-desc">Terms of Service</span>
+                </span>
+              </a>
+              <a href="legal/impressum.html" class="legal-popover-item" onclick="openLegalModal(event, 'impressum')">
+                <span class="legal-popover-icon">🏛️</span>
+                <span class="legal-popover-texts">
+                  <span class="legal-popover-title">إشعار الناشر (Impressum)</span>
+                  <span class="legal-popover-desc">Legal Notice & Publisher info (§ 5 TMG)</span>
+                </span>
+              </a>
+              <a href="legal/license.html" class="legal-popover-item" onclick="openLegalModal(event, 'license')">
+                <span class="legal-popover-icon">⚖️</span>
+                <span class="legal-popover-texts">
+                  <span class="legal-popover-title">الرخصة والملكية</span>
+                  <span class="legal-popover-desc">MIT License & Copyright</span>
+                </span>
+              </a>
+              <a href="legal/disclaimer.html" class="legal-popover-item" onclick="openLegalModal(event, 'disclaimer')">
+                <span class="legal-popover-icon">⚠️</span>
+                <span class="legal-popover-texts">
+                  <span class="legal-popover-title">إخلاء المسؤولية</span>
+                  <span class="legal-popover-desc">Disclaimer & Data Safety</span>
+                </span>
+              </a>
+              <a href="legal/cookies.html" class="legal-popover-item" onclick="openLegalModal(event, 'cookies')">
+                <span class="legal-popover-icon">🍪</span>
+                <span class="legal-popover-texts">
+                  <span class="legal-popover-title">سياسة الكوكيز</span>
+                  <span class="legal-popover-desc">Cookie Policy & Storage</span>
+                </span>
+              </a>
+              <a href="legal/about.html" class="legal-popover-item" onclick="openLegalModal(event, 'about')">
+                <span class="legal-popover-icon">ℹ️</span>
+                <span class="legal-popover-texts">
+                  <span class="legal-popover-title">من نحن (About Us)</span>
+                  <span class="legal-popover-desc">عن المحرر والمطور ورسالة المشروع</span>
+                </span>
+              </a>
+              <a href="legal/contact.html" class="legal-popover-item" onclick="openLegalModal(event, 'contact')">
+                <span class="legal-popover-icon">✉️</span>
+                <span class="legal-popover-texts">
+                  <span class="legal-popover-title">اتصل بنا</span>
+                  <span class="legal-popover-desc">Contact Us & Support</span>
+                </span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+  </div> <!-- /#modern-app-wrapper -->
+
+  <!-- =========================================================
+       الواجهة الكلاسيكية الأصلية (Classic Mode - 2014 Pure RTL MD)
+       مطابقة 100% للشكل القديم مع إبقاء الأيقونات الثلاث واسم المشروع وحقوق الملكية
+       ========================================================= -->
+  <div id="classic-app-wrapper">
+    <!-- زر التبديل إلى الواجهة الحديثة (في نفس موضع وشكل زر الوضع الكلاسيكي تماماً) -->
+    <button class="btn btn-outline-classic classic-switch-btn" id="btn-classic-switch" onclick="toggleClassicMode()" title="التبديل إلى الواجهة الحديثة">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+        <line x1="8" y1="21" x2="16" y2="21"></line>
+        <line x1="12" y1="17" x2="12" y2="21"></line>
+      </svg>
+      <span class="btn-text">الواجهة الحديثة</span>
+    </button>
+
+    <!-- Header section -->
+    <div id="classic-header">
+      <h1 id="sitename">Vienix Markdown Editor</h1>
+      <p id="sitedescription">A fast simple right-to-left markdown editor</p>
+    </div>
+
+    <!-- Mobile view switch tabs for classic mode -->
+    <div class="classic-mobile-tabs" id="classic-mobile-tabs">
+      <button class="classic-tab-btn active" id="classic-tab-editor-btn" onclick="setClassicMobileTab('editor')">المحرر</button>
+      <button class="classic-tab-btn" id="classic-tab-preview-btn" onclick="setClassicMobileTab('preview')">المعاينة</button>
+    </div>
+
+    <!-- Editor (Pure CSS grid) -->
+    <div id="classic-editor" class="pure-g">
+      <div id="classic-textbox" class="pure-u-1-2">
+        <textarea id="classic-markdown-input" rows="40" placeholder="اكتب نص الماركداون هنا..."></textarea>
+
+        <!-- الأيقونات الثلاث (التالي، السابق، تصفير) مطلوبة في كلا الوضعين -->
+        <div class="editor-floating-actions classic-floating-actions" id="classic-floating-actions">
+          <!-- 1. التالي (Redo) -->
+          <button class="floating-tool-btn" id="btn-classic-redo" onclick="redoAction()" title="التالي (إعادة الخطوة - Ctrl+Y)">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 14 20 9 15 4"></polyline>
+              <path d="M4 20v-7a4 4 0 0 1 4-4h12"></path>
+            </svg>
+          </button>
+          <!-- 2. السابق (Undo) -->
+          <button class="floating-tool-btn" id="btn-classic-undo" onclick="undoAction()" title="السابق (تراجع - Ctrl+Z)">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 14 4 9 9 4"></polyline>
+              <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+            </svg>
+          </button>
+          <!-- 3. تصفير (مسح المحتوى الحالي) -->
+          <button class="floating-tool-btn danger" id="btn-classic-clear" onclick="clearWorkspaceContent()" title="تصفير (مسح المحتوى الحالي)">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              <line x1="10" y1="11" x2="10" y2="17"></line>
+              <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+          </button>
+          <!-- 4. لصق (لصق من الحافظة) -->
+          <button class="floating-tool-btn" id="btn-classic-paste" onclick="pasteWorkspaceContent()" title="لصق من الحافظة (Ctrl+V)">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div id="classic-output" class="pure-u-1-2">
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div id="classic-footer">
+      <p id="footercontent">جميع الحقوق محفوظة لـ <strong>Vienix Markdown Editor</strong> © 2026</p>
+    </div>
+  </div>
+
+  <!-- Book Export Modal (نافذة إعدادات تصدير الكتاب) -->
+  <div class="book-modal-overlay" id="book-modal-overlay" onclick="closeBookModal(event)">
+    <div class="book-modal" onclick="event.stopPropagation()">
+      <div class="book-modal-header">
+        <h2>📖 تصدير ككتاب احترافي</h2>
+        <button class="book-modal-close" onclick="closeBookModal()" title="إغلاق">&times;</button>
+      </div>
+      <div class="book-modal-body">
+        <!-- عنوان الكتاب وخيارات الغلاف والفهرس -->
+        <div class="book-field">
+          <div class="book-field-header">
+            <label for="book-title">عنوان الكتاب</label>
+            <div class="book-checkboxes-inline">
+              <label class="book-checkbox-inline" title="إنشاء صفحة غلاف للكتاب">
+                <input type="checkbox" id="book-include-cover" checked />
+                <span>إنشاء غلاف</span>
+              </label>
+              <label class="book-checkbox-inline" title="إنشاء صفحة فهرس محتويات">
+                <input type="checkbox" id="book-toc" checked />
+                <span>إنشاء فهرس</span>
+              </label>
+            </div>
+          </div>
+          <input type="text" id="book-title" placeholder="أدخل عنوان الكتاب..." value="كتابي" />
+        </div>
+        <!-- اسم المؤلف -->
+        <div class="book-field">
+          <label for="book-author">اسم المؤلف</label>
+          <input type="text" id="book-author" placeholder="اسم المؤلف..." value="" />
+        </div>
+        <!-- وصف مختصر -->
+        <div class="book-field">
+          <label for="book-subtitle">وصف مختصر (اختياري)</label>
+          <input type="text" id="book-subtitle" placeholder="وصف مختصر للكتاب..." value="" />
+        </div>
+
+        <!-- نطاق محتوى الكتاب (الحجرات والفصول) -->
+        <div class="book-field" id="book-chambers-scope-field">
+          <label>محتوى وفصول الكتاب</label>
+          <div class="book-scope-options">
+            <label class="book-radio-pill active" id="pill-scope-all">
+              <input type="radio" name="book-scope-type" id="book-scope-all" value="all" checked onchange="toggleBookChamberScope(this.value)" />
+              <span>📚 تجميع الحجرات الممتلئة كفصول مستقلة</span>
+            </label>
+            <label class="book-radio-pill" id="pill-scope-current">
+              <input type="radio" name="book-scope-type" id="book-scope-current" value="current" onchange="toggleBookChamberScope(this.value)" />
+              <span id="book-scope-current-label">📄 الحجرة الحالية فقط (حجرة 1)</span>
+            </label>
+          </div>
+          <div class="book-chambers-checklist" id="book-chambers-checklist">
+            <!-- سيتم توليد قائمة الحجرات الممتلئة ديناميكياً مع عناوينها -->
+          </div>
+        </div>
+
+        <div class="book-field-row">
+          <!-- حجم الورق -->
+          <div class="book-field">
+            <label for="book-paper">حجم الورق</label>
+            <select id="book-paper">
+              <option value="a4" selected>A4 (210×297 مم)</option>
+              <option value="a5">A5 (148×210 مم)</option>
+              <option value="letter">Letter (216×279 مم)</option>
+            </select>
+          </div>
+          <!-- لون الغلاف -->
+          <div class="book-field" id="book-cover-color-field">
+            <label for="book-cover-color">لون خلفية الغلاف</label>
+            <div class="book-color-row">
+              <input type="color" id="book-cover-color" value="#1e3a5f" />
+              <span class="book-color-label" id="book-cover-color-label">#1e3a5f</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="book-field-row">
+          <!-- الخط -->
+          <div class="book-field">
+            <label for="book-font">خط الكتاب</label>
+            <select id="book-font">
+              <option value="Tajawal" selected>Tajawal (تجوال)</option>
+              <option value="Cairo">Cairo (القاهرة)</option>
+              <option value="Amiri">Amiri (أميري - نسخي)</option>
+              <option value="Noto Naskh Arabic">Noto Naskh Arabic</option>
+            </select>
+          </div>
+          <!-- حجم الخط -->
+          <div class="book-field">
+            <label for="book-fontsize">حجم خط المتن</label>
+            <select id="book-fontsize">
+              <option value="12">12pt</option>
+              <option value="14" selected>14pt</option>
+              <option value="16">16pt</option>
+              <option value="18">18pt</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- خيارات إضافية -->
+        <div class="book-field">
+          <label>خيارات إضافية</label>
+          <div class="book-checkboxes">
+            <div class="book-numbering-row">
+              <label class="book-checkbox">
+                <input type="checkbox" id="book-page-numbers" checked />
+                <span>ترقيم الصفحات</span>
+              </label>
+              <div class="book-numbering-format-wrap" id="book-numbering-format-wrap">
+                <span class="book-inline-label">شكل الترقيم:</span>
+                <select id="book-page-number-format" class="book-select-compact">
+                  <option value="detailed" selected>صفحة 1 من 4 (مع الإجمالي)</option>
+                  <option value="simple">صفحة 1 (رقم الصفحة فقط)</option>
+                  <option value="number">1 (رقم مجرد)</option>
+                </select>
+              </div>
+            </div>
+            <label class="book-checkbox"><input type="checkbox" id="book-header-footer" checked /> رأس الصفحة (اسم الكتاب في الأعلى)</label>
+          </div>
+        </div>
+
+      </div>
+      <div class="book-modal-footer">
+        <button class="btn btn-ghost" onclick="closeBookModal()">إلغاء</button>
+        <button class="btn btn-primary book-export-btn" onclick="exportAsBook('pdf')">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          حفظ كـ PDF (طباعة مباشرة)
+        </button>
+        <button class="btn btn-outline" onclick="exportAsBook('html')" style="margin-right: auto;" title="تنزيل نسخة مستقلة من الكتاب بتنسيق HTML للقراءة أو الطباعة لاحقاً">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          تحميل ككتاب HTML
+        </button>
+        <button class="btn btn-outline" onclick="exportAsBook('preview')" title="فتح الكتاب كاملاً في تبويب جديد لمعاينته">
+          👁️ معاينة
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة مطابقة ومقارنة الحجرات (Chambers Diff / Comparison Modal) -->
+  <div class="diff-modal-overlay" id="diff-modal-overlay" onclick="closeChambersDiffModal(event)">
+    <div class="diff-modal" onclick="event.stopPropagation()">
+      <div class="diff-modal-header">
+        <div class="diff-modal-title">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 3h5v5"></path>
+            <path d="M4 20L21 3"></path>
+            <path d="M21 16v5h-5"></path>
+            <path d="M15 15l6 6"></path>
+            <path d="M4 4l5 5"></path>
+          </svg>
+          <h2>مطابقة ومقارنة الحجرات</h2>
+        </div>
+        <button class="diff-modal-close" onclick="closeChambersDiffModal()" title="إغلاق">&times;</button>
+      </div>
+
+      <div class="diff-modal-toolbar">
+        <div class="diff-selector-row">
+          <div class="diff-select-box">
+            <label for="diff-select-a">الحجرة الأولى (أ):</label>
+            <select id="diff-select-a" onchange="updateChambersDiffView()"></select>
+          </div>
+          <button class="diff-swap-btn" onclick="swapDiffChambers()" title="تبديل موضع الحجرتين">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l4-4m-4 4l-4-4"/></svg>
+          </button>
+          <div class="diff-select-box">
+            <label for="diff-select-b">الحجرة الثانية (ب):</label>
+            <select id="diff-select-b" onchange="updateChambersDiffView()"></select>
+          </div>
+        </div>
+
+        <div class="diff-view-toggles">
+          <button class="diff-view-btn active" id="btn-diff-view-split" onclick="setDiffViewType('split')">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+            عرض جنباً إلى جنب
+          </button>
+          <button class="diff-view-btn" id="btn-diff-view-lines" onclick="setDiffViewType('lines')">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+            تحديد الفروقات (Diff)
+          </button>
+        </div>
+      </div>
+
+      <div class="diff-modal-body" id="diff-modal-body">
+        <!-- يتم التصيير ديناميكياً هنا -->
+      </div>
+
+      <div class="diff-modal-footer">
+        <div class="diff-summary-info" id="diff-summary-info">
+          <!-- تفاصيل مثل عدد الكلمات والأسطر -->
+        </div>
+        <div class="diff-footer-actions">
+          <button class="btn btn-ghost" onclick="closeChambersDiffModal()">إغلاق</button>
+          <button class="btn btn-outline" onclick="copyDiffChamberB()" title="نسخ محتوى الحجرة المقابلة للحافظة">
+            📋 نسخ محتوى (ب)
+          </button>
+          <button class="btn btn-primary" onclick="applyChamberBToActive()" title="استبدال محتوى الحجرة النشطة بمحتوى الحجرة (ب)">
+            نقل محتوى (ب) إلى الحجرة النشطة
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- قائمة سياقية مصغرة عند النقر بالزر الأيمن على الحجرة -->
+  <div class="chamber-context-menu" id="chamber-context-menu" style="display:none;">
+    <button class="chamber-menu-item" onclick="contextClearChamber()">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      <span>تفريغ هذه الحجرة</span>
+    </button>
+    <button class="chamber-menu-item" onclick="contextCopyChamber()">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      <span>نسخ محتوى الحجرة</span>
+    </button>
+    <button class="chamber-menu-item" onclick="contextCompareChamber()">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/></svg>
+      <span>مقارنة مع الحجرة الحالية</span>
+    </button>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container"></div>
+
+  <!-- Legal Modal Reader (نافذة قراءة الصفحات القانونية داخل المحرر) -->
+  <div class="legal-modal-overlay" id="legal-modal-overlay" onclick="closeLegalModalOnBackdrop(event)">
+    <div class="legal-modal-dialog">
+      <div class="legal-modal-header">
+        <div class="legal-modal-title" id="legal-modal-title">
+          <span class="legal-modal-icon" id="legal-modal-icon">🛡️</span>
+          <div class="legal-modal-header-texts">
+            <h3 id="legal-modal-heading">سياسة الخصوصية</h3>
+            <span class="legal-modal-sub" id="legal-modal-sub">Privacy Policy</span>
+          </div>
+        </div>
+        <div class="legal-modal-actions">
+          <a href="#" target="_blank" id="legal-modal-external-link" class="btn btn-sm btn-outline" title="فتح في صفحة مستقلة">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+            <span>فتح بصفحة جديدة</span>
+          </a>
+          <button type="button" class="btn btn-sm btn-icon" onclick="closeLegalModal()" title="إغلاق">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      </div>
+      <div class="legal-modal-body" id="legal-modal-body">
+        <!-- المحتوى القانوني يُحقن هنا ديناميكياً -->
+      </div>
+      <div class="legal-modal-footer">
+        <div class="legal-modal-nav">
+          <button type="button" class="legal-tab-btn active" onclick="switchLegalTab('privacy')">الخصوصية</button>
+          <button type="button" class="legal-tab-btn" onclick="switchLegalTab('terms')">الشروط</button>
+          <button type="button" class="legal-tab-btn" onclick="switchLegalTab('impressum')">Impressum</button>
+          <button type="button" class="legal-tab-btn" onclick="switchLegalTab('license')">الرخصة</button>
+          <button type="button" class="legal-tab-btn" onclick="switchLegalTab('disclaimer')">إخلاء المسؤولية</button>
+          <button type="button" class="legal-tab-btn" onclick="switchLegalTab('cookies')">الكوكيز</button>
+          <button type="button" class="legal-tab-btn" onclick="switchLegalTab('about')">من نحن</button>
+          <button type="button" class="legal-tab-btn" onclick="switchLegalTab('contact')">اتصل بنا</button>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" onclick="closeLegalModal()">فهمت وموافق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden File Input for Image Uploading -->
+  <input type="file" id="image-upload-input" accept="image/*" style="display:none;" />
+
+  <!-- Offline Local Vendor Libraries -->
+  <script src="assets/vendor/marked.min.js"></script>
+  <script src="assets/vendor/mermaid.min.js"></script>
+  <script src="assets/vendor/prism.min.js"></script>
+  <script src="assets/vendor/html2pdf.bundle.min.js"></script>
+  <script src="assets/vendor/html-docx.js"></script>
+
+  <!-- Application Main Script -->
+  <script src="app/js/rtlmd.js?v=chambers3"></script>
+
+</body>
+</html>

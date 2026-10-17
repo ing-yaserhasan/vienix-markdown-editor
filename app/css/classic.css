@@ -1,0 +1,436 @@
+/* =========================================================
+   Vienix Markdown Editor - Classic Mode Styling (الوضع الكلاسيكي الأصلي 2014)
+   Exact 100% visual parity with rtlmd.productivity.directory
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/earlyaccess/droidarabicnaskh.css');
+@import url('https://fonts.googleapis.com/css?family=Open+Sans:400,600,700|Fira+Mono:400,700');
+
+/* إخفاء الواجهة الكلاسيكية بالوضع الحديث افتراضياً */
+#classic-app-wrapper {
+  display: none;
+}
+
+body.classic-mode {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  font-family: 'Droid Arabic Naskh', 'Open Sans', serif !important;
+  overflow: hidden !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  direction: rtl !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+body.classic-mode * {
+  font-family: 'Droid Arabic Naskh', 'Open Sans', serif !important;
+}
+
+body.classic-mode #modern-app-wrapper {
+  display: none !important;
+}
+
+body.classic-mode #classic-app-wrapper {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  background-color: #ffffff !important;
+  position: relative !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+/* الرأس الكلاسيكي الأصلي النظيف 100% */
+body.classic-mode #classic-header {
+  flex: 0 0 auto !important;
+  text-align: center !important;
+  padding: 14px 20px 6px !important;
+  margin: 0 !important;
+  position: relative !important;
+}
+
+body.classic-mode #classic-header #sitename {
+  text-align: center !important;
+  margin: 0 0 2px 0 !important;
+  padding: 0 !important;
+  font-family: 'Droid Arabic Naskh', 'Open Sans', serif !important;
+  font-size: 2em !important;
+  font-weight: bold !important;
+  color: #000000 !important;
+  line-height: 1.2 !important;
+}
+
+body.classic-mode #classic-header #sitedescription {
+  text-align: center !important;
+  font-size: 0.95em !important;
+  margin: 0 0 8px 0 !important;
+  padding: 0 !important;
+  color: #333333 !important;
+  font-family: 'Droid Arabic Naskh', 'Open Sans', serif !important;
+}
+
+/* زر التبديل إلى الواجهة الحديثة (في نفس موضع وشكل زر الوضع الكلاسيكي تماماً) */
+.classic-switch-btn {
+  position: fixed !important;
+  top: 15.5px !important;
+  left: 399px; /* قيمة أولية تتطابق مع مكان زر الوضع الكلاسيكي وتُحسب ديناميكياً بدقة */
+  z-index: 1000 !important;
+  box-sizing: border-box !important;
+  font-family: 'Tajawal', sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 6px 14px !important;
+  border-radius: 10px !important;
+  border: 1.5px solid #6366f1 !important;
+  color: #4f46e5 !important;
+  background: #ffffff !important;
+  height: 35px !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2) !important;
+  transition: all 0.18s ease-in-out !important;
+  text-decoration: none !important;
+}
+
+.classic-switch-btn:hover {
+  background: #eef2ff !important;
+  border-color: #4338ca !important;
+  color: #4338ca !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
+}
+
+.classic-switch-btn svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+/* شبكة Pure CSS الكلاسيكية الأصلية بمقاس متناسق مع الشاشة */
+body.classic-mode #classic-editor.pure-g {
+  direction: rtl;
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: row !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 0 25px !important;
+  gap: 20px !important;
+  overflow: hidden !important;
+}
+
+body.classic-mode #classic-editor .pure-u-1-2 {
+  flex: 1 1 50% !important;
+  width: 50% !important;
+  max-width: 50% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+}
+
+/* صندوق الكتابة الأصلي (#textbox) على اليمين */
+body.classic-mode #classic-textbox {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  box-sizing: border-box !important;
+}
+
+body.classic-mode #classic-textbox textarea {
+  background-color: #fbfbfb !important;
+  width: 100% !important;
+  flex: 1 1 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  padding: 1.1em !important;
+  padding-bottom: 80px !important;
+  -moz-box-shadow: inset 0 0 0.25em #fCCEf0 !important;
+  -webkit-box-shadow: inset 0 0 0.25em #fCCEf0 !important;
+  box-shadow: inset 0 0 0.25em #fCCEf0 !important;
+  border: 1px solid #d6d3d3 !important;
+  border-radius: 4px !important;
+  direction: rtl !important;
+  font-family: 'Droid Arabic Naskh', 'Open Sans', serif !important;
+  font-size: 1rem !important;
+  line-height: 1.8 !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+  color: #000000 !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  resize: none !important;
+}
+
+/* الأيقونات العائمة (التالي، السابق، تصفير، لصق) */
+body.classic-mode #classic-textbox .classic-floating-actions {
+  position: absolute !important;
+  bottom: 20px !important;
+  left: 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 7px !important;
+  z-index: 50 !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  padding: 5px !important;
+  border-radius: 10px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* مخرجات المعاينة الكلاسيكية (#output) على اليسار */
+body.classic-mode #classic-output {
+  box-sizing: border-box !important;
+  padding: 1.1em 25px !important;
+  direction: rtl !important;
+  text-align: right !important;
+  line-height: 1.7 !important;
+  flex: 1 1 100% !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  background-color: #ffffff !important;
+  border: 1px solid #f1f1f1 !important;
+  border-radius: 4px !important;
+}
+
+body.classic-mode #classic-output a {
+  text-decoration: none;
+  color: #0078e7;
+}
+
+body.classic-mode #classic-output li {
+  padding-right: 1em;
+  margin-bottom: 0.3em;
+}
+
+body.classic-mode #classic-output li li {
+  padding-right: 2em;
+}
+
+body.classic-mode #classic-output li li li {
+  padding-right: 4em;
+}
+
+body.classic-mode #classic-output blockquote p {
+  border-right: 5px solid #d6d3d3;
+  padding-right: 8px;
+  margin: 1em 0;
+  color: #555;
+}
+
+body.classic-mode #classic-output img {
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: 4px !important;
+  margin: 14px auto !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  display: block !important;
+}
+
+/* أكواد البرمجة الكلاسيكية الصافية: خلفية بيج ونص بنفسجي فاقع #913D88 */
+body.classic-mode #classic-output code {
+  display: inline-block !important;
+  direction: ltr !important;
+  font-family: 'Fira Mono', sans-serif !important;
+  padding: 0.5em !important;
+  font-size: 0.9em !important;
+  color: #913D88 !important;
+  background-color: beige !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+body.classic-mode #classic-output pre {
+  margin: 1.4em 0 !important;
+  background-color: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+body.classic-mode #classic-output pre code {
+  display: block !important;
+  direction: ltr !important;
+  font-family: 'Fira Mono', sans-serif !important;
+  margin-left: 2em !important;
+  padding: 0.5em !important;
+  font-size: 0.9em !important;
+  color: #913D88 !important;
+  background-color: beige !important;
+}
+
+/* تذييل الصفحة الكلاسيكي */
+body.classic-mode #classic-footer {
+  flex: 0 0 auto !important;
+  text-align: right !important;
+  padding: 8px 30px !important;
+  margin: 0 !important;
+  font-size: 0.9em !important;
+}
+
+body.classic-mode #classic-footer #footercontent {
+  text-align: right !important;
+  margin: 0 !important;
+  font-size: 0.85em !important;
+  font-family: 'Fira Mono', 'Droid Arabic Naskh', sans-serif !important;
+  color: #000000 !important;
+}
+
+body.classic-mode #classic-footer a {
+  color: #0078e7;
+  text-decoration: none;
+}
+
+/* =========================================================
+   Classic Mode Mobile Responsiveness
+   ========================================================= */
+.classic-mobile-tabs {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Mobile Tab Switcher */
+  .classic-mobile-tabs {
+    display: flex !important;
+    gap: 8px;
+    padding: 6px 12px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e2e8f0;
+    justify-content: center;
+    z-index: 40;
+  }
+
+  .classic-tab-btn {
+    flex: 1;
+    max-width: 200px;
+    padding: 7px 12px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    font-weight: 600;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+
+  .classic-tab-btn.active {
+    background: #4f46e5;
+    color: #ffffff;
+    border-color: #4f46e5;
+  }
+
+  /* Header Optimization */
+  body.classic-mode #classic-header {
+    position: relative !important;
+    padding: 10px 52px 8px 52px !important;
+    text-align: center !important;
+  }
+
+  body.classic-mode #classic-header #sitename {
+    font-size: 1.2rem !important;
+    margin: 0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  body.classic-mode #classic-header #sitedescription {
+    font-size: 0.78rem !important;
+    margin: 2px 0 0 0 !important;
+  }
+
+  /* Switch Button Clean Positioning on Left */
+  body.classic-mode .classic-switch-btn {
+    position: absolute !important;
+    top: 10px !important;
+    left: 12px !important;
+    right: auto !important;
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    max-width: 34px !important;
+    padding: 6px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 8px !important;
+    z-index: 1000 !important;
+  }
+
+  body.classic-mode .classic-switch-btn .btn-text {
+    display: none !important;
+  }
+
+  /* Workspace: Single Panel View Only */
+  body.classic-mode #classic-editor.pure-g {
+    flex-direction: column !important;
+    padding: 6px 10px !important;
+    gap: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  body.classic-mode #classic-editor .pure-u-1-2 {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 1 1 100% !important;
+    height: 100% !important;
+  }
+
+  /* Default on mobile: Show Editor only, Hide Preview */
+  body.classic-mode #classic-editor #classic-textbox {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+  }
+
+  body.classic-mode #classic-editor #classic-output {
+    display: none !important;
+  }
+
+  /* When Preview tab is active: Show Preview only, Hide Editor */
+  body.classic-mode #classic-editor.classic-mode-preview #classic-textbox {
+    display: none !important;
+  }
+
+  body.classic-mode #classic-editor.classic-mode-preview #classic-output {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+  }
+
+  body.classic-mode #classic-textbox textarea {
+    padding: 12px 14px 60px 14px !important;
+    font-size: 0.95rem !important;
+    height: 100% !important;
+  }
+
+  /* Floating Actions */
+  body.classic-mode .classic-floating-actions {
+    bottom: 8px !important;
+    left: 8px !important;
+    flex-direction: row !important;
+    gap: 6px !important;
+    padding: 4px 6px !important;
+  }
+}
