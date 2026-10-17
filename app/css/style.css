@@ -640,8 +640,8 @@ body.is-resizing-workspace .workspace-resizer {
 
 /* أيقونة مقبض السحب فوق الكونتينر */
 .floating-dock-handle {
-  margin-top: 6px;         /* المقبض أسفل الكونتينر — بعيد بمسافة بسيطة */
-  margin-bottom: 0;
+  margin-bottom: 6px;      /* المقبض فوق الكونتينر — بعيد بمسافة بسيطة */
+  margin-top: 0;
   color: var(--text-muted, #94a3b8);
   opacity: 0.5;
   padding: 3px 6px;

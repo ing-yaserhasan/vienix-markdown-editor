@@ -373,6 +373,17 @@
 
         <!-- أدوات التحرير السريعة (خارج editor-wrapper لتجنب overflow:hidden) -->
         <div class="floating-dock-wrapper" id="floating-dock-wrapper">
+          <!-- أيقونة مقبض السحب (فوق الكونتينر) -->
+          <div class="floating-dock-handle" id="floating-dock-handle" title="اسحب لتغيير موضع اللوحة">
+            <svg viewBox="0 0 20 8" width="20" height="8" fill="none" aria-hidden="true">
+              <circle cx="4" cy="2" r="1.4" fill="currentColor"/>
+              <circle cx="10" cy="2" r="1.4" fill="currentColor"/>
+              <circle cx="16" cy="2" r="1.4" fill="currentColor"/>
+              <circle cx="4" cy="6" r="1.4" fill="currentColor"/>
+              <circle cx="10" cy="6" r="1.4" fill="currentColor"/>
+              <circle cx="16" cy="6" r="1.4" fill="currentColor"/>
+            </svg>
+          </div>
           <div class="editor-floating-actions" id="editor-floating-actions">
             <!-- 1. التالي (Redo) -->
             <button class="floating-tool-btn" id="btn-redo" onclick="redoAction()" title="التالي (إعادة الخطوة - Ctrl+Y)">
@@ -404,17 +415,6 @@
                 <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
               </svg>
             </button>
-          </div>
-          <!-- أيقونة مقبض السحب -->
-          <div class="floating-dock-handle" id="floating-dock-handle" title="اسحب لتغيير موضع اللوحة">
-            <svg viewBox="0 0 20 8" width="20" height="8" fill="none" aria-hidden="true">
-              <circle cx="4" cy="2" r="1.4" fill="currentColor"/>
-              <circle cx="10" cy="2" r="1.4" fill="currentColor"/>
-              <circle cx="16" cy="2" r="1.4" fill="currentColor"/>
-              <circle cx="4" cy="6" r="1.4" fill="currentColor"/>
-              <circle cx="10" cy="6" r="1.4" fill="currentColor"/>
-              <circle cx="16" cy="6" r="1.4" fill="currentColor"/>
-            </svg>
           </div>
         </div><!-- /.floating-dock-wrapper -->
       </section>
@@ -575,7 +575,18 @@
 
         <!-- الأيقونات الثلاث (التالي، السابق، تصفير) مطلوبة في كلا الوضعين -->
         <div class="floating-dock-wrapper" id="classic-floating-dock-wrapper">
-        <div class="editor-floating-actions classic-floating-actions" id="classic-floating-actions">
+          <!-- أيقونة مقبض السحب (فوق الكونتينر) -->
+          <div class="floating-dock-handle" id="classic-floating-dock-handle" title="اسحب لتغيير موضع اللوحة">
+            <svg viewBox="0 0 20 8" width="20" height="8" fill="none" aria-hidden="true">
+              <circle cx="4" cy="2" r="1.4" fill="currentColor"/>
+              <circle cx="10" cy="2" r="1.4" fill="currentColor"/>
+              <circle cx="16" cy="2" r="1.4" fill="currentColor"/>
+              <circle cx="4" cy="6" r="1.4" fill="currentColor"/>
+              <circle cx="10" cy="6" r="1.4" fill="currentColor"/>
+              <circle cx="16" cy="6" r="1.4" fill="currentColor"/>
+            </svg>
+          </div>
+          <div class="editor-floating-actions classic-floating-actions" id="classic-floating-actions">
           <!-- 1. التالي (Redo) -->
           <button class="floating-tool-btn" id="btn-classic-redo" onclick="redoAction()" title="التالي (إعادة الخطوة - Ctrl+Y)">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -607,17 +618,6 @@
             </svg>
           </button>
         </div>
-          <!-- أيقونة مقبض السحب (أسفل الكونتينر دائماً مرئية) -->
-          <div class="floating-dock-handle" id="classic-floating-dock-handle" title="اسحب لتغيير موضع اللوحة">
-            <svg viewBox="0 0 20 8" width="20" height="8" fill="none" aria-hidden="true">
-              <circle cx="4" cy="2" r="1.4" fill="currentColor"/>
-              <circle cx="10" cy="2" r="1.4" fill="currentColor"/>
-              <circle cx="16" cy="2" r="1.4" fill="currentColor"/>
-              <circle cx="4" cy="6" r="1.4" fill="currentColor"/>
-              <circle cx="10" cy="6" r="1.4" fill="currentColor"/>
-              <circle cx="16" cy="6" r="1.4" fill="currentColor"/>
-            </svg>
-          </div>
         </div><!-- /.classic-floating-dock-wrapper -->
       </div>
       <div id="classic-output" class="pure-u-1-2">
