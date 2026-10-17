@@ -3930,3 +3930,126 @@
 
 })();
 
+/* ============================================================
+   نظام السحب والإفلات للوحة الأدوات العائمة
+   يستخدم Pointer Events API + setPointerCapture لموثوقية أعلى
+   ============================================================ */
+(function initFloatingDockDrag() {
+
+  /* مسح أي موضع قديم بعد تحديث البنية (v4) */
+  const DOCK_VERSION = 'v4';
+  if (localStorage.getItem('vienix_dock_version') !== DOCK_VERSION) {
+    localStorage.removeItem('vienix_dock_pos');
+    localStorage.removeItem('vienix_classic_dock_pos');
+    localStorage.setItem('vienix_dock_version', DOCK_VERSION);
+  }
+
+  function makeDraggable(wrapperId, storageKey) {
+    const wrapper = document.getElementById(wrapperId);
+    if (!wrapper) return;
+
+    /* --- استعادة الموضع المحفوظ --- */
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey));
+      if (saved && typeof saved.left === 'number' && typeof saved.bottom === 'number') {
+        wrapper.style.left   = saved.left   + 'px';
+        wrapper.style.bottom = saved.bottom + 'px';
+        wrapper.style.right  = 'auto';
+        wrapper.style.top    = 'auto';
+      }
+    } catch (_) {}
+
+    let startX, startY, startLeft, startBottom;
+    let isDragging = false;
+    let hasMoved   = false;
+
+    function getParentRect() {
+      const p = wrapper.offsetParent || wrapper.parentElement || document.body;
+      return p.getBoundingClientRect();
+    }
+
+    wrapper.addEventListener('pointerdown', function (e) {
+      /* تجاهُل الأزرار الداخلية */
+      if (e.target.closest('button')) return;
+      /* تجاهُل بزر اليمين */
+      if (e.button !== 0) return;
+
+      isDragging = true;
+      hasMoved   = false;
+
+      const rect   = wrapper.getBoundingClientRect();
+      const parent = getParentRect();
+
+      startX      = e.clientX;
+      startY      = e.clientY;
+      startLeft   = rect.left - parent.left;
+      startBottom = parent.bottom - rect.bottom;
+
+      /* تثبيت القيم الحالية inline لمنع أي CSS من تغييرها */
+      wrapper.style.left       = startLeft   + 'px';
+      wrapper.style.bottom     = startBottom + 'px';
+      wrapper.style.right      = 'auto';
+      wrapper.style.top        = 'auto';
+      wrapper.style.transition = 'none';
+
+      /* التقاط كل أحداث المؤشر على هذا العنصر */
+      wrapper.setPointerCapture(e.pointerId);
+
+      e.preventDefault();
+    });
+
+    wrapper.addEventListener('pointermove', function (e) {
+      if (!isDragging) return;
+
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+
+      if (!hasMoved && Math.abs(dx) < 2 && Math.abs(dy) < 2) return;
+      hasMoved = true;
+
+      const parent = getParentRect();
+      const wRect  = wrapper.getBoundingClientRect();
+
+      let newLeft   = Math.max(0, Math.min(startLeft   + dx, parent.width  - wRect.width));
+      let newBottom = Math.max(0, Math.min(startBottom - dy, parent.height - wRect.height));
+
+      wrapper.style.left   = newLeft   + 'px';
+      wrapper.style.bottom = newBottom + 'px';
+    });
+
+    wrapper.addEventListener('pointerup', function (e) {
+      if (!isDragging) return;
+      isDragging = false;
+      wrapper.style.transition = '';
+
+      if (hasMoved) {
+        try {
+          localStorage.setItem(storageKey, JSON.stringify({
+            left:   parseFloat(wrapper.style.left),
+            bottom: parseFloat(wrapper.style.bottom)
+          }));
+        } catch (_) {}
+      }
+      hasMoved = false;
+    });
+
+    wrapper.addEventListener('pointercancel', function () {
+      isDragging = false;
+      hasMoved   = false;
+      wrapper.style.transition = '';
+    });
+  }
+
+  function initDrag() {
+    makeDraggable('floating-dock-wrapper',         'vienix_dock_pos');
+    makeDraggable('classic-floating-dock-wrapper', 'vienix_classic_dock_pos');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDrag);
+  } else {
+    initDrag();
+  }
+
+})();
+

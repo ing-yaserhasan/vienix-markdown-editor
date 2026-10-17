@@ -595,6 +595,7 @@ body.is-resizing-workspace .workspace-resizer {
   flex: 1;
   position: relative;
   overflow: hidden;
+  overflow-clip-margin: 0;   /* الـ overflow:hidden يقطع المحتوى خارج الحدود */
 }
 
 .editor-textarea {
@@ -619,15 +620,61 @@ body.is-resizing-workspace .workspace-resizer {
   color: var(--text-faint);
 }
 
-/* أدوات التحرير السريعة بأسفل يسار المحرر (التالي، السابق، تصفير) */
-.editor-floating-actions {
+/* حامل التحرير العائم القابل للسحب */
+.floating-dock-wrapper {
   position: absolute;
   bottom: 20px;
   left: 20px;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  align-items: center;
   z-index: 30;
+  user-select: none;
+  touch-action: none;
+  cursor: grab;
+}
+
+.floating-dock-wrapper:active {
+  cursor: grabbing;
+}
+
+/* أيقونة مقبض السحب فوق الكونتينر */
+.floating-dock-handle {
+  margin-top: 6px;         /* المقبض أسفل الكونتينر — بعيد بمسافة بسيطة */
+  margin-bottom: 0;
+  color: var(--text-muted, #94a3b8);
+  opacity: 0.5;
+  padding: 3px 6px;
+  border-radius: 6px;
+  transition: opacity 0.2s ease, transform 0.2s ease, color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.floating-dock-wrapper:hover .floating-dock-handle {
+  opacity: 1;
+  color: var(--accent-color, #3b82f6);
+  transform: scale(1.12);
+}
+
+[data-theme="dark"] .floating-dock-handle {
+  color: var(--text-muted, #475569);
+  opacity: 0.6;
+}
+
+[data-theme="dark"] .floating-dock-wrapper:hover .floating-dock-handle {
+  color: #60a5fa;
+  opacity: 1;
+}
+
+/* أدوات التحرير السريعة — بدون position مستقلة (ال wrapper يتحكم بالموضع) */
+.editor-floating-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
   background: var(--bg-surface-elevated, #ffffff);
   padding: 5px;
   border-radius: 10px;
@@ -635,6 +682,7 @@ body.is-resizing-workspace .workspace-resizer {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(8px);
   user-select: none;
+  cursor: default; /* لا يورث ال grab من ال wrapper على البودر نفسه */
 }
 
 .floating-tool-btn {
@@ -1354,6 +1402,7 @@ body.is-resizing-workspace .workspace-resizer {
   .code-copy-btn,
   .image-resizer-toolbar,
   .resizer-handle,
+  .floating-dock-wrapper,
   .editor-floating-actions {
     display: none !important;
     visibility: hidden !important;
@@ -1798,15 +1847,30 @@ body.is-resizing-workspace .workspace-resizer {
     padding: 16px 14px;
   }
 
-  /* Floating Actions: Horizontal Compact Row */
-  .editor-floating-actions {
+  /* Floating Dock Wrapper: compact position on mobile */
+  .floating-dock-wrapper {
     bottom: 10px;
     left: 10px;
+    z-index: 35;
+  }
+
+  /* Floating Actions: Horizontal Compact Row */
+  .editor-floating-actions {
     flex-direction: row;
     gap: 6px;
     padding: 4px 6px;
     border-radius: 8px;
-    z-index: 35;
+  }
+
+  /* Handle goes to the left of the container on mobile (row layout) */
+  .floating-dock-wrapper {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .floating-dock-handle {
+    margin-bottom: 0;
+    margin-right: 6px;
   }
 
   .floating-tool-btn {

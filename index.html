@@ -369,8 +369,10 @@
         </div>
         <div class="editor-wrapper">
           <textarea id="markdown-input" class="editor-textarea" placeholder="اكتب نص الماركداون هنا باللغة العربية... تدعم المخططات التفاعلية والأكواد والجداول" spellcheck="false"></textarea>
+        </div>
 
-          <!-- أدوات التحرير السريعة بأسفل يسار المحرر (التالي، السابق، تصفير) -->
+        <!-- أدوات التحرير السريعة (خارج editor-wrapper لتجنب overflow:hidden) -->
+        <div class="floating-dock-wrapper" id="floating-dock-wrapper">
           <div class="editor-floating-actions" id="editor-floating-actions">
             <!-- 1. التالي (Redo) -->
             <button class="floating-tool-btn" id="btn-redo" onclick="redoAction()" title="التالي (إعادة الخطوة - Ctrl+Y)">
@@ -403,7 +405,18 @@
               </svg>
             </button>
           </div>
-        </div>
+          <!-- أيقونة مقبض السحب -->
+          <div class="floating-dock-handle" id="floating-dock-handle" title="اسحب لتغيير موضع اللوحة">
+            <svg viewBox="0 0 20 8" width="20" height="8" fill="none" aria-hidden="true">
+              <circle cx="4" cy="2" r="1.4" fill="currentColor"/>
+              <circle cx="10" cy="2" r="1.4" fill="currentColor"/>
+              <circle cx="16" cy="2" r="1.4" fill="currentColor"/>
+              <circle cx="4" cy="6" r="1.4" fill="currentColor"/>
+              <circle cx="10" cy="6" r="1.4" fill="currentColor"/>
+              <circle cx="16" cy="6" r="1.4" fill="currentColor"/>
+            </svg>
+          </div>
+        </div><!-- /.floating-dock-wrapper -->
       </section>
 
       <!-- Split Resizer Gutter (خط فاصل قابل للسحب لتعديل مقاس القسمين) -->
@@ -561,6 +574,7 @@
         <textarea id="classic-markdown-input" rows="40" placeholder="اكتب نص الماركداون هنا..."></textarea>
 
         <!-- الأيقونات الثلاث (التالي، السابق، تصفير) مطلوبة في كلا الوضعين -->
+        <div class="floating-dock-wrapper" id="classic-floating-dock-wrapper">
         <div class="editor-floating-actions classic-floating-actions" id="classic-floating-actions">
           <!-- 1. التالي (Redo) -->
           <button class="floating-tool-btn" id="btn-classic-redo" onclick="redoAction()" title="التالي (إعادة الخطوة - Ctrl+Y)">
@@ -593,6 +607,18 @@
             </svg>
           </button>
         </div>
+          <!-- أيقونة مقبض السحب (أسفل الكونتينر دائماً مرئية) -->
+          <div class="floating-dock-handle" id="classic-floating-dock-handle" title="اسحب لتغيير موضع اللوحة">
+            <svg viewBox="0 0 20 8" width="20" height="8" fill="none" aria-hidden="true">
+              <circle cx="4" cy="2" r="1.4" fill="currentColor"/>
+              <circle cx="10" cy="2" r="1.4" fill="currentColor"/>
+              <circle cx="16" cy="2" r="1.4" fill="currentColor"/>
+              <circle cx="4" cy="6" r="1.4" fill="currentColor"/>
+              <circle cx="10" cy="6" r="1.4" fill="currentColor"/>
+              <circle cx="16" cy="6" r="1.4" fill="currentColor"/>
+            </svg>
+          </div>
+        </div><!-- /.classic-floating-dock-wrapper -->
       </div>
       <div id="classic-output" class="pure-u-1-2">
       </div>
