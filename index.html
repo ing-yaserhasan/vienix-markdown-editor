@@ -1378,10 +1378,17 @@
       <button type="button" class="emoji-picker-close-btn" onclick="closeEmojiPicker()" title="إغلاق">&times;</button>
     </div>
     <div class="emoji-category-tabs">
-      <button type="button" class="emoji-cat-btn active" data-cat="all" onclick="selectEmojiCategory('all')">🌟 الكل</button>
-      <button type="button" class="emoji-cat-btn" data-cat="faces" onclick="selectEmojiCategory('faces')">😎 وجوه</button>
-      <button type="button" class="emoji-cat-btn" data-cat="badges" onclick="selectEmojiCategory('badges')">🎖️ شارات</button>
-      <button type="button" class="emoji-cat-btn" data-cat="symbols" onclick="selectEmojiCategory('symbols')">🚀 تفاعلات</button>
+      <button type="button" class="emoji-cat-btn active" data-cat="all" onclick="selectEmojiCategory('all')">🌟 الكل (3,700+)</button>
+      <button type="button" class="emoji-cat-btn" data-cat="featured" onclick="selectEmojiCategory('featured')">⭐ مميزة</button>
+      <button type="button" class="emoji-cat-btn" data-cat="smileys" onclick="selectEmojiCategory('smileys')">😀 وجوه ومشاعر</button>
+      <button type="button" class="emoji-cat-btn" data-cat="people" onclick="selectEmojiCategory('people')">👋 أشخاص</button>
+      <button type="button" class="emoji-cat-btn" data-cat="animals" onclick="selectEmojiCategory('animals')">🐶 حيوانات</button>
+      <button type="button" class="emoji-cat-btn" data-cat="food" onclick="selectEmojiCategory('food')">🍔 طعام</button>
+      <button type="button" class="emoji-cat-btn" data-cat="travel" onclick="selectEmojiCategory('travel')">✈️ سفر</button>
+      <button type="button" class="emoji-cat-btn" data-cat="activities" onclick="selectEmojiCategory('activities')">⚽ أنشطة</button>
+      <button type="button" class="emoji-cat-btn" data-cat="objects" onclick="selectEmojiCategory('objects')">💡 أدوات</button>
+      <button type="button" class="emoji-cat-btn" data-cat="symbols" onclick="selectEmojiCategory('symbols')">❤️ رموز</button>
+      <button type="button" class="emoji-cat-btn" data-cat="flags" onclick="selectEmojiCategory('flags')">🚩 أعلام</button>
     </div>
     <div class="emoji-picker-grid" id="emoji-picker-grid"></div>
   </div>
@@ -1398,8 +1405,11 @@
   <script src="assets/vendor/turndown.js"></script>
   <script src="assets/vendor/turndown-plugin-gfm.js"></script>
 
+  <!-- Twemoji Full Vector SVG Dataset (3,689 Icons Categorized) -->
+  <script src="assets/icons/twemoji/twemoji_data.js"></script>
+
   <!-- Application Main Script -->
-  <script src="app/js/rtlmd.js?v=obsidian23"></script>
+  <script src="app/js/rtlmd.js?v=obsidian24"></script>
 
 </body>
 </html>
