@@ -1996,7 +1996,7 @@
 
   let isExplorerOpen = false;
   let explorerSearchFilter = '';
-  const collapsedFolders = { archive: true };
+  const collapsedFolders = {};
   let moveFolderTargetChamber = null;
   let moveFolderTarget = null;
 
@@ -2018,6 +2018,7 @@
     const overlay = document.getElementById('explorer-drawer-overlay');
     if (!drawer || !overlay) return;
 
+    const prevState = isExplorerOpen;
     if (typeof forceState === 'boolean') {
       isExplorerOpen = forceState;
     } else {
@@ -2026,6 +2027,12 @@
 
     if (isExplorerOpen) {
       window.updateDrawerOverlayBounds();
+      // عند فتح المستكشف يكون الوضع الافتراضي دائماً طي كافة المجلدات
+      if (!prevState) {
+        getAppFolders().forEach(f => {
+          collapsedFolders[f.key] = true;
+        });
+      }
     }
 
     drawer.classList.toggle('active', isExplorerOpen);
@@ -2082,13 +2089,14 @@
   };
 
   window.toggleTreeFolder = function (folderKey) {
-    collapsedFolders[folderKey] = !collapsedFolders[folderKey];
+    const isCurrentlyCollapsed = collapsedFolders[folderKey] !== false;
+    collapsedFolders[folderKey] = !isCurrentlyCollapsed;
     renderChambersExplorerTree();
   };
 
   window.toggleCollapseAllFolders = function () {
     const allFolders = getAppFolders();
-    const allCollapsed = allFolders.every(f => !!collapsedFolders[f.key]);
+    const allCollapsed = allFolders.every(f => collapsedFolders[f.key] !== false);
     allFolders.forEach(f => {
       collapsedFolders[f.key] = !allCollapsed;
     });
@@ -3918,7 +3926,7 @@
       const items = folderBuckets[f.key] || [];
       const folderFiles = getFolderFiles(f.key);
       const subFolders = foldersDef.filter(child => child.parent === f.key);
-      const isCollapsed = !!collapsedFolders[f.key];
+      const isCollapsed = explorerSearchFilter ? false : (collapsedFolders[f.key] !== false);
       const count = getFolderTotalCount(f.key);
       const isSub = depth > 0;
 
