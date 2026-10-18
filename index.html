@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Fira+Code:wght@400;500&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/earlyaccess/droidarabicnaskh.css">
   <link rel="stylesheet" href="assets/fonts/tajawal.css">
-  <link rel="stylesheet" href="app/css/style.css?v=obsidian15">
+  <link rel="stylesheet" href="app/css/style.css?v=obsidian16">
   <link rel="stylesheet" href="app/css/classic.css?v=obsidian3">
 </head>
 <body>
@@ -285,6 +285,14 @@
             <span class="win-folder-label">المستكشف</span>
           </button>
 
+          <!-- زر تحرير المعاينة المباشر بتقنية Neumorphic (Edit Preview Toggle) -->
+          <button type="button" class="wysiwyg-preview-btn" id="btn-toggle-wysiwyg" onclick="toggleWysiwygPreviewMode()" title="تبديل وضع تحرير المعاينة المباشر (Edit Preview)">
+            <span class="wysiwyg-btn-text">
+              <span class="wysiwyg-line-edit">Edit</span>
+              <span class="wysiwyg-line-preview">Preview</span>
+            </span>
+          </button>
+
           <button class="tool-btn chamber-diff-btn" id="btn-chamber-diff" onclick="openChambersDiffModal()" title="مطابقة ومقارنة محتوى حجرتين جنباً إلى جنب">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M16 3h5v5"></path>
@@ -454,7 +462,7 @@
       <section class="panel panel-preview" id="panel-preview">
         <div class="panel-header">
           <span>المعاينة المباشرة (Live Preview)</span>
-          <span class="badge">Mermaid & HTML</span>
+          <span class="badge" id="preview-mode-badge">Mermaid & HTML</span>
         </div>
         <div class="preview-container" id="preview-output">
           <article class="markdown-body" id="preview-content">
@@ -1261,6 +1269,46 @@
     </div>
   </div>
 
+  <!-- شريط التنسيق العائم للمعاينة المباشرة (WYSIWYG Floating Formatting Toolbar) -->
+  <div class="wysiwyg-floating-toolbar" id="wysiwyg-floating-toolbar" role="toolbar" aria-label="شريط التنسيق السريع">
+    <button type="button" class="wysiwyg-tool-btn" data-command="bold" title="غامق (Bold - Ctrl+B)">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path></svg>
+    </button>
+    <button type="button" class="wysiwyg-tool-btn" data-command="italic" title="مائل (Italic - Ctrl+I)">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"></line><line x1="14" y1="20" x2="5" y2="20"></line><line x1="15" y1="4" x2="9" y2="20"></line></svg>
+    </button>
+    <button type="button" class="wysiwyg-tool-btn" data-command="underline" title="تسطير (Underline - Ctrl+U)">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v7a6 6 0 0 0 12 0V3"></path><line x1="4" y1="21" x2="20" y2="21"></line></svg>
+    </button>
+    <button type="button" class="wysiwyg-tool-btn" data-command="strikeThrough" title="شطب (Strikethrough)">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4H9a3 3 0 0 0-2.83 4"></path><path d="M14 12a4 4 0 0 1 0 8H6"></path><line x1="4" y1="12" x2="20" y2="12"></line></svg>
+    </button>
+    <button type="button" class="wysiwyg-tool-btn" data-command="code" title="كود مضمّن (Inline Code)">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+    </button>
+    <div class="wysiwyg-toolbar-divider"></div>
+    <button type="button" class="wysiwyg-tool-btn" data-command="formatBlock" data-value="H1" title="عنوان رئيسي (H1)">H1</button>
+    <button type="button" class="wysiwyg-tool-btn" data-command="formatBlock" data-value="H2" title="عنوان فرعي (H2)">H2</button>
+    <button type="button" class="wysiwyg-tool-btn" data-command="formatBlock" data-value="H3" title="عنوان قسم (H3)">H3</button>
+    <button type="button" class="wysiwyg-tool-btn" data-command="formatBlock" data-value="P" title="فقرة عادية (Paragraph)">¶</button>
+    <div class="wysiwyg-toolbar-divider"></div>
+    <button type="button" class="wysiwyg-tool-btn" data-command="insertUnorderedList" title="قائمة نقطية (Bullet List)">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+    </button>
+    <button type="button" class="wysiwyg-tool-btn" data-command="insertOrderedList" title="قائمة مرقمة (Numbered List)">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"></line><line x1="10" y1="12" x2="21" y2="12"></line><line x1="10" y1="18" x2="21" y2="18"></line><path d="M4 6h1v4"></path><path d="M4 10h2"></path><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"></path></svg>
+    </button>
+    <button type="button" class="wysiwyg-tool-btn" data-command="formatBlock" data-value="BLOCKQUOTE" title="اقتباس (Blockquote)">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path></svg>
+    </button>
+    <button type="button" class="wysiwyg-tool-btn" data-command="createLink" title="إدراج رابط (Link)">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+    </button>
+    <button type="button" class="wysiwyg-tool-btn" data-command="removeFormat" title="مسح التنسيق (Clear Formatting)">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><path d="M4 6h16l-7 7v7l-2-1v-6z"></path></svg>
+    </button>
+  </div>
+
   <!-- Hidden File Input for Image Uploading -->
   <input type="file" id="image-upload-input" accept="image/*" style="display:none;" />
 
@@ -1270,9 +1318,11 @@
   <script src="assets/vendor/prism.min.js"></script>
   <script src="assets/vendor/html2pdf.bundle.min.js"></script>
   <script src="assets/vendor/html-docx.js"></script>
+  <script src="assets/vendor/turndown.js"></script>
+  <script src="assets/vendor/turndown-plugin-gfm.js"></script>
 
   <!-- Application Main Script -->
-  <script src="app/js/rtlmd.js?v=obsidian15"></script>
+  <script src="app/js/rtlmd.js?v=obsidian17"></script>
 
 </body>
 </html>

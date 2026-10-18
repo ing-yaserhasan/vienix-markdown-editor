@@ -64,6 +64,7 @@
     setupDraggableFloatingActions();
     setupWorkspaceResizer();
     initResponsiveMode();
+    initWysiwygPreviewSystem();
   });
 
   // Responsive mode initialization
@@ -534,6 +535,13 @@
 
     // تفعيل مقابض تحجيم وتكبير/تصغير الصور التفاعلية
     setupImageResizers(previewContent);
+
+    // إذا كان وضع التحرير المباشر مفعلاً، نحافظ على خصائص التحرير وحماية العناصر
+    if (typeof isWysiwygActive !== 'undefined' && isWysiwygActive) {
+      previewContent.setAttribute('contenteditable', 'true');
+      previewContent.classList.add('preview-editable');
+      protectNonEditableElements();
+    }
   }
 
   // Extract Mermaid Blocks to prevent Marked from mangling syntax
@@ -6977,6 +6985,405 @@
       window.closeLegalMenu();
     }
   });
+
+  // =========================================================================
+  // نظام التحرير المباشر في مساحة العرض (WYSIWYG Live Preview System)
+  // يشمل: تحويل المعاينة إلى محرر، مكتبة Turndown، شريط التنسيق العائم، وحماية المخططات
+  // =========================================================================
+  let isWysiwygActive = false;
+  let turndownService = null;
+  let wysiwygDebounceTimer = null;
+  let isWysiwygSyncing = false;
+
+  function initTurndown() {
+    if (typeof TurndownService === 'undefined') {
+      console.warn('TurndownService is not available yet.');
+      return;
+    }
+    turndownService = new TurndownService({
+      headingStyle: 'atx',
+      hr: '---',
+      bulletListMarker: '-',
+      codeBlockStyle: 'fenced',
+      emDelimiter: '*',
+      strongDelimiter: '**'
+    });
+
+    // استخدام إضافات GFM للجداول والشطب وقوائم المهام
+    if (typeof turndownPluginGfm !== 'undefined' && turndownPluginGfm.gfm) {
+      turndownService.use(turndownPluginGfm.gfm);
+    }
+
+    // قاعدة حماية مخططات Mermaid واسترجاع الكود الأصلي
+    turndownService.addRule('preserveMermaidDiagrams', {
+      filter: function (node) {
+        return (
+          node.nodeName === 'DIV' &&
+          (node.classList.contains('mermaid-wrapper') || node.classList.contains('mermaid'))
+        );
+      },
+      replacement: function (content, node) {
+        let diagramCode = '';
+        const mermaidInner = node.classList.contains('mermaid') ? node : node.querySelector('.mermaid');
+        if (mermaidInner) {
+          if (mermaidInner.hasAttribute('data-diagram')) {
+            try {
+              diagramCode = decodeURIComponent(mermaidInner.getAttribute('data-diagram'));
+            } catch (e) {
+              diagramCode = mermaidInner.getAttribute('data-diagram');
+            }
+          } else {
+            diagramCode = mermaidInner.textContent.trim();
+          }
+        }
+        return '\n\n```mermaid\n' + (diagramCode || '').trim() + '\n```\n\n';
+      }
+    });
+
+    // قاعدة الحفاظ على لغة كتل الأكواد البرمجية Prism
+    turndownService.addRule('preserveCodeBlocks', {
+      filter: function (node) {
+        return (
+          node.nodeName === 'PRE' &&
+          node.querySelector('code') &&
+          !node.classList.contains('mermaid')
+        );
+      },
+      replacement: function (content, node) {
+        const codeEl = node.querySelector('code');
+        let lang = '';
+        if (codeEl) {
+          const classes = codeEl.className.split(/\s+/);
+          for (const cls of classes) {
+            if (cls.startsWith('language-')) {
+              lang = cls.replace('language-', '');
+              break;
+            }
+          }
+        }
+        const rawCode = codeEl ? codeEl.textContent : node.textContent;
+        return '\n\n```' + lang + '\n' + rawCode.replace(/\n+$/, '') + '\n```\n\n';
+      }
+    });
+
+    // قاعدة تجريد عناصر واجهة المستخدم الداخلية (أزرار الزوم، أزرار النسخ، ومقابض التحجيم)
+    turndownService.addRule('stripInternalUIElements', {
+      filter: function (node) {
+        return (
+          node.classList &&
+          (node.classList.contains('diagram-zoom-controls') ||
+           node.classList.contains('code-copy-btn') ||
+           node.classList.contains('img-resize-handle') ||
+           node.classList.contains('image-action-overlay'))
+        );
+      },
+      replacement: function () {
+        return '';
+      }
+    });
+  }
+
+  // حماية العناصر غير القابلة للتحرير المباشر داخل المعاينة
+  function protectNonEditableElements() {
+    if (!previewContent) return;
+    const nonEditables = previewContent.querySelectorAll(
+      '.mermaid-wrapper, .mermaid, .diagram-zoom-controls, .code-copy-btn, .img-resize-handle, .image-action-overlay'
+    );
+    nonEditables.forEach(el => {
+      el.setAttribute('contenteditable', 'false');
+    });
+  }
+
+  // مزامنة محتوى المعاينة المباشر إلى نصوص الماركداون
+  function syncPreviewToMarkdown(immediate = false) {
+    if (!turndownService) initTurndown();
+    if (!turndownService || !previewContent) return;
+
+    clearTimeout(wysiwygDebounceTimer);
+
+    const doSync = () => {
+      if (isWysiwygSyncing) return;
+      isWysiwygSyncing = true;
+
+      try {
+        // نسخ مؤقت لشجرة العناصر لتنظيفها قبل التحويل
+        const clone = previewContent.cloneNode(true);
+
+        // إزالة أزرار الزوم والنسخ ومقابض التحجيم من النسخة
+        clone.querySelectorAll(
+          '.diagram-zoom-controls, .code-copy-btn, .img-resize-handle, .image-action-overlay'
+        ).forEach(el => el.remove());
+
+        // تحويل شجرة HTML إلى نصوص ماركداون دقيقة
+        let md = turndownService.turndown(clone.innerHTML);
+
+        // توحيد فواصل الأسطر
+        md = md.replace(/\r\n/g, '\n');
+
+        // تحديث محرر النصوص بدون وميض
+        editor.value = md;
+        if (classicEditor) classicEditor.value = md;
+
+        // تحديث الإحصائيات والحجرة النشطة
+        updateStats(md);
+        setChamberContent(activeChamber, md);
+        updateChambersUI();
+
+        if (saveStatus) {
+          saveStatus.textContent = 'تم الحفظ تلقائياً ✓';
+          saveStatus.className = 'save-badge';
+        }
+
+        if (!isPerformingHistory) {
+          recordHistorySnapshot(false);
+        }
+      } catch (err) {
+        console.warn('WYSIWYG Markdown Sync Warning:', err);
+      } finally {
+        isWysiwygSyncing = false;
+      }
+    };
+
+    if (immediate) {
+      doSync();
+    } else {
+      wysiwygDebounceTimer = setTimeout(doSync, 280);
+    }
+  }
+
+  // تحديث شارة ترويسة نافذة المعاينة
+  function updatePreviewHeaderIndicator(active) {
+    const badge = document.getElementById('preview-mode-badge');
+    if (badge) {
+      if (active) {
+        badge.textContent = 'وضع التحرير المباشر ✏️';
+        badge.className = 'badge wysiwyg-active-badge';
+      } else {
+        badge.textContent = 'Mermaid & HTML';
+        badge.className = 'badge';
+      }
+    }
+  }
+
+  // إخفاء شريط التنسيق العائم
+  function hideFloatingFormatToolbar() {
+    const toolbar = document.getElementById('wysiwyg-floating-toolbar');
+    if (toolbar) {
+      toolbar.classList.remove('visible');
+      toolbar.style.display = 'none';
+    }
+  }
+
+  // فحص وتحديث حالة أزرار شريط التنسيق العائم
+  function updateToolbarButtonStates() {
+    const toolbar = document.getElementById('wysiwyg-floating-toolbar');
+    if (!toolbar || !isWysiwygActive) return;
+
+    toolbar.querySelectorAll('.wysiwyg-tool-btn').forEach(btn => {
+      const cmd = btn.getAttribute('data-command');
+      if (cmd && ['bold', 'italic', 'underline', 'strikeThrough', 'insertUnorderedList', 'insertOrderedList'].includes(cmd)) {
+        try {
+          if (document.queryCommandState(cmd)) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        } catch (_) {}
+      }
+    });
+  }
+
+  // تهيئة شريط التنسيق العائم (Floating Formatting Bar - المرحلة 3)
+  function setupFloatingFormatToolbar() {
+    const toolbar = document.getElementById('wysiwyg-floating-toolbar');
+    if (!toolbar) return;
+
+    // منع فقدان التحديد عند النقر على أدوات الشريط
+    toolbar.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+    });
+
+    // ربط أوامر التنسيق بأزرار الشريط
+    toolbar.querySelectorAll('.wysiwyg-tool-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!isWysiwygActive) return;
+
+        const cmd = btn.getAttribute('data-command');
+        const val = btn.getAttribute('data-value') || null;
+
+        if (cmd === 'createLink') {
+          const url = prompt('أدخل رابط URL:', 'https://');
+          if (url && url.trim()) {
+            document.execCommand('createLink', false, url.trim());
+          }
+        } else if (cmd === 'code') {
+          // تبديل كود مضمن inline code
+          const sel = window.getSelection();
+          if (sel && sel.rangeCount) {
+            const range = sel.getRangeAt(0);
+            const parentCode = range.commonAncestorContainer.parentElement?.closest('code');
+            if (parentCode) {
+              const textNode = document.createTextNode(parentCode.textContent);
+              parentCode.parentNode.replaceChild(textNode, parentCode);
+            } else {
+              const fragment = range.extractContents();
+              const codeEl = document.createElement('code');
+              codeEl.appendChild(fragment);
+              range.insertNode(codeEl);
+              sel.selectAllChildren(codeEl);
+            }
+          }
+        } else if (cmd) {
+          document.execCommand(cmd, false, val);
+        }
+
+        // المزامنة الفورية مع محرر النصوص بعد التنسيق
+        syncPreviewToMarkdown(true);
+        updateToolbarButtonStates();
+      });
+    });
+
+    // معالجة ظهور وتموضع شريط التنسيق عند تحديد نص داخل المعاينة
+    const handleSelection = () => {
+      if (!isWysiwygActive) {
+        hideFloatingFormatToolbar();
+        return;
+      }
+
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || !sel.rangeCount) {
+        hideFloatingFormatToolbar();
+        return;
+      }
+
+      const range = sel.getRangeAt(0);
+      let container = range.commonAncestorContainer;
+      if (container && container.nodeType !== Node.ELEMENT_NODE) {
+        container = container.parentElement;
+      }
+      if (!container || !previewContent.contains(container)) {
+        hideFloatingFormatToolbar();
+        return;
+      }
+
+      const text = sel.toString().trim();
+      if (!text) {
+        hideFloatingFormatToolbar();
+        return;
+      }
+
+      const rect = range.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) {
+        hideFloatingFormatToolbar();
+        return;
+      }
+
+      toolbar.style.display = 'flex';
+      toolbar.classList.add('visible');
+
+      const toolbarWidth = toolbar.offsetWidth || 340;
+      const toolbarHeight = toolbar.offsetHeight || 38;
+
+      let left = rect.left + rect.width / 2;
+      const margin = 12;
+      const minLeft = toolbarWidth / 2 + margin;
+      const maxLeft = window.innerWidth - toolbarWidth / 2 - margin;
+      left = Math.max(minLeft, Math.min(left, maxLeft));
+
+      let top = rect.top - toolbarHeight - 8;
+      if (top < 12) {
+        // إذا كان قريباً جداً من الحافة العلوية، يظهر أسفل النص المحدد
+        top = rect.bottom + 8;
+      }
+
+      toolbar.style.left = `${left}px`;
+      toolbar.style.top = `${top}px`;
+
+      updateToolbarButtonStates();
+    };
+
+    document.addEventListener('selectionchange', handleSelection);
+    previewContent.addEventListener('mouseup', () => setTimeout(handleSelection, 25));
+    previewContent.addEventListener('keyup', () => setTimeout(handleSelection, 25));
+
+    window.addEventListener('scroll', () => {
+      if (isWysiwygActive && toolbar.classList.contains('visible')) {
+        handleSelection();
+      }
+    }, { passive: true });
+  }
+
+  // التبديل بين وضع القراءة ووضع التحرير المباشر
+  window.toggleWysiwygPreviewMode = function () {
+    isWysiwygActive = !isWysiwygActive;
+    const btn = document.getElementById('btn-toggle-wysiwyg');
+
+    if (isWysiwygActive) {
+      // تفعيل وضع التحرير المباشر
+      if (btn) {
+        btn.classList.add('active');
+        btn.title = 'إلغاء وضع التحرير المباشر وحفظ التغييرات (Edit Preview: ON)';
+      }
+      previewContent.setAttribute('contenteditable', 'true');
+      previewContent.classList.add('preview-editable');
+
+      // حماية المخططات والأزرار الداخلية من التعديل
+      protectNonEditableElements();
+
+      // تمييز ترويسة المعاينة
+      updatePreviewHeaderIndicator(true);
+
+      if (saveStatus) {
+        saveStatus.textContent = 'وضع التحرير المباشر مفعّل — انقر للتعديل';
+        saveStatus.className = 'save-badge';
+      }
+    } else {
+      // إيقاف وضع التحرير المباشر
+      if (btn) {
+        btn.classList.remove('active');
+        btn.title = 'تبديل وضع تحرير المعاينة المباشر (Edit Preview: OFF)';
+      }
+      previewContent.removeAttribute('contenteditable');
+      previewContent.classList.remove('preview-editable');
+
+      hideFloatingFormatToolbar();
+      updatePreviewHeaderIndicator(false);
+
+      // مزامنة أخيرة للمحتوى المعدل
+      syncPreviewToMarkdown(true);
+
+      // إعادة تصيير المعاينة لضمان سلامة الهايلايت والأكواد والمخططات
+      renderMarkdown();
+
+      if (saveStatus) {
+        saveStatus.textContent = 'تم الحفظ تلقائياً ✓';
+        saveStatus.className = 'save-badge';
+      }
+    }
+  };
+
+  // تهيئة النظام بالكامل
+  function initWysiwygPreviewSystem() {
+    initTurndown();
+    setupFloatingFormatToolbar();
+
+    if (previewContent) {
+      previewContent.addEventListener('input', () => {
+        if (!isWysiwygActive) return;
+        if (saveStatus) {
+          saveStatus.textContent = 'جارٍ الحفظ والكتابة في المعاينة...';
+          saveStatus.className = 'save-badge saving';
+        }
+        syncPreviewToMarkdown(false);
+      });
+
+      previewContent.addEventListener('blur', () => {
+        if (!isWysiwygActive) return;
+        syncPreviewToMarkdown(true);
+      });
+    }
+  }
 
 })();
 

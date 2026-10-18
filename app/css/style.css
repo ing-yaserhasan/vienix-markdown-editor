@@ -4609,3 +4609,242 @@ body.is-resizing-workspace .workspace-resizer {
   border-color: var(--border-color, #1e293b);
 }
 
+/* ========================================================
+   زر تحرير المعاينة المباشر (Neumorphic WYSIWYG Toggle Button)
+   مستوحى من تصميم زر PUSH النيومورفي بالكامل
+   ======================================================== */
+.wysiwyg-preview-btn {
+  position: relative;
+  height: 28px;
+  min-width: 38px;
+  padding: 1px 7px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #efefef;
+  border: none;
+  border-radius: 7px;
+  /* تظليل نيومورفي ناعم ومطابق لزر PUSH: ضوء أبيض علوي-يساري وظل رمادي سفلي-يميني */
+  box-shadow: -2.5px -2.5px 6px rgba(255, 255, 255, 0.95), 2.5px 2.5px 5.5px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-right: 4px;
+  flex-shrink: 0;
+  outline: none;
+  line-height: 1;
+}
+
+.wysiwyg-preview-btn:hover {
+  background: #f5f5f5;
+  box-shadow: -3px -3px 7px rgba(255, 255, 255, 1), 3px 3px 7px rgba(0, 0, 0, 0.15);
+  transform: translateY(-0.5px);
+}
+
+/* حالة الضغط النيومورفية المنخفضة للداخل (Inset Shadow) */
+.wysiwyg-preview-btn:active {
+  background: #ebebeb;
+  box-shadow: inset 1.5px 1.5px 3.5px rgba(0, 0, 0, 0.22),
+              inset -1.5px -1.5px 3.5px rgba(255, 255, 255, 0.9);
+  transform: translateY(0.5px);
+}
+
+/* حالة التفعيل (عندما يكون وضع التحرير المباشر قيد التشغيل) */
+.wysiwyg-preview-btn.active {
+  background: #ebebeb;
+  box-shadow: inset 1.5px 1.5px 3.5px rgba(0, 0, 0, 0.22),
+              inset -1.5px -1.5px 3.5px rgba(255, 255, 255, 0.9),
+              0 0 0 1.5px rgba(37, 99, 235, 0.55);
+}
+
+.wysiwyg-btn-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: #515151; /* لون الخط الخاص بزر PUSH تماماً */
+  text-align: center;
+  pointer-events: none;
+  gap: 1px;
+}
+
+.wysiwyg-line-edit {
+  font-size: 7.8px;
+  font-weight: 600;
+  letter-spacing: 0.35px;
+  line-height: 1;
+}
+
+.wysiwyg-line-preview {
+  font-size: 7.2px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  line-height: 1;
+  opacity: 0.92;
+}
+
+.wysiwyg-preview-btn.active .wysiwyg-line-edit {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+/* دعم الوضع الليلي */
+[data-theme="dark"] .wysiwyg-preview-btn {
+  background: #232730;
+  box-shadow: -2px -2px 5px rgba(255, 255, 255, 0.05), 2px 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .wysiwyg-preview-btn:hover {
+  background: #282d38;
+  box-shadow: -2.5px -2.5px 6px rgba(255, 255, 255, 0.08), 2.5px 2.5px 7px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .wysiwyg-preview-btn .wysiwyg-btn-text {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .wysiwyg-preview-btn:active {
+  background: #1e222a;
+  box-shadow: inset 1.5px 1.5px 3.5px rgba(0, 0, 0, 0.65),
+              inset -1.5px -1.5px 3.5px rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .wysiwyg-preview-btn.active {
+  background: #1e222a;
+  box-shadow: inset 1.5px 1.5px 3.5px rgba(0, 0, 0, 0.65),
+              inset -1.5px -1.5px 3.5px rgba(255, 255, 255, 0.08),
+              0 0 0 1.5px rgba(96, 165, 250, 0.65);
+}
+
+[data-theme="dark"] .wysiwyg-preview-btn.active .wysiwyg-line-edit {
+  color: #60a5fa;
+}
+
+/* ========================================================
+   تنسيقات منطقة المعاينة عند تفعيل التحرير المباشر
+   ======================================================== */
+#preview-content.preview-editable {
+  outline: none;
+  cursor: text;
+  caret-color: var(--accent-color, #2563eb);
+  min-height: 100%;
+}
+
+#preview-content.preview-editable > p:hover,
+#preview-content.preview-editable > h1:hover,
+#preview-content.preview-editable > h2:hover,
+#preview-content.preview-editable > h3:hover,
+#preview-content.preview-editable > h4:hover,
+#preview-content.preview-editable > h5:hover,
+#preview-content.preview-editable > h6:hover,
+#preview-content.preview-editable > ul:hover,
+#preview-content.preview-editable > ol:hover,
+#preview-content.preview-editable > blockquote:hover,
+#preview-content.preview-editable > table:hover {
+  background: rgba(37, 99, 235, 0.035);
+  border-radius: 4px;
+  outline: 1px dashed rgba(37, 99, 235, 0.25);
+  outline-offset: 3px;
+  transition: background 0.15s ease, outline 0.15s ease;
+}
+
+[data-theme="dark"] #preview-content.preview-editable > p:hover,
+[data-theme="dark"] #preview-content.preview-editable > h1:hover,
+[data-theme="dark"] #preview-content.preview-editable > h2:hover,
+[data-theme="dark"] #preview-content.preview-editable > h3:hover,
+[data-theme="dark"] #preview-content.preview-editable > h4:hover,
+[data-theme="dark"] #preview-content.preview-editable > h5:hover,
+[data-theme="dark"] #preview-content.preview-editable > h6:hover,
+[data-theme="dark"] #preview-content.preview-editable > ul:hover,
+[data-theme="dark"] #preview-content.preview-editable > ol:hover,
+[data-theme="dark"] #preview-content.preview-editable > blockquote:hover,
+[data-theme="dark"] #preview-content.preview-editable > table:hover {
+  background: rgba(96, 165, 250, 0.05);
+  outline-color: rgba(96, 165, 250, 0.3);
+}
+
+.wysiwyg-active-badge {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);
+  animation: pulseBadge 2.2s infinite ease-in-out;
+}
+
+@keyframes pulseBadge {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.03); opacity: 0.85; }
+}
+
+/* ========================================================
+   شريط التنسيق العائم (Floating Formatting Toolbar)
+   ======================================================== */
+.wysiwyg-floating-toolbar {
+  position: fixed;
+  z-index: 10050;
+  display: none;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 24px;
+  box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.45), 0 0 1px rgba(255, 255, 255, 0.25);
+  transform: translate(-50%, -6px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  user-select: none;
+  direction: ltr;
+}
+
+.wysiwyg-floating-toolbar.visible {
+  display: flex;
+  transform: translate(-50%, 0);
+}
+
+.wysiwyg-tool-btn {
+  width: 27px;
+  height: 27px;
+  border: none;
+  background: transparent;
+  color: #cbd5e1;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.14s ease;
+  padding: 0;
+  font-family: inherit;
+}
+
+.wysiwyg-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.wysiwyg-tool-btn.active {
+  background: var(--accent-color, #2563eb);
+  color: #ffffff;
+}
+
+.wysiwyg-tool-btn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+.wysiwyg-toolbar-divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.18);
+  margin: 0 3px;
+}
+
+
