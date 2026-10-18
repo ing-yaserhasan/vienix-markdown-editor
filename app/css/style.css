@@ -3237,24 +3237,14 @@ body.is-resizing-workspace .workspace-resizer {
   color: #ffffff;
 }
 
-.obsidian-action-btn.danger {
+.obsidian-action-btn.danger:hover {
   background: #fee2e2;
   color: #ef4444;
 }
 
-.obsidian-action-btn.danger:hover {
-  background: #fecaca;
-  color: #dc2626;
-}
-
-[data-theme="dark"] .obsidian-action-btn.danger {
+[data-theme="dark"] .obsidian-action-btn.danger:hover {
   background: rgba(239, 68, 68, 0.2);
   color: #f87171;
-}
-
-[data-theme="dark"] .obsidian-action-btn.danger:hover {
-  background: rgba(239, 68, 68, 0.35);
-  color: #fca5a5;
 }
 
 /* إدخال إعادة التسمية المباشرة النظيف */
