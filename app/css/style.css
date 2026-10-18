@@ -3098,33 +3098,33 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 .obsidian-item-num {
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: 0.73rem;
+  font-weight: 600;
   color: #94a3b8;
-  font-family: monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.3px;
   flex-shrink: 0;
+  min-width: 18px;
+  text-align: center;
+  opacity: 0.85;
 }
 
 .obsidian-tree-item.active .obsidian-item-num {
   color: #2563eb;
+  opacity: 1;
 }
 
 [data-theme="dark"] .obsidian-tree-item.active .obsidian-item-num {
   color: #93c5fd;
-}
-
-.obsidian-item-content {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+  opacity: 1;
 }
 
 .obsidian-item-title-row {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex: 1;
+  min-width: 0;
 }
 
 .obsidian-item-title {

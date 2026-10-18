@@ -3808,16 +3808,15 @@
       return count;
     }
 
-    // رندرة عنصر الحجرة الشجري
+    // رندرة عنصر الحجرة الشجري (نمط الفهرس العصري: سطر واحد مدمج بدون # وبدون أسطر ثانوية)
     function renderItemHTML(item, parentFolderKey) {
-      const relTime = formatRelativeTimeArabic(item.updatedAt);
-      const wordsStr = item.isFilled ? `${item.words.toLocaleString('en-US')} كلمة` : 'فارغة';
-
       const editIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
       const moveIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
       const copyIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
       const pasteIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>`;
       const clearIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+
+      const formattedNum = String(item.num).padStart(2, '0');
 
       return `
         <div class="obsidian-tree-item ${item.isActive ? 'active' : ''}"
@@ -3830,18 +3829,11 @@
              ondragend="handleItemDragEnd(event)"
              onclick="handleTreeItemClick(event, ${item.num})"
              oncontextmenu="handleTreeItemContextMenu(event, ${item.num})">
-          <span class="obsidian-item-num" title="رقم الحجرة">#${item.num}</span>
-          <div class="obsidian-item-content">
-            <div class="obsidian-item-title-row" id="tree-title-row-${item.num}">
-              <span class="obsidian-item-title" id="tree-title-${item.num}" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</span>
-              ${item.isActive ? '<span class="obsidian-active-indicator" title="الحجرة النشطة"></span>' : ''}
-            </div>
-            <div class="obsidian-item-meta">
-              <span class="obsidian-dot ${item.isFilled ? 'filled' : 'empty'}"></span>
-              <span class="obsidian-item-words">${wordsStr}</span>
-              <span class="obsidian-meta-sep">•</span>
-              <span class="obsidian-item-time" title="وقت آخر تعديل">${relTime}</span>
-            </div>
+          <span class="obsidian-item-num" title="حجرة رقم ${item.num}">${formattedNum}</span>
+          <span class="obsidian-dot ${item.isFilled ? 'filled' : 'empty'}" title="${item.isFilled ? 'محتوى مكتوب' : 'فارغة'}"></span>
+          <div class="obsidian-item-title-row" id="tree-title-row-${item.num}">
+            <span class="obsidian-item-title" id="tree-title-${item.num}" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</span>
+            ${item.isActive ? '<span class="obsidian-active-indicator" title="الحجرة النشطة"></span>' : ''}
           </div>
           <div class="obsidian-item-actions">
             <button type="button" class="obsidian-action-btn" onclick="startTreeInlineRename(event, ${item.num})" title="إعادة تسمية مخصصة">
@@ -3864,10 +3856,8 @@
       `;
     }
 
-    // رندرة ملفات المجلد المستنسخة أو المنقولة أو المنشأة
+    // رندرة ملفات المجلد المستنسخة أو المنقولة أو المنشأة (نمط الفهرس العصري: سطر واحد مدمج بدون # وبدون أسطر ثانوية)
     function renderFolderFileHTML(file, parentFolderKey) {
-      const relTime = formatRelativeTimeArabic(file.updatedAt || Date.now());
-      const wordsStr = (file.words && file.words > 0) ? `${file.words.toLocaleString('en-US')} كلمة` : 'فارغة';
       const isViewingInChamber8 = (activeChamber === 8 && activeExplorerFile && activeExplorerFile.folderKey === parentFolderKey && activeExplorerFile.fileId === file.id);
       const isFilled = !!(file.content && file.content.trim().length > 0);
 
@@ -3876,6 +3866,8 @@
       const copyIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
       const pasteIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>`;
       const clearIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+
+      const formattedNum = String(file.num).padStart(2, '0');
 
       return `
         <div class="obsidian-tree-item is-folder-file ${isViewingInChamber8 ? 'active' : ''}"
@@ -3887,18 +3879,11 @@
              ondrop="handleFileDrop(event, '${file.id}', '${parentFolderKey}')"
              ondragend="handleFileDragEnd(event)"
              onclick="handleFolderFileClick('${parentFolderKey}', '${file.id}')">
-          <span class="obsidian-item-num" title="رقم الملف">#${file.num}</span>
-          <div class="obsidian-item-content">
-            <div class="obsidian-item-title-row" id="tree-title-row-file-${file.id}">
-              <span class="obsidian-item-title" id="tree-title-file-${file.id}" title="${escapeHtml(file.title)}">${escapeHtml(file.title)}</span>
-              ${isViewingInChamber8 ? '<span class="obsidian-active-indicator" title="قيد العرض"></span>' : ''}
-            </div>
-            <div class="obsidian-item-meta">
-              <span class="obsidian-dot ${isFilled ? 'filled' : 'empty'}"></span>
-              <span class="obsidian-item-words">${wordsStr}</span>
-              <span class="obsidian-meta-sep">•</span>
-              <span class="obsidian-item-time" title="وقت الحفظ">${relTime}</span>
-            </div>
+          <span class="obsidian-item-num" title="ملف رقم ${file.num}">${formattedNum}</span>
+          <span class="obsidian-dot ${isFilled ? 'filled' : 'empty'}" title="${isFilled ? 'محتوى مكتوب' : 'فارغ'}"></span>
+          <div class="obsidian-item-title-row" id="tree-title-row-file-${file.id}">
+            <span class="obsidian-item-title" id="tree-title-file-${file.id}" title="${escapeHtml(file.title)}">${escapeHtml(file.title)}</span>
+            ${isViewingInChamber8 ? '<span class="obsidian-active-indicator" title="قيد العرض"></span>' : ''}
           </div>
           <div class="obsidian-item-actions">
             <button type="button" class="obsidian-action-btn" onclick="startFolderFileRename(event, '${parentFolderKey}', '${file.id}')" title="إعادة تسمية الملف">
