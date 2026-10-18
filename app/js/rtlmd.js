@@ -7022,6 +7022,9 @@
       if (typeof window.closeWysiwygLinkModal === 'function') {
         window.closeWysiwygLinkModal();
       }
+      if (typeof window.closeWysiwygColorPopover === 'function') {
+        window.closeWysiwygColorPopover();
+      }
     }
   });
 
@@ -7120,6 +7123,36 @@
         return '';
       }
     });
+
+    // قاعدة الحفاظ على ألوان النصوص والتمييز (Text Colors & Highlights)
+    turndownService.addRule('preserveColorsAndHighlights', {
+      filter: function (node) {
+        if (node.nodeName === 'MARK') return true;
+        if (node.nodeName === 'SPAN') {
+          return !!(node.style && (node.style.color || node.style.backgroundColor));
+        }
+        if (node.nodeName === 'FONT' && (node.color || node.getAttribute('color'))) {
+          return true;
+        }
+        return false;
+      },
+      replacement: function (content, node) {
+        if (!content) return '';
+        if (node.nodeName === 'MARK') {
+          const bg = node.style && node.style.backgroundColor;
+          return bg ? `<mark style="background-color: ${bg};">${content}</mark>` : `<mark>${content}</mark>`;
+        }
+        let styles = [];
+        const color = (node.style && node.style.color) || node.getAttribute('color') || '';
+        const bg = (node.style && node.style.backgroundColor) || '';
+        if (color) styles.push(`color: ${color}`);
+        if (bg) styles.push(`background-color: ${bg}`);
+        if (styles.length > 0) {
+          return `<span style="${styles.join('; ')}">${content}</span>`;
+        }
+        return content;
+      }
+    });
   }
 
   // حماية العناصر غير القابلة للتحرير المباشر داخل المعاينة
@@ -7211,6 +7244,9 @@
       toolbar.classList.remove('visible');
       toolbar.style.display = 'none';
     }
+    if (typeof window.closeWysiwygColorPopover === 'function') {
+      window.closeWysiwygColorPopover();
+    }
   }
 
   // فحص وتحديث حالة أزرار شريط التنسيق العائم
@@ -7268,6 +7304,20 @@
               if (codeParent && previewContent.contains(codeParent)) {
                 const textNode = document.createTextNode(codeParent.textContent);
                 codeParent.parentNode.replaceChild(textNode, codeParent);
+              }
+              const markParent = (container.nodeType === Node.ELEMENT_NODE ? container : container.parentElement)?.closest('mark');
+              if (markParent && previewContent.contains(markParent)) {
+                const textNode = document.createTextNode(markParent.textContent);
+                markParent.parentNode.replaceChild(textNode, markParent);
+              }
+              const coloredSpan = (container.nodeType === Node.ELEMENT_NODE ? container : container.parentElement)?.closest('span[style]');
+              if (coloredSpan && previewContent.contains(coloredSpan)) {
+                coloredSpan.style.color = '';
+                coloredSpan.style.backgroundColor = '';
+                if (!coloredSpan.getAttribute('style') || !coloredSpan.getAttribute('style').trim()) {
+                  const textNode = document.createTextNode(coloredSpan.textContent);
+                  coloredSpan.parentNode.replaceChild(textNode, coloredSpan);
+                }
               }
             }
           }
@@ -7535,6 +7585,164 @@
     closeWysiwygLinkModal();
     syncPreviewToMarkdown(true);
   };
+
+  // =========================================================================
+  // نظام ألوان النصوص والتمييز للشريط العائم (WYSIWYG Colors & Highlights)
+  // =========================================================================
+  let activeColorType = 'foreColor';
+
+  const TEXT_COLORS = [
+    { name: 'أسود', hex: '#000000' },
+    { name: 'أحمر', hex: '#ef4444' },
+    { name: 'برتقالي', hex: '#f97316' },
+    { name: 'أصفر عنبري', hex: '#eab308' },
+    { name: 'أخضر', hex: '#16a34a' },
+    { name: 'سماوي', hex: '#06b6d4' },
+    { name: 'أزرق فينيكس', hex: '#2563eb' },
+    { name: 'بنفسجي', hex: '#8b5cf6' },
+    { name: 'وردي', hex: '#ec4899' },
+    { name: 'رمادي', hex: '#64748b' },
+    { name: 'بني', hex: '#b45309' },
+    { name: 'أبيض', hex: '#ffffff' }
+  ];
+
+  const HILITE_COLORS = [
+    { name: 'أصفر قلم التمييز', hex: '#fef08a' },
+    { name: 'أخضر نعناعي', hex: '#bbf7d0' },
+    { name: 'سماوي هادئ', hex: '#bae6fd' },
+    { name: 'مشمشي دافئ', hex: '#fed7aa' },
+    { name: 'وردي ناعم', hex: '#fecdd3' },
+    { name: 'خزامى بنفسجي', hex: '#e9d5ff' },
+    { name: 'أصفر باستيل', hex: '#fef9c3' },
+    { name: 'أخضر ليموني', hex: '#dcfce7' },
+    { name: 'أزرق جليدي', hex: '#e0f2fe' },
+    { name: 'خوخي دافئ', hex: '#ffedd5' },
+    { name: 'مرجاني فاتح', hex: '#ffe4e6' },
+    { name: 'رمادي لؤلؤي', hex: '#f1f5f9' }
+  ];
+
+  window.openWysiwygColorPopover = function (type, triggerBtn, event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      savedWysiwygSelectionRange = sel.getRangeAt(0).cloneRange();
+    }
+
+    activeColorType = type;
+    const popover = document.getElementById('wysiwyg-color-popover');
+    const titleEl = document.getElementById('wysiwyg-popover-title');
+    const swatchesContainer = document.getElementById('wysiwyg-color-swatches');
+    if (!popover || !swatchesContainer) return;
+
+    if (titleEl) {
+      titleEl.textContent = type === 'foreColor' ? 'لون الخط (Text Color)' : 'لون التمييز (Highlight Color)';
+    }
+
+    const palette = type === 'foreColor' ? TEXT_COLORS : HILITE_COLORS;
+    swatchesContainer.innerHTML = '';
+
+    palette.forEach(c => {
+      const swatch = document.createElement('button');
+      swatch.type = 'button';
+      swatch.className = 'wysiwyg-color-swatch';
+      swatch.style.backgroundColor = c.hex;
+      swatch.title = c.name;
+      swatch.onclick = (e) => {
+        e.preventDefault();
+        applyWysiwygColor(c.hex);
+      };
+      swatchesContainer.appendChild(swatch);
+    });
+
+    popover.style.display = 'block';
+
+    popover.onmousedown = (e) => {
+      if (e.target.id !== 'wysiwyg-custom-color-input') {
+        e.preventDefault();
+      }
+    };
+
+    const targetBtn = triggerBtn || document.getElementById(type === 'foreColor' ? 'wysiwyg-btn-forecolor' : 'wysiwyg-btn-hilitecolor');
+    if (targetBtn) {
+      const btnRect = targetBtn.getBoundingClientRect();
+      const popWidth = popover.offsetWidth || 236;
+      const popHeight = popover.offsetHeight || 150;
+
+      let left = btnRect.left + btnRect.width / 2 - popWidth / 2;
+      left = Math.max(12, Math.min(left, window.innerWidth - popWidth - 12));
+
+      let top = btnRect.bottom + 8;
+      if (top + popHeight > window.innerHeight - 10) {
+        top = btnRect.top - popHeight - 8;
+      }
+
+      popover.style.left = `${left}px`;
+      popover.style.top = `${top}px`;
+    }
+  };
+
+  window.closeWysiwygColorPopover = function () {
+    const popover = document.getElementById('wysiwyg-color-popover');
+    if (popover) {
+      popover.style.display = 'none';
+    }
+  };
+
+  window.applyWysiwygColor = function (colorHex) {
+    if (savedWysiwygSelectionRange) {
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(savedWysiwygSelectionRange);
+    }
+
+    try {
+      document.execCommand('styleWithCSS', false, true);
+    } catch (_) {}
+
+    if (activeColorType === 'foreColor') {
+      if (!colorHex) {
+        document.execCommand('foreColor', false, 'inherit');
+        const bar = document.getElementById('wysiwyg-forecolor-bar');
+        if (bar) bar.style.backgroundColor = '#ef4444';
+      } else {
+        document.execCommand('foreColor', false, colorHex);
+        const bar = document.getElementById('wysiwyg-forecolor-bar');
+        if (bar) bar.style.backgroundColor = colorHex;
+      }
+    } else {
+      // hiliteColor
+      if (!colorHex) {
+        try {
+          document.execCommand('hiliteColor', false, 'transparent');
+        } catch (_) {
+          document.execCommand('backColor', false, 'transparent');
+        }
+      } else {
+        try {
+          document.execCommand('hiliteColor', false, colorHex);
+        } catch (_) {
+          document.execCommand('backColor', false, colorHex);
+        }
+      }
+    }
+
+    closeWysiwygColorPopover();
+    syncPreviewToMarkdown(true);
+  };
+
+  // إغلاق لوحة الألوان عند النقر خارجها
+  document.addEventListener('click', (e) => {
+    const popover = document.getElementById('wysiwyg-color-popover');
+    if (popover && popover.style.display !== 'none') {
+      if (!popover.contains(e.target) && !e.target.closest('.wysiwyg-color-trigger-btn')) {
+        window.closeWysiwygColorPopover();
+      }
+    }
+  });
 
 })();
 

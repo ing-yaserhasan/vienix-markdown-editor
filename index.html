@@ -1299,6 +1299,16 @@
     <button type="button" class="wysiwyg-tool-btn" data-command="code" title="كود مضمّن (Inline Code)">
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
     </button>
+    <!-- زرا الألوان: لون الخط وقلم التمييز -->
+    <button type="button" class="wysiwyg-tool-btn wysiwyg-color-trigger-btn" id="wysiwyg-btn-forecolor" onclick="openWysiwygColorPopover('foreColor', this, event)" title="لون الخط (Text Color)">
+      <span class="wysiwyg-color-icon-a">
+        <span class="letter-a">A</span>
+        <span class="color-bar" id="wysiwyg-forecolor-bar" style="background-color: #ef4444;"></span>
+      </span>
+    </button>
+    <button type="button" class="wysiwyg-tool-btn wysiwyg-color-trigger-btn" id="wysiwyg-btn-hilitecolor" onclick="openWysiwygColorPopover('hiliteColor', this, event)" title="لون التمييز (Highlight Color)">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path><path d="M15 5l3 3"></path></svg>
+    </button>
     <div class="wysiwyg-toolbar-divider"></div>
     <button type="button" class="wysiwyg-tool-btn" data-command="formatBlock" data-value="H1" title="عنوان رئيسي (H1)">H1</button>
     <button type="button" class="wysiwyg-tool-btn" data-command="formatBlock" data-value="H2" title="عنوان فرعي (H2)">H2</button>
@@ -1322,6 +1332,24 @@
     </button>
   </div>
 
+  <!-- لوحة اختيار الألوان المنبثقة للشريط العائم (Color Palette Popover) -->
+  <div class="wysiwyg-color-popover" id="wysiwyg-color-popover" style="display:none;" role="dialog" aria-label="لوحة الألوان">
+    <div class="wysiwyg-popover-header">
+      <span class="wysiwyg-popover-title" id="wysiwyg-popover-title">لون الخط</span>
+      <button type="button" class="wysiwyg-clear-color-btn" onclick="applyWysiwygColor(null)" title="إزالة اللون (تلقائي)">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <span>تلقائي</span>
+      </button>
+    </div>
+    <div class="wysiwyg-color-swatches" id="wysiwyg-color-swatches"></div>
+    <div class="wysiwyg-custom-color-row">
+      <label for="wysiwyg-custom-color-input" class="wysiwyg-custom-color-label">
+        <span>🎨 لون مخصص:</span>
+      </label>
+      <input type="color" id="wysiwyg-custom-color-input" class="wysiwyg-custom-color-picker" value="#2563eb" oninput="applyWysiwygColor(this.value)" />
+    </div>
+  </div>
+
   <!-- Hidden File Input for Image Uploading -->
   <input type="file" id="image-upload-input" accept="image/*" style="display:none;" />
 
@@ -1335,7 +1363,7 @@
   <script src="assets/vendor/turndown-plugin-gfm.js"></script>
 
   <!-- Application Main Script -->
-  <script src="app/js/rtlmd.js?v=obsidian20"></script>
+  <script src="app/js/rtlmd.js?v=obsidian21"></script>
 
 </body>
 </html>

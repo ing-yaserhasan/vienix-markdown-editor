@@ -4811,4 +4811,140 @@ body.is-resizing-workspace .workspace-resizer {
   margin: 0 3px;
 }
 
+/* أيقونة زر لون الخط (A مع مؤشر لوني سفلي) */
+.wysiwyg-color-icon-a {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.wysiwyg-color-icon-a .letter-a {
+  font-size: 11px;
+  font-weight: 800;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #f1f5f9;
+  line-height: 1;
+}
+
+.wysiwyg-color-icon-a .color-bar {
+  width: 13px;
+  height: 2.5px;
+  border-radius: 1px;
+  margin-top: 1.5px;
+  background-color: #ef4444;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.4);
+}
+
+/* لوحة الألوان المنبثقة للشريط العائم (Color Palette Popover) */
+.wysiwyg-color-popover {
+  position: fixed;
+  z-index: 10060;
+  width: 236px;
+  padding: 10px 12px;
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.55), 0 0 1px rgba(255, 255, 255, 0.3);
+  user-select: none;
+  direction: rtl;
+  font-family: inherit;
+  animation: popoverFadeIn 0.14s ease-out;
+}
+
+@keyframes popoverFadeIn {
+  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.wysiwyg-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.wysiwyg-popover-title {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.wysiwyg-clear-color-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #cbd5e1;
+  border-radius: 5px;
+  padding: 2px 7px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.wysiwyg-clear-color-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+.wysiwyg-color-swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.wysiwyg-color-swatch {
+  width: 27px;
+  height: 27px;
+  border-radius: 7px;
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+  padding: 0;
+  outline: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.wysiwyg-color-swatch:hover {
+  transform: scale(1.18);
+  z-index: 2;
+  border-color: #ffffff;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45), 0 0 6px rgba(255, 255, 255, 0.4);
+}
+
+.wysiwyg-custom-color-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.wysiwyg-custom-color-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  cursor: pointer;
+}
+
+.wysiwyg-custom-color-picker {
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+}
+
 
