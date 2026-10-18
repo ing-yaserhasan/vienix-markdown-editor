@@ -2558,7 +2558,7 @@
       const newFile = {
         id: 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
         num: nextNum,
-        title: `ملف #${nextNum}`,
+        title: `ملف ${nextNum}`,
         content: text,
         words: wordsCount,
         chars: trimmed.length,
@@ -3333,6 +3333,28 @@
     const foldersDef = getAppFolders();
     const chambersOrder = getChambersOrder();
 
+    // إزالة علامة المربع (#) من أسماء الملفات التلقائية القديمة (ملف 8 بدلاً من ملف #8)
+    try {
+      foldersDef.forEach(folder => {
+        const folderFiles = getFolderFiles(folder.key);
+        let changed = false;
+        folderFiles.forEach(f => {
+          if (f.title && f.title.includes('ملف #')) {
+            f.title = f.title.replace(/ملف\s*#(\d+)/g, 'ملف $1');
+            changed = true;
+          }
+        });
+        if (changed) saveFolderFiles(folder.key, folderFiles);
+      });
+      if (activeExplorerFile && activeExplorerFile.title && activeExplorerFile.title.includes('ملف #')) {
+        activeExplorerFile.title = activeExplorerFile.title.replace(/ملف\s*#(\d+)/g, 'ملف $1');
+        try { localStorage.setItem('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (e) {}
+        if (activeChamber === 8) {
+          setChamberCustomTitle(8, activeExplorerFile.title);
+        }
+      }
+    } catch (e) {}
+
     let totalProjectWords = 0;
     let filledChambersCount = 0;
     const folderBuckets = {};
@@ -3574,17 +3596,18 @@
         });
       }
 
-      // 2. رندرة ملفات المجلد المستنسخة / المنقولة
-      if (filteredFiles.length > 0) {
-        filteredFiles.forEach(file => {
-          nodeHTML += renderFolderFileHTML(file, f.key);
-        });
-      }
-
-      // 3. رندرة الحجرات المنتمية مباشرة لهذا المجلد
+      // 2. رندرة الحجرات المنتمية مباشرة لهذا المجلد (1 إلى 7)
       if (items.length > 0) {
         items.forEach(item => {
           nodeHTML += renderItemHTML(item, f.key);
+        });
+      }
+
+      // 3. رندرة ملفات المجلد مرتبة تصاعدياً لتأتي بعد الحجرات مباشرة (8 بعد 7 وهكذا)
+      if (filteredFiles.length > 0) {
+        const sortedFiles = [...filteredFiles].sort((a, b) => (a.num || 0) - (b.num || 0));
+        sortedFiles.forEach(file => {
+          nodeHTML += renderFolderFileHTML(file, f.key);
         });
       }
 
