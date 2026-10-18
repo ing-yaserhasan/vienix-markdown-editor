@@ -2543,6 +2543,64 @@
     });
   };
 
+  window.pasteToFolderFile = function (e, folderKey, fileId) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    navigator.clipboard.readText().then(text => {
+      if (!text) {
+        showToast('الحافظة فارغة!', 'info', 1200);
+        return;
+      }
+      const files = getFolderFiles(folderKey);
+      const file = files.find(f => f.id === fileId);
+      if (!file) return;
+      file.content = (file.content ? file.content + '\n\n' : '') + text;
+      const textWithoutDataUrls = file.content.replace(/data:image\/[^"')\s]+/g, '[صورة]');
+      const trimmed = textWithoutDataUrls.trim();
+      file.words = trimmed ? (trimmed.match(/[\w\u0600-\u06FF]+/g) || []).length : 0;
+      file.chars = trimmed.length;
+      file.updatedAt = Date.now();
+      saveFolderFiles(folderKey, files);
+      if (activeExplorerFile && activeExplorerFile.folderKey === folderKey && activeExplorerFile.fileId === fileId) {
+        if (activeChamber === 8) {
+          setChamberContent(8, file.content);
+          if (isClassicMode && classicEditor) classicEditor.value = file.content;
+          else if (editor) editor.value = file.content;
+          if (isClassicMode) renderClassicMarkdown(); else renderMarkdown();
+          updateStats();
+        }
+      }
+      renderChambersExplorerTree();
+      showToast(`تم لصق المحتوى في ملف "${file.title}" 📋`, 'success', 1200);
+    }).catch(() => {
+      showToast('تعذر الوصول للحافظة', 'error', 1200);
+    });
+  };
+
+  window.openMoveFolderFileModal = function (folderKey, fileId, e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const allFolders = getAppFolders();
+    const files = getFolderFiles(folderKey);
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+    const destFolder = prompt(`نقل ملف "${file.title}" إلى مجلد آخر:\nاختر المجلد المستهدف أو اكتب اسمه:`, folderKey);
+    if (!destFolder || destFolder.trim() === folderKey) return;
+    const target = allFolders.find(f => f.key === destFolder.trim() || f.name === destFolder.trim());
+    if (!target) {
+      showToast('لم يتم العثور على المجلد المحدد!', 'error', 1500);
+      return;
+    }
+    saveFolderFiles(folderKey, files.filter(f => f.id !== fileId));
+    const destFiles = getFolderFiles(target.key);
+    destFiles.push(file);
+    saveFolderFiles(target.key, destFiles);
+    if (activeExplorerFile && activeExplorerFile.folderKey === folderKey && activeExplorerFile.fileId === fileId) {
+      activeExplorerFile.folderKey = target.key;
+      try { localStorage.setItem('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (err) {}
+    }
+    renderChambersExplorerTree();
+    showToast(`تم نقل ملف "${file.title}" إلى مجلد "${target.name}" 📂`, 'success', 1500);
+  };
+
   window.deleteFolderFile = function (e, folderKey, fileId) {
     if (e && e.stopPropagation) e.stopPropagation();
     let files = getFolderFiles(folderKey);
@@ -3176,6 +3234,9 @@
       const wordsStr = item.isFilled ? `${item.words.toLocaleString('en-US')} كلمة` : 'فارغة';
 
       const editIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+      const moveIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
+      const copyIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+      const pasteIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>`;
       const clearIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
 
       return `
@@ -3206,6 +3267,15 @@
             <button type="button" class="obsidian-action-btn" onclick="startTreeInlineRename(event, ${item.num})" title="إعادة تسمية مخصصة">
               ${editIcon}
             </button>
+            <button type="button" class="obsidian-action-btn" onclick="openMoveFolderModal(${item.num}, event)" title="نقل لمجلد">
+              ${moveIcon}
+            </button>
+            <button type="button" class="obsidian-action-btn" onclick="copyChamberFromTree(event, ${item.num})" title="نسخ المحتوى">
+              ${copyIcon}
+            </button>
+            <button type="button" class="obsidian-action-btn" onclick="pasteToChamberFromTree(event, ${item.num})" title="لصق المحتوى للحجرة">
+              ${pasteIcon}
+            </button>
             <button type="button" class="obsidian-action-btn danger" onclick="clearChamberFromTree(event, ${item.num})" title="تفريغ الحجرة">
               ${clearIcon}
             </button>
@@ -3217,27 +3287,28 @@
     // رندرة ملفات المجلد المستنسخة أو المنقولة أو المنشأة
     function renderFolderFileHTML(file, parentFolderKey) {
       const relTime = formatRelativeTimeArabic(file.updatedAt || Date.now());
-      const wordsStr = `${(file.words || 0).toLocaleString('en-US')} كلمة`;
+      const wordsStr = (file.words && file.words > 0) ? `${file.words.toLocaleString('en-US')} كلمة` : 'فارغة';
       const isViewingInChamber8 = (activeChamber === 8 && activeExplorerFile && activeExplorerFile.folderKey === parentFolderKey && activeExplorerFile.fileId === file.id);
+      const isFilled = !!(file.content && file.content.trim().length > 0);
 
       const editIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+      const moveIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
       const copyIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
-      const deleteIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+      const pasteIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>`;
+      const clearIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
 
       return `
-        <div class="obsidian-tree-item is-folder-file ${isViewingInChamber8 ? 'active active-in-preview' : ''}"
+        <div class="obsidian-tree-item is-folder-file ${isViewingInChamber8 ? 'active' : ''}"
              id="tree-file-${file.id}"
              onclick="handleFolderFileClick('${parentFolderKey}', '${file.id}')">
-          <span class="obsidian-item-num" title="ملف محفوظ • انقر للعرض في حجرة الملفات 🟢">
-            #${file.num}
-          </span>
+          <span class="obsidian-item-num" title="رقم الملف">#${file.num}</span>
           <div class="obsidian-item-content">
-            <div class="obsidian-item-title-row">
-              <span class="obsidian-item-title" title="${escapeHtml(file.title)}">${escapeHtml(file.title)}</span>
-              ${isViewingInChamber8 ? '<span class="obsidian-file-viewing-badge" title="معروض حالياً في حجرة الملفات">🟢 قيد العرض</span>' : ''}
+            <div class="obsidian-item-title-row" id="tree-title-row-file-${file.id}">
+              <span class="obsidian-item-title" id="tree-title-file-${file.id}" title="${escapeHtml(file.title)}">${escapeHtml(file.title)}</span>
+              ${isViewingInChamber8 ? '<span class="obsidian-active-indicator" title="قيد العرض"></span>' : ''}
             </div>
             <div class="obsidian-item-meta">
-              <span class="obsidian-dot ${file.content && file.content.trim() ? 'filled' : 'empty'}"></span>
+              <span class="obsidian-dot ${isFilled ? 'filled' : 'empty'}"></span>
               <span class="obsidian-item-words">${wordsStr}</span>
               <span class="obsidian-meta-sep">•</span>
               <span class="obsidian-item-time" title="وقت الحفظ">${relTime}</span>
@@ -3247,11 +3318,17 @@
             <button type="button" class="obsidian-action-btn" onclick="startFolderFileRename(event, '${parentFolderKey}', '${file.id}')" title="إعادة تسمية الملف">
               ${editIcon}
             </button>
+            <button type="button" class="obsidian-action-btn" onclick="openMoveFolderFileModal('${parentFolderKey}', '${file.id}', event)" title="نقل لمجلد">
+              ${moveIcon}
+            </button>
             <button type="button" class="obsidian-action-btn" onclick="copyFolderFileContent(event, '${parentFolderKey}', '${file.id}')" title="نسخ المحتوى">
               ${copyIcon}
             </button>
+            <button type="button" class="obsidian-action-btn" onclick="pasteToFolderFile(event, '${parentFolderKey}', '${file.id}')" title="لصق المحتوى للملف">
+              ${pasteIcon}
+            </button>
             <button type="button" class="obsidian-action-btn danger" onclick="deleteFolderFile(event, '${parentFolderKey}', '${file.id}')" title="حذف الملف من المجلد">
-              ${deleteIcon}
+              ${clearIcon}
             </button>
           </div>
         </div>
@@ -3357,6 +3434,7 @@
 
     treeEl.innerHTML = treeHTML;
   }
+  window.renderChambersExplorerTree = renderChambersExplorerTree;
 
   window.handleTreeItemClick = function (e, chNum) {
     if (e.target.closest('.obsidian-item-actions') || e.target.closest('.obsidian-inline-edit-box') || e.target.closest('.tree-action-btn')) {
