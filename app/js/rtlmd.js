@@ -2466,6 +2466,119 @@
     }
   };
 
+  // اللصق السريع المتسلسل التلقائي (Clipboard-Plus)
+  window.handleDockClipboardPlus = async function () {
+    try {
+      if (!navigator.clipboard || !navigator.clipboard.readText) {
+        showToast('يرجى السماح بصلاحية قراءة الحافظة في المتصفح', 'warning', 2000);
+        return;
+      }
+
+      const text = await navigator.clipboard.readText();
+      if (!text || text.trim().length === 0) {
+        showToast('الحافظة فارغة حالياً، يرجى نسخ نص أولاً! 📋', 'warning', 1800);
+        return;
+      }
+
+      // 1. حفظ المحتوى الحالي في الحجرة النشطة قبل الانتقال
+      const currentVal = isClassicMode ? (classicEditor?.value || editor.value) : editor.value;
+      if (activeChamber !== 8) {
+        setChamberContent(activeChamber, currentVal);
+        updateChamberMetaStats(activeChamber, currentVal);
+      } else if (activeExplorerFile) {
+        const curFiles = getFolderFiles(activeExplorerFile.folderKey);
+        const f = curFiles.find(x => x.id === activeExplorerFile.fileId);
+        if (f) {
+          f.content = currentVal;
+          const trimmedCur = currentVal.replace(/data:image\/[^"')\s]+/g, '[صورة]').trim();
+          f.words = trimmedCur ? (trimmedCur.match(/[\w\u0600-\u06FF]+/g) || []).length : 0;
+          f.chars = trimmedCur.length;
+          f.updatedAt = Date.now();
+          saveFolderFiles(activeExplorerFile.folderKey, curFiles);
+        }
+      }
+
+      // 2. البحث عن أول حجرة فارغة من الحجرات 1 إلى 7
+      let targetChamber = null;
+
+      // أ) البحث بدءاً من الحجرة التي تلي الحالية (إذا كانت الحالية < 7)
+      if (activeChamber >= 1 && activeChamber < 7) {
+        for (let ch = activeChamber + 1; ch <= 7; ch++) {
+          const content = getChamberContent(ch);
+          if (!content || content.trim().length === 0) {
+            targetChamber = ch;
+            break;
+          }
+        }
+      }
+
+      // ب) إذا لم نجد، نبحث من الحجرة 1 فصاعداً حتى 7
+      if (!targetChamber) {
+        for (let ch = 1; ch <= 7; ch++) {
+          const content = getChamberContent(ch);
+          if (!content || content.trim().length === 0) {
+            targetChamber = ch;
+            break;
+          }
+        }
+      }
+
+      // 3. الحالة الأولى: توجد حجرة فارغة بين 1 و 7
+      if (targetChamber !== null) {
+        setChamberContent(targetChamber, text);
+        updateChamberMetaStats(targetChamber, text);
+
+        // التبديل فوراً للحجرة وتحديث الواجهة والمحرر
+        window.switchChamber(targetChamber);
+        if (typeof renderChambersExplorerTree === 'function') {
+          renderChambersExplorerTree();
+        }
+
+        showToast(`تم لصق المحتوى في الحجرة #${targetChamber} بنجاح! 📋✨`, 'success', 1600);
+        return;
+      }
+
+      // 4. الحالة الثانية: الحجرات من 1 إلى 7 كلها ممتلئة -> إنشاء ملف جديد في المجلد الرئيسي (book)
+      const folderKey = 'book';
+      const files = getFolderFiles(folderKey);
+
+      // حساب الرقم التسلسلي التصاعدي التالي بدءاً من 8
+      let maxNum = 7;
+      files.forEach(f => {
+        if (typeof f.num === 'number' && f.num > maxNum) {
+          maxNum = f.num;
+        }
+      });
+      const nextNum = maxNum + 1;
+
+      const textWithoutDataUrls = text.replace(/data:image\/[^"')\s]+/g, '[صورة]');
+      const trimmed = textWithoutDataUrls.trim();
+      const wordsCount = trimmed ? (trimmed.match(/[\w\u0600-\u06FF]+/g) || []).length : 0;
+
+      const newFile = {
+        id: 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        num: nextNum,
+        title: `ملف #${nextNum}`,
+        content: text,
+        words: wordsCount,
+        chars: trimmed.length,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+
+      files.push(newFile);
+      saveFolderFiles(folderKey, files);
+
+      // فتح وعرض الملف فوراً في الحجرة المخصصة (حجرة 8)
+      window.handleFolderFileClick(folderKey, newFile.id);
+
+      showToast(`تم إنشاء ولصق المحتوى في "${newFile.title}" داخل المجلد الرئيسي 📂✨`, 'success', 1800);
+
+    } catch (err) {
+      showToast('تعذر الوصول إلى الحافظة، يرجى السماح بصلاحيات المتصفح', 'error', 2000);
+    }
+  };
+
   // تفاعل النقر على ملف داخل مجلد: يُعرض دائماً في الحجرة رقم 8 المخصصة بعلامة النقطة الخضراء
   window.handleFolderFileClick = function (folderKey, fileId) {
     const files = getFolderFiles(folderKey);
