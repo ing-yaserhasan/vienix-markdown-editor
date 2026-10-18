@@ -2458,30 +2458,27 @@ body.is-resizing-workspace .workspace-resizer {
   border-color: #64748b;
 }
 
-/* شكل الحجرة وهي مفعلة: خلفية باستيل خضراء مع إطار مزدوج ونقطة خضراء بالمنتصف */
+/* شكل الحجرة وهي مفعلة: تصميم نظيف بإطار واحد وخلفية باستيل ونقطة خضراء بالمنتصف (مطابق للصورة الأولى) */
 .chamber-btn.chamber-file-dedicated.active {
   background: #d1fae5 !important;
   border: 1.5px solid #10b981 !important;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25) !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.22) !important;
   transform: translateY(-1px);
 }
 
-/* الإطار الداخلي الصلب المزدوج عند التفعيل */
+/* إخفاء أي إطار داخلي عند التفعيل ليكون بإطار خارجي واحد نظيف تماماً مثل الصورة الأولى */
 .chamber-btn.chamber-file-dedicated.active::before {
-  border: 1.5px solid #10b981;
-  border-style: solid !important;
-  border-radius: 5px;
-  opacity: 0.85;
+  display: none !important;
 }
 
 /* النقطة الخضراء في المنتصف عند التفعيل */
 .chamber-btn.chamber-file-dedicated.active .chamber-green-dot {
   display: block;
-  width: 9px;
-  height: 9px;
+  width: 9.5px;
+  height: 9.5px;
   border-radius: 50%;
   background: #059669 !important;
-  box-shadow: 0 2px 5px rgba(5, 150, 105, 0.45) !important;
+  box-shadow: 0 1.5px 4px rgba(5, 150, 105, 0.4) !important;
   z-index: 1;
   transition: transform 0.2s ease;
 }
@@ -2489,10 +2486,6 @@ body.is-resizing-workspace .workspace-resizer {
 .chamber-btn.chamber-file-dedicated.active:hover {
   background: #a7f3d0 !important;
   border-color: #059669 !important;
-}
-
-.chamber-btn.chamber-file-dedicated.active:hover::before {
-  border-color: #059669;
 }
 
 /* الوضع الليلي (Dark Mode) */
@@ -2517,7 +2510,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 [data-theme="dark"] .chamber-btn.chamber-file-dedicated.active::before {
-  border-color: #34d399;
+  display: none !important;
 }
 
 [data-theme="dark"] .chamber-btn.chamber-file-dedicated.active .chamber-green-dot {
