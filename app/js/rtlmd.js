@@ -6370,11 +6370,28 @@
   // ==========================================
   function setupImageResizers(container) {
     if (!container) return;
+
+    // فك أي تغليف خاطئ للأيقونات والإيموجي المضمنة لتعود نصوصاً طبيعية بدون إطارات
+    container.querySelectorAll('.image-resizer-wrapper').forEach((wrapper) => {
+      const emojiImg = wrapper.querySelector('img.inline-emoji, img[src*="assets/icons/emojis/"]');
+      if (emojiImg && wrapper.parentNode) {
+        wrapper.parentNode.replaceChild(emojiImg, wrapper);
+      }
+    });
+
     const images = container.querySelectorAll('img');
 
     images.forEach((img) => {
-      // استثناء مخططات mermaid وأزرار التكبير
-      if (img.closest('.mermaid') || img.closest('.diagram-zoom-controls')) return;
+      // استثناء مخططات mermaid وأزرار التكبير وأيقونات الإيموجي المضمنة
+      if (
+        img.closest('.mermaid') ||
+        img.closest('.diagram-zoom-controls') ||
+        img.classList.contains('inline-emoji') ||
+        (img.getAttribute('src') || '').includes('assets/icons/emojis/') ||
+        img.closest('.inline-emoji')
+      ) {
+        return;
+      }
       if (img.parentElement && img.parentElement.classList.contains('image-resizer-wrapper')) {
         return;
       }

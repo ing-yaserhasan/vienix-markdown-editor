@@ -1128,8 +1128,8 @@ body.is-resizing-workspace .workspace-resizer {
   accent-color: var(--accent-color);
 }
 
-/* تنسيق الصور المدرجة في المعاينة لتكون متجاوبة وأنيقة */
-.markdown-body img {
+/* تنسيق الصور المدرجة في المعاينة لتكون متجاوبة وأنيقة (باستثناء الإيموجي المضمن) */
+.markdown-body img:not(.inline-emoji) {
   max-width: 100% !important;
   height: auto !important;
   border-radius: 6px;
@@ -4950,13 +4950,25 @@ body.is-resizing-workspace .workspace-resizer {
 /* ========================================================
    أيقونات وإيموجي فلات ملونة (Rich Flat Emoji & Badges)
    ======================================================== */
-.inline-emoji {
-  width: 1.35em;
-  height: 1.35em;
-  vertical-align: -0.22em;
-  display: inline-block;
-  margin: 0 2px;
-  object-fit: contain;
+.inline-emoji,
+.markdown-body img.inline-emoji,
+#preview-content img.inline-emoji,
+#wysiwyg-editor img.inline-emoji,
+.image-resizer-wrapper img.inline-emoji {
+  width: 1.35em !important;
+  height: 1.35em !important;
+  min-width: 1.35em !important;
+  max-width: 1.35em !important;
+  vertical-align: -0.22em !important;
+  display: inline-block !important;
+  margin: 0 3px !important;
+  padding: 0 !important;
+  border: none !important;
+  outline: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  object-fit: contain !important;
 }
 
 /* لوحة منتقي الأيقونات والإيموجي الملونة (Emoji Popover) */

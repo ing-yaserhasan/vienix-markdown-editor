@@ -236,7 +236,7 @@ body.classic-mode #classic-output blockquote p {
   color: #555;
 }
 
-body.classic-mode #classic-output img {
+body.classic-mode #classic-output img:not(.inline-emoji) {
   max-width: 100% !important;
   height: auto !important;
   border-radius: 4px !important;
