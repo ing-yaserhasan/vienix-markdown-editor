@@ -2413,109 +2413,64 @@ body.is-resizing-workspace .workspace-resizer {
   box-shadow: 0 0 5px rgba(255, 255, 255, 0.9);
 }
 
-/* الحجرة المخصصة لعرض ملفات المستكشف (مطابقة لتصميم الصورة: غير مفعلة / مفعلة) */
+/* الحجرة المخصصة لعرض ملفات المستكشف */
 .chamber-btn.chamber-file-dedicated {
-  position: relative;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: #f1f5f9 !important;
-  border: 1.5px solid #cbd5e1 !important;
+  border: 1.5px dashed rgba(148, 163, 184, 0.5) !important;
+  background: transparent !important;
+  opacity: 0.7;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: none !important;
-  transform: none;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 0;
-  overflow: visible;
 }
 
-/* الإطار الداخلي المتقطع للحجرة وهي غير مفعلة */
-.chamber-btn.chamber-file-dedicated::before {
-  content: '';
-  position: absolute;
-  inset: 2.5px;
-  border: 1.5px dashed #94a3b8;
-  border-radius: 5px;
-  pointer-events: none;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-sizing: border-box;
-}
-
-/* شكل أيقونة الحجرة وهي غير مفعلة: النقطة مخفية وفارغة من الداخل */
 .chamber-btn.chamber-file-dedicated .chamber-green-dot {
   display: none;
 }
 
 .chamber-btn.chamber-file-dedicated:hover {
-  background: #e2e8f0 !important;
-  border-color: #94a3b8 !important;
+  opacity: 1;
+  border-color: #10b981 !important;
+  background: rgba(16, 185, 129, 0.06) !important;
   transform: translateY(-1px);
 }
 
-.chamber-btn.chamber-file-dedicated:hover::before {
-  border-color: #64748b;
-}
-
-/* شكل الحجرة وهي مفعلة: تصميم نظيف بإطار واحد وخلفية باستيل ونقطة خضراء بالمنتصف (مطابق للصورة الأولى) */
+/* شكل الحجرة وهي مفعلة: نفس الشكل الهادئ الأنيق السابق بالتمام مع النقطة الخضراء */
 .chamber-btn.chamber-file-dedicated.active {
-  background: #d1fae5 !important;
-  border: 1.5px solid #10b981 !important;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.22) !important;
+  border: 1.5px solid rgba(16, 185, 129, 0.45) !important;
+  background: rgba(16, 185, 129, 0.08) !important;
+  opacity: 1 !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2) !important;
   transform: translateY(-1px);
-}
-
-/* إخفاء أي إطار داخلي عند التفعيل ليكون بإطار خارجي واحد نظيف تماماً مثل الصورة الأولى */
-.chamber-btn.chamber-file-dedicated.active::before {
-  display: none !important;
-}
-
-/* النقطة الخضراء في المنتصف عند التفعيل */
-.chamber-btn.chamber-file-dedicated.active .chamber-green-dot {
-  display: block;
-  width: 9.5px;
-  height: 9.5px;
-  border-radius: 50%;
-  background: #059669 !important;
-  box-shadow: 0 1.5px 4px rgba(5, 150, 105, 0.4) !important;
-  z-index: 1;
-  transition: transform 0.2s ease;
 }
 
 .chamber-btn.chamber-file-dedicated.active:hover {
-  background: #a7f3d0 !important;
-  border-color: #059669 !important;
+  border-color: #10b981 !important;
+  background: rgba(16, 185, 129, 0.16) !important;
+}
+
+.chamber-btn.chamber-file-dedicated.active .chamber-green-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.8);
+  transition: all 0.2s ease;
 }
 
 /* الوضع الليلي (Dark Mode) */
 [data-theme="dark"] .chamber-btn.chamber-file-dedicated {
-  background: rgba(255, 255, 255, 0.06) !important;
   border-color: rgba(148, 163, 184, 0.35) !important;
 }
 
-[data-theme="dark"] .chamber-btn.chamber-file-dedicated::before {
-  border-color: rgba(148, 163, 184, 0.45);
-}
-
-[data-theme="dark"] .chamber-btn.chamber-file-dedicated:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-color: rgba(148, 163, 184, 0.6) !important;
-}
-
 [data-theme="dark"] .chamber-btn.chamber-file-dedicated.active {
-  background: rgba(16, 185, 129, 0.22) !important;
-  border-color: #34d399 !important;
-  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3) !important;
-}
-
-[data-theme="dark"] .chamber-btn.chamber-file-dedicated.active::before {
-  display: none !important;
+  border-color: rgba(52, 211, 153, 0.45) !important;
+  background: rgba(16, 185, 129, 0.15) !important;
 }
 
 [data-theme="dark"] .chamber-btn.chamber-file-dedicated.active .chamber-green-dot {
-  background: #34d399 !important;
-  box-shadow: 0 0 8px rgba(52, 211, 153, 0.65) !important;
+  background: #34d399;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.8);
 }
 
 /* زر المقارنة والمطابقة */
