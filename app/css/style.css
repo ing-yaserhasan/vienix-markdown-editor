@@ -1815,8 +1815,7 @@ body.is-resizing-workspace .workspace-resizer {
   }
 
   /* Hide redundant desktop view buttons inside toolbar on mobile */
-  #btn-mode-split,
-  #btn-mode-toggle,
+  #btn-mode-cycle,
   #btn-zoom-out,
   #btn-zoom-in,
   #btn-sync-scroll,

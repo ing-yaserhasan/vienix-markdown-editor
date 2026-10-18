@@ -1029,7 +1029,7 @@
     }
   };
 
-  // View Mode Switching (Split, Editor only, Preview only)
+  // View Mode Switching (Tri-State Cycle: Split ➔ Editor ➔ Preview ➔ Split)
   let currentViewMode = 'split';
 
   window.setViewMode = function (mode) {
@@ -1038,49 +1038,54 @@
     document.querySelectorAll('.view-toggle-btn').forEach((b) => b.classList.remove('active'));
     document.querySelectorAll('.mobile-tab-btn').forEach((b) => b.classList.remove('active'));
 
-    const toggleBtn = document.getElementById('btn-mode-toggle');
-    const splitBtn = document.getElementById('btn-mode-split');
+    const cycleBtn = document.getElementById('btn-mode-cycle');
 
-    const eyeSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+    const splitSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="3" x2="12" y2="21"></line></svg>';
     const editorSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="8" y1="9" x2="16" y2="9"></line><line x1="8" y1="13" x2="16" y2="13"></line></svg>';
+    const previewSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
 
     if (mode === 'editor') {
       workspace.classList.add('mode-editor-only');
-      toggleBtn?.classList.add('active');
-      if (toggleBtn) {
-        toggleBtn.innerHTML = eyeSvg;
-        toggleBtn.title = 'معاينة فقط (وضع القراءة)';
+      if (cycleBtn) {
+        cycleBtn.innerHTML = editorSvg;
+        cycleBtn.title = 'محرر فقط (وضع التركيز بالكتابة) • انقر للتبديل إلى معاينة فقط';
+        cycleBtn.classList.add('active');
       }
       document.getElementById('mobile-tab-editor')?.classList.add('active');
     } else if (mode === 'preview') {
       workspace.classList.add('mode-preview-only');
-      toggleBtn?.classList.add('active');
-      if (toggleBtn) {
-        toggleBtn.innerHTML = editorSvg;
-        toggleBtn.title = 'محرر فقط (وضع التركيز بالكتابة)';
+      if (cycleBtn) {
+        cycleBtn.innerHTML = previewSvg;
+        cycleBtn.title = 'معاينة فقط (وضع القراءة التامة) • انقر للعودة للعرض المزدوج';
+        cycleBtn.classList.add('active');
       }
       document.getElementById('mobile-tab-preview')?.classList.add('active');
       // Ensure rendered markdown is updated
       renderMarkdown();
     } else {
-      // Split mode
-      splitBtn?.classList.add('active');
-      if (toggleBtn) {
-        toggleBtn.innerHTML = eyeSvg;
-        toggleBtn.title = 'معاينة فقط (وضع القراءة)';
+      // Split mode (Default)
+      if (cycleBtn) {
+        cycleBtn.innerHTML = splitSvg;
+        cycleBtn.title = 'عرض مزدوج (محرر + معاينة) • انقر للتبديل إلى محرر فقط';
+        cycleBtn.classList.remove('active');
       }
       document.getElementById('mobile-tab-editor')?.classList.add('active');
     }
   };
 
-  // تبديل ذكي بين وضعي التركيز المنفردين (محرر فقط ⟷ معاينة فقط)
-  window.toggleSingleViewMode = function () {
-    if (currentViewMode === 'preview') {
+  // زر دوري ثلاثي الأوضاع: مزدوج ➔ محرر فقط ➔ معاينة فقط ➔ مزدوج
+  window.cycleViewMode = function () {
+    if (currentViewMode === 'split') {
       setViewMode('editor');
-    } else {
+    } else if (currentViewMode === 'editor') {
       setViewMode('preview');
+    } else {
+      setViewMode('split');
     }
   };
+
+  // توافق رجعي مع أي استدعاء قديم
+  window.toggleSingleViewMode = window.cycleViewMode;
 
   // Switch tabs in Classic mode on mobile (Strict single panel view)
   window.setClassicMobileTab = function (tab) {

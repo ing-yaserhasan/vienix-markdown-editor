@@ -344,13 +344,9 @@
 
         <div class="toolbar-divider"></div>
 
-        <!-- Split / Full Editor / Full Preview Views -->
-        <button class="tool-btn view-toggle-btn active" id="btn-mode-split" onclick="setViewMode('split')" title="عرض مزدوج (محرر + معاينة)">
+        <!-- Unified Tri-State View Mode (زر أحادي دوري بـ 3 وضعيات: مزدوج ➔ محرر ➔ معاينة) -->
+        <button class="tool-btn view-toggle-btn" id="btn-mode-cycle" onclick="cycleViewMode()" title="عرض مزدوج (محرر + معاينة) • انقر للتبديل إلى محرر فقط">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="3" x2="12" y2="21"></line></svg>
-        </button>
-        <!-- Smart Single-View Toggle (تبديل ذكي بين محرر فقط ومعاينة فقط) -->
-        <button class="tool-btn view-toggle-btn" id="btn-mode-toggle" onclick="toggleSingleViewMode()" title="معاينة فقط (وضع القراءة)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
         </button>
 
         <div class="toolbar-divider"></div>
@@ -1339,7 +1335,7 @@
   <script src="assets/vendor/turndown-plugin-gfm.js"></script>
 
   <!-- Application Main Script -->
-  <script src="app/js/rtlmd.js?v=obsidian19"></script>
+  <script src="app/js/rtlmd.js?v=obsidian20"></script>
 
 </body>
 </html>
