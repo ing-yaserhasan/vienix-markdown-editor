@@ -1772,13 +1772,15 @@
     const folderName = folder ? folder.name : targetKey;
 
     const files = getFolderFiles(targetKey);
+    const nextNum = getNextFolderFileNum(targetKey);
     const newFile = {
       id: 'file_' + targetKey + '_' + Date.now().toString(36),
-      num: files.length + 1,
+      num: nextNum,
       title: title || 'ملف جديد',
       content: '',
       words: 0,
       chars: 0,
+      createdAt: Date.now(),
       updatedAt: Date.now(),
       linkedChamber: null
     };
@@ -2229,6 +2231,43 @@
     } catch (e) {}
   }
 
+  // الحصول على الرقم التسلسلي التصاعدي التالي لملفات المجلد (ليأتي بعد الحجرات وأعلى ملف)
+  function getNextFolderFileNum(folderKey) {
+    const files = getFolderFiles(folderKey);
+    let maxNum = 0;
+    for (let ch = 1; ch <= 7; ch++) {
+      const meta = getChamberMeta(ch);
+      const chFolder = meta.folder || (ch <= 7 ? 'book' : 'drafts');
+      if (chFolder === folderKey && ch > maxNum) {
+        maxNum = ch;
+      }
+    }
+    files.forEach(f => {
+      if (typeof f.num === 'number' && f.num > maxNum) {
+        maxNum = f.num;
+      }
+    });
+    return maxNum + 1;
+  }
+
+  // إعادة ترقيم ملفات المجلد بتسلسل تصاعدي دقيق يبدأ بعد أعلى حجرة في هذا المجلد
+  function resequenceFolderFiles(folderKey, files) {
+    if (!files || !Array.isArray(files) || files.length === 0) return files;
+    let maxChamberNum = 0;
+    for (let ch = 1; ch <= 7; ch++) {
+      const meta = getChamberMeta(ch);
+      const chFolder = meta.folder || (ch <= 7 ? 'book' : 'drafts');
+      if (chFolder === folderKey && ch > maxChamberNum) {
+        maxChamberNum = ch;
+      }
+    }
+    const startNum = maxChamberNum > 0 ? (maxChamberNum + 1) : 1;
+    files.forEach((f, idx) => {
+      f.num = startNum + idx;
+    });
+    return files;
+  }
+
   // الحصول على الرقم التلقائي المتصاعد للمجلدات الجديدة (1، 2، 3...)
   function getNextAutoFolderName() {
     const allFolders = getAppFolders();
@@ -2543,13 +2582,7 @@
       const files = getFolderFiles(folderKey);
 
       // حساب الرقم التسلسلي التصاعدي التالي بدءاً من 8
-      let maxNum = 7;
-      files.forEach(f => {
-        if (typeof f.num === 'number' && f.num > maxNum) {
-          maxNum = f.num;
-        }
-      });
-      const nextNum = maxNum + 1;
+      const nextNum = getNextFolderFileNum(folderKey);
 
       const textWithoutDataUrls = text.replace(/data:image\/[^"')\s]+/g, '[صورة]');
       const trimmed = textWithoutDataUrls.trim();
@@ -2752,9 +2785,13 @@
       showToast('لم يتم العثور على المجلد المحدد!', 'error', 1500);
       return;
     }
-    saveFolderFiles(folderKey, files.filter(f => f.id !== fileId));
+    const remainingFiles = files.filter(f => f.id !== fileId);
+    resequenceFolderFiles(folderKey, remainingFiles);
+    saveFolderFiles(folderKey, remainingFiles);
+
     const destFiles = getFolderFiles(target.key);
     destFiles.push(file);
+    resequenceFolderFiles(target.key, destFiles);
     saveFolderFiles(target.key, destFiles);
     if (activeExplorerFile && activeExplorerFile.folderKey === folderKey && activeExplorerFile.fileId === fileId) {
       activeExplorerFile.folderKey = target.key;
@@ -2772,6 +2809,7 @@
 
     const doDelete = () => {
       files = files.filter(f => f.id !== fileId);
+      resequenceFolderFiles(folderKey, files);
       saveFolderFiles(folderKey, files);
 
       // إذا كان الملف المحذوف هو المعروض حالياً في حجرة 8، نفرغها
@@ -3044,6 +3082,7 @@
   // ==========================================
   let draggedChamberNum = null;
   let draggedFolderKey = null;
+  let draggedFile = null;
 
   function isDescendantFolder(parentKey, testKey) {
     if (parentKey === testKey) return true;
@@ -3102,11 +3141,14 @@
   window.handleFolderDragEnd = function (e) {
     clearAllDragClasses();
     draggedFolderKey = null;
+    draggedChamberNum = null;
+    draggedFile = null;
   };
 
   window.handleItemDragStart = function (e, chNum) {
     draggedChamberNum = chNum;
     draggedFolderKey = null;
+    draggedFile = null;
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', chNum.toString());
     setTimeout(() => {
@@ -3116,6 +3158,7 @@
   };
 
   window.handleItemDragOver = function (e, targetChNum) {
+    if (!draggedChamberNum && !draggedFile) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     const targetEl = document.getElementById('tree-item-' + targetChNum);
@@ -3137,6 +3180,38 @@
     e.preventDefault();
     e.stopPropagation();
     clearAllDragClasses();
+
+    // إذا كان المسحوب ملفاً وتم إفلاته فوق حجرة
+    if (draggedFile) {
+      const { folderKey: srcFolderKey, fileId: srcFileId } = draggedFile;
+      draggedFile = null;
+      if (srcFolderKey !== targetFolderKey) {
+        const srcFiles = getFolderFiles(srcFolderKey);
+        const srcIndex = srcFiles.findIndex(f => f.id === srcFileId);
+        if (srcIndex !== -1) {
+          const [movingFile] = srcFiles.splice(srcIndex, 1);
+          resequenceFolderFiles(srcFolderKey, srcFiles);
+          saveFolderFiles(srcFolderKey, srcFiles);
+
+          const targetFiles = getFolderFiles(targetFolderKey);
+          targetFiles.unshift(movingFile);
+          resequenceFolderFiles(targetFolderKey, targetFiles);
+          saveFolderFiles(targetFolderKey, targetFiles);
+
+          if (activeExplorerFile && activeExplorerFile.folderKey === srcFolderKey && activeExplorerFile.fileId === srcFileId) {
+            activeExplorerFile.folderKey = targetFolderKey;
+            try { localStorage.setItem('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (err) {}
+          }
+          collapsedFolders[targetFolderKey] = false;
+          renderChambersExplorerTree();
+          const allFolders = getAppFolders();
+          const dest = allFolders.find(f => f.key === targetFolderKey);
+          showToast(`تم نقل ملف "${movingFile.title}" إلى مجلد "${dest ? dest.name : targetFolderKey}"! 📁`, 'success', 1500);
+        }
+      }
+      return;
+    }
+
     if (!draggedChamberNum || draggedChamberNum === targetChNum) return;
 
     // 1. نقل إلى المجلد في حال كان مختلفاً
@@ -3163,12 +3238,135 @@
     draggedChamberNum = null;
   };
 
+  // ==========================================
+  // سحب وإفلات ملفات المجلدات (Folder Files Drag & Drop)
+  // ==========================================
+  window.handleFileDragStart = function (e, folderKey, fileId) {
+    draggedFile = { folderKey, fileId };
+    draggedChamberNum = null;
+    draggedFolderKey = null;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'file', folderKey, fileId }));
+    setTimeout(() => {
+      const el = document.getElementById('tree-file-' + fileId);
+      if (el) el.classList.add('is-dragging');
+    }, 0);
+  };
+
+  window.handleFileDragOver = function (e, folderKey, fileId) {
+    if (!draggedFile && !draggedChamberNum) return;
+    if (draggedFile && draggedFile.fileId === fileId) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+
+    const targetEl = document.getElementById('tree-file-' + fileId);
+    if (targetEl) {
+      const rect = targetEl.getBoundingClientRect();
+      const isTopHalf = (e.clientY - rect.top) < (rect.height / 2);
+      targetEl.classList.toggle('drag-over-top', isTopHalf);
+      targetEl.classList.toggle('drag-over-bottom', !isTopHalf);
+    }
+  };
+
+  window.handleFileDragLeave = function (e) {
+    if (e.currentTarget) {
+      e.currentTarget.classList.remove('drag-over-top', 'drag-over-bottom');
+    }
+  };
+
+  window.handleFileDrop = function (e, targetFileId, targetFolderKey) {
+    e.preventDefault();
+    e.stopPropagation();
+    clearAllDragClasses();
+
+    // 1. إذا كان المسحوب هو حجرة تم إفلاتها فوق ملف
+    if (draggedChamberNum) {
+      const meta = getChamberMeta(draggedChamberNum);
+      const prevFolder = meta.folder || (draggedChamberNum <= 7 ? 'book' : 'drafts');
+      if (prevFolder !== targetFolderKey) {
+        meta.folder = targetFolderKey;
+        saveChamberMeta(draggedChamberNum, meta);
+        renderChambersExplorerTree();
+        showToast(`تم نقل الحجرة #${draggedChamberNum} إلى المجلد! 📁`, 'success', 1400);
+      }
+      draggedChamberNum = null;
+      return;
+    }
+
+    // 2. إذا كان المسحوب هو ملف
+    if (!draggedFile) return;
+    const { folderKey: srcFolderKey, fileId: srcFileId } = draggedFile;
+    draggedFile = null;
+
+    if (srcFolderKey === targetFolderKey && srcFileId === targetFileId) return;
+
+    const targetEl = document.getElementById('tree-file-' + targetFileId);
+    const rect = targetEl ? targetEl.getBoundingClientRect() : null;
+    const isTopHalf = rect ? ((e.clientY - rect.top) < (rect.height / 2)) : true;
+
+    if (srcFolderKey === targetFolderKey) {
+      // إعادة ترتيب الملفات داخل نفس المجلد
+      const files = getFolderFiles(targetFolderKey);
+      const srcIndex = files.findIndex(f => f.id === srcFileId);
+      if (srcIndex === -1) return;
+      const [movingFile] = files.splice(srcIndex, 1);
+
+      let targetIndex = files.findIndex(f => f.id === targetFileId);
+      if (targetIndex === -1) targetIndex = files.length;
+      const insertIndex = isTopHalf ? targetIndex : targetIndex + 1;
+      files.splice(insertIndex, 0, movingFile);
+
+      resequenceFolderFiles(targetFolderKey, files);
+      saveFolderFiles(targetFolderKey, files);
+      renderChambersExplorerTree();
+      showToast(`تم تغيير ترتيب ملف "${movingFile.title}" بنجاح! ⇅`, 'info', 1200);
+    } else {
+      // نقل الملف من مجلد إلى مجلد آخر عند الموضع المستهدف
+      const srcFiles = getFolderFiles(srcFolderKey);
+      const srcIndex = srcFiles.findIndex(f => f.id === srcFileId);
+      if (srcIndex === -1) return;
+      const [movingFile] = srcFiles.splice(srcIndex, 1);
+      resequenceFolderFiles(srcFolderKey, srcFiles);
+      saveFolderFiles(srcFolderKey, srcFiles);
+
+      const targetFiles = getFolderFiles(targetFolderKey);
+      let targetIndex = targetFiles.findIndex(f => f.id === targetFileId);
+      if (targetIndex === -1) targetIndex = targetFiles.length;
+      const insertIndex = isTopHalf ? targetIndex : targetIndex + 1;
+      targetFiles.splice(insertIndex, 0, movingFile);
+      resequenceFolderFiles(targetFolderKey, targetFiles);
+      saveFolderFiles(targetFolderKey, targetFiles);
+
+      if (activeExplorerFile && activeExplorerFile.folderKey === srcFolderKey && activeExplorerFile.fileId === srcFileId) {
+        activeExplorerFile.folderKey = targetFolderKey;
+        try { localStorage.setItem('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (err) {}
+      }
+
+      collapsedFolders[targetFolderKey] = false;
+      renderChambersExplorerTree();
+      const allFolders = getAppFolders();
+      const destFolder = allFolders.find(f => f.key === targetFolderKey);
+      showToast(`تم نقل ملف "${movingFile.title}" إلى مجلد "${destFolder ? destFolder.name : targetFolderKey}"! 📁`, 'success', 1500);
+    }
+  };
+
+  window.handleFileDragEnd = function (e) {
+    clearAllDragClasses();
+    draggedFile = null;
+    draggedChamberNum = null;
+    draggedFolderKey = null;
+  };
+
   window.handleFolderDragOver = function (e, folderKey) {
     if (draggedFolderKey) {
       if (draggedFolderKey === folderKey || isDescendantFolder(draggedFolderKey, folderKey)) {
         return;
       }
     }
+    if (!draggedFolderKey && !draggedChamberNum && !draggedFile) return;
+
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     const folderEl = document.getElementById('obsidian-folder-' + folderKey);
@@ -3217,7 +3415,38 @@
       return;
     }
 
-    // 2. معالجة سحب وإفلات حجرة داخل مجلد
+    // 2. معالجة سحب وإفلات ملف داخل مجلد
+    if (draggedFile) {
+      const { folderKey: srcFolderKey, fileId: srcFileId } = draggedFile;
+      draggedFile = null;
+      if (srcFolderKey === targetFolderKey) return;
+
+      const srcFiles = getFolderFiles(srcFolderKey);
+      const srcIndex = srcFiles.findIndex(f => f.id === srcFileId);
+      if (srcIndex === -1) return;
+      const [movingFile] = srcFiles.splice(srcIndex, 1);
+      resequenceFolderFiles(srcFolderKey, srcFiles);
+      saveFolderFiles(srcFolderKey, srcFiles);
+
+      const targetFiles = getFolderFiles(targetFolderKey);
+      targetFiles.push(movingFile);
+      resequenceFolderFiles(targetFolderKey, targetFiles);
+      saveFolderFiles(targetFolderKey, targetFiles);
+
+      if (activeExplorerFile && activeExplorerFile.folderKey === srcFolderKey && activeExplorerFile.fileId === srcFileId) {
+        activeExplorerFile.folderKey = targetFolderKey;
+        try { localStorage.setItem('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (err) {}
+      }
+
+      collapsedFolders[targetFolderKey] = false;
+      renderChambersExplorerTree();
+      const allFolders = getAppFolders();
+      const dest = allFolders.find(f => f.key === targetFolderKey);
+      showToast(`تم نقل ملف "${movingFile.title}" إلى مجلد "${dest ? dest.name : targetFolderKey}"! 📁`, 'success', 1600);
+      return;
+    }
+
+    // 3. معالجة سحب وإفلات حجرة داخل مجلد
     if (!draggedChamberNum) return;
     const meta = getChamberMeta(draggedChamberNum);
     const prevFolder = meta.folder || (draggedChamberNum <= 7 ? 'book' : 'drafts');
@@ -3270,6 +3499,7 @@
     clearAllDragClasses();
     draggedChamberNum = null;
     draggedFolderKey = null;
+    draggedFile = null;
   };
 
   // ==========================================
@@ -3333,7 +3563,7 @@
     const foldersDef = getAppFolders();
     const chambersOrder = getChambersOrder();
 
-    // إزالة علامة المربع (#) من أسماء الملفات التلقائية القديمة (ملف 8 بدلاً من ملف #8)
+    // إزالة علامة المربع (#) وتصحيح ترقيم الملفات القديمة المتضاربة (مثل ملف 666)
     try {
       foldersDef.forEach(folder => {
         const folderFiles = getFolderFiles(folder.key);
@@ -3344,6 +3574,34 @@
             changed = true;
           }
         });
+
+        // تصحيح ترقيم الملفات إذا كان هناك ملف أخذ رقماً مساوياً أو أقل من حجرات المجلد (مثل ملف 666 الذي أخذ #7)
+        let maxChamberNum = 0;
+        for (let ch = 1; ch <= 7; ch++) {
+          const meta = getChamberMeta(ch);
+          const chFolder = meta.folder || (ch <= 7 ? 'book' : 'drafts');
+          if (chFolder === folder.key && ch > maxChamberNum) {
+            maxChamberNum = ch;
+          }
+        }
+
+        const hasInvalidNum = folderFiles.some(f => !f.num || (maxChamberNum > 0 && f.num <= maxChamberNum));
+        if (hasInvalidNum) {
+          let currentMax = maxChamberNum;
+          folderFiles.forEach(f => {
+            if (typeof f.num === 'number' && f.num > maxChamberNum && f.num > currentMax) {
+              currentMax = f.num;
+            }
+          });
+          folderFiles.forEach(f => {
+            if (!f.num || (maxChamberNum > 0 && f.num <= maxChamberNum)) {
+              currentMax++;
+              f.num = currentMax;
+              changed = true;
+            }
+          });
+        }
+
         if (changed) saveFolderFiles(folder.key, folderFiles);
       });
       if (activeExplorerFile && activeExplorerFile.title && activeExplorerFile.title.includes('ملف #')) {
@@ -3500,6 +3758,12 @@
       return `
         <div class="obsidian-tree-item is-folder-file ${isViewingInChamber8 ? 'active' : ''}"
              id="tree-file-${file.id}"
+             draggable="true"
+             ondragstart="handleFileDragStart(event, '${parentFolderKey}', '${file.id}')"
+             ondragover="handleFileDragOver(event, '${parentFolderKey}', '${file.id}')"
+             ondragleave="handleFileDragLeave(event)"
+             ondrop="handleFileDrop(event, '${file.id}', '${parentFolderKey}')"
+             ondragend="handleFileDragEnd(event)"
              onclick="handleFolderFileClick('${parentFolderKey}', '${file.id}')">
           <span class="obsidian-item-num" title="رقم الملف">#${file.num}</span>
           <div class="obsidian-item-content">
