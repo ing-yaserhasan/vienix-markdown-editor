@@ -1998,6 +1998,7 @@
   let explorerSearchFilter = '';
   const collapsedFolders = { archive: true };
   let moveFolderTargetChamber = null;
+  let moveFolderTarget = null;
 
   window.updateDrawerOverlayBounds = function () {
     const overlay = document.getElementById('explorer-drawer-overlay');
@@ -2774,31 +2775,36 @@
 
   window.openMoveFolderFileModal = function (folderKey, fileId, e) {
     if (e && e.stopPropagation) e.stopPropagation();
-    const allFolders = getAppFolders();
     const files = getFolderFiles(folderKey);
     const file = files.find(f => f.id === fileId);
     if (!file) return;
-    const destFolder = prompt(`نقل ملف "${file.title}" إلى مجلد آخر:\nاختر المجلد المستهدف أو اكتب اسمه:`, folderKey);
-    if (!destFolder || destFolder.trim() === folderKey) return;
-    const target = allFolders.find(f => f.key === destFolder.trim() || f.name === destFolder.trim());
-    if (!target) {
-      showToast('لم يتم العثور على المجلد المحدد!', 'error', 1500);
-      return;
-    }
-    const remainingFiles = files.filter(f => f.id !== fileId);
-    resequenceFolderFiles(folderKey, remainingFiles);
-    saveFolderFiles(folderKey, remainingFiles);
 
-    const destFiles = getFolderFiles(target.key);
-    destFiles.push(file);
-    resequenceFolderFiles(target.key, destFiles);
-    saveFolderFiles(target.key, destFiles);
-    if (activeExplorerFile && activeExplorerFile.folderKey === folderKey && activeExplorerFile.fileId === fileId) {
-      activeExplorerFile.folderKey = target.key;
-      try { localStorage.setItem('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (err) {}
+    moveFolderTarget = { type: 'file', folderKey, fileId, fileTitle: file.title, fileNum: file.num };
+    moveFolderTargetChamber = null;
+
+    const modal = document.getElementById('move-folder-modal');
+    const titleEl = document.getElementById('move-folder-modal-title');
+    const desc = document.getElementById('move-folder-chamber-desc');
+    const newFolderInput = document.getElementById('move-new-folder-name-input');
+    if (!modal) return;
+
+    if (titleEl) titleEl.textContent = 'نقل الملف إلى مجلد';
+
+    const allFolders = getAppFolders();
+    const curFolder = allFolders.find(f => f.key === folderKey);
+    const curName = curFolder ? curFolder.name : folderKey;
+
+    if (desc) {
+      desc.innerHTML = `اختر المجلد الذي ترغب بنقل ملف <strong>"${escapeHtml(file.title)}"</strong> (من ${escapeHtml(curName)}) إليه:`;
     }
-    renderChambersExplorerTree();
-    showToast(`تم نقل ملف "${file.title}" إلى مجلد "${target.name}" 📂`, 'success', 1500);
+
+    if (typeof renderMoveFolderOptions === 'function') {
+      renderMoveFolderOptions(folderKey);
+    }
+
+    if (newFolderInput) newFolderInput.value = '';
+    modal.style.display = 'flex';
+    setTimeout(() => { if (newFolderInput) newFolderInput.focus(); }, 100);
   };
 
   window.deleteFolderFile = function (e, folderKey, fileId) {
@@ -3505,52 +3511,160 @@
   // ==========================================
   // نافذة نقل الحجرة إلى مجلد آخر (Move Folder Modal)
   // ==========================================
+  // رندرة خيارات المجلدات داخل نافذة النقل الاحترافية
+  function renderMoveFolderOptions(currentFolderKey) {
+    const container = document.getElementById('move-folder-options-container');
+    if (!container) return;
+    const allFolders = getAppFolders();
+    container.innerHTML = allFolders.map(f => {
+      const isCurrent = (f.key === currentFolderKey);
+      const parentFolder = f.parent ? allFolders.find(p => p.key === f.parent) : null;
+      const prefix = parentFolder ? `<span style="color:#d97706; font-size:0.75rem;">${escapeHtml(parentFolder.name)} / </span>` : '';
+      const currentBadge = isCurrent ? `<span class="folder-pick-current-badge">المجلد الحالي</span>` : '';
+      return `
+        <button type="button" class="folder-pick-btn ${isCurrent ? 'is-current' : ''}" onclick="confirmMoveFolder('${f.key}')" title="${isCurrent ? 'المجلد الحالي' : 'نقل إلى ' + escapeHtml(f.name)}">
+          <span class="folder-pick-icon">${f.key === 'archive' ? '🗄️' : (f.key === 'book' ? '📖' : '📁')}</span>
+          <div class="folder-pick-info" style="flex:1;">
+            <strong>${f.parent ? '&nbsp;&nbsp;└── ' : ''}${prefix}${escapeHtml(f.name)}</strong>
+            <small>${escapeHtml(f.desc)}</small>
+          </div>
+          ${currentBadge}
+        </button>
+      `;
+    }).join('');
+  }
+
+  // نافذة نقل الحجرة إلى مجلد آخر (Move Chamber Modal)
   window.openMoveFolderModal = function (chNum, e) {
     if (e && e.stopPropagation) e.stopPropagation();
-    moveFolderTargetChamber = parseInt(chNum, 10);
+    const ch = parseInt(chNum, 10);
+    moveFolderTargetChamber = ch;
+    moveFolderTarget = { type: 'chamber', chamberNum: ch };
+
     const modal = document.getElementById('move-folder-modal');
+    const titleEl = document.getElementById('move-folder-modal-title');
     const desc = document.getElementById('move-folder-chamber-desc');
-    const container = document.getElementById('move-folder-options-container');
+    const newFolderInput = document.getElementById('move-new-folder-name-input');
     if (!modal) return;
 
-    const title = getChamberTitle(moveFolderTargetChamber);
+    if (titleEl) titleEl.textContent = 'نقل الحجرة إلى مجلد';
+
+    const title = getChamberTitle(ch);
+    const meta = getChamberMeta(ch);
+    const currentFolderKey = meta.folder || (ch <= 7 ? 'book' : 'drafts');
+
     if (desc) {
-      desc.textContent = `اختر المجلد الذي ترغب بنقل (حجرة ${moveFolderTargetChamber}: ${title}) إليه:`;
+      desc.innerHTML = `اختر المجلد الذي ترغب بنقل <strong>(حجرة #${ch}: ${escapeHtml(title)})</strong> إليه:`;
     }
 
-    if (container) {
-      const allFolders = getAppFolders();
-      container.innerHTML = allFolders.map(f => {
-        const parentFolder = f.parent ? allFolders.find(p => p.key === f.parent) : null;
-        const prefix = parentFolder ? `<span style="color:#d97706; font-size:0.75rem;">${escapeHtml(parentFolder.name)} / </span>` : '';
-        return `
-          <button type="button" class="folder-pick-btn" onclick="confirmMoveFolder('${f.key}')">
-            <span class="folder-pick-icon">${f.key === 'archive' ? '🗄️' : (f.key === 'book' ? '📖' : '📁')}</span>
-            <div class="folder-pick-info">
-              <strong>${f.parent ? '&nbsp;&nbsp;└── ' : ''}${prefix}${escapeHtml(f.name)}</strong>
-              <small>${escapeHtml(f.desc)}</small>
-            </div>
-          </button>
-        `;
-      }).join('');
-    }
+    renderMoveFolderOptions(currentFolderKey);
 
+    if (newFolderInput) newFolderInput.value = '';
     modal.style.display = 'flex';
   };
 
   window.closeMoveFolderModal = function (e) {
-    if (e && e.target && e.target.id !== 'move-folder-modal' && !e.target.classList.contains('diff-modal-close')) {
+    if (e && e.target && e.target.id !== 'move-folder-modal' && !e.target.classList.contains('diff-modal-close') && e.target.tagName !== 'BUTTON') {
       return;
     }
     const modal = document.getElementById('move-folder-modal');
     if (modal) modal.style.display = 'none';
+    moveFolderTarget = null;
+    moveFolderTargetChamber = null;
   };
 
   window.confirmMoveFolder = function (targetFolder) {
-    if (!moveFolderTargetChamber) return;
-    window.moveChamberToFolder(moveFolderTargetChamber, targetFolder);
+    if (!moveFolderTarget && !moveFolderTargetChamber) return;
     const modal = document.getElementById('move-folder-modal');
-    if (modal) modal.style.display = 'none';
+
+    // 1. إذا كان العنصر المنقول ملفاً داخل مجلد
+    if (moveFolderTarget && moveFolderTarget.type === 'file') {
+      const { folderKey: srcFolderKey, fileId } = moveFolderTarget;
+      if (srcFolderKey === targetFolder) {
+        showToast('الملف موجود بالفعل داخل هذا المجلد!', 'info', 1500);
+        if (modal) modal.style.display = 'none';
+        moveFolderTarget = null;
+        return;
+      }
+
+      const srcFiles = getFolderFiles(srcFolderKey);
+      const fileIdx = srcFiles.findIndex(f => f.id === fileId);
+      if (fileIdx === -1) {
+        if (modal) modal.style.display = 'none';
+        moveFolderTarget = null;
+        return;
+      }
+
+      const [movingFile] = srcFiles.splice(fileIdx, 1);
+      resequenceFolderFiles(srcFolderKey, srcFiles);
+      saveFolderFiles(srcFolderKey, srcFiles);
+
+      const destFiles = getFolderFiles(targetFolder);
+      destFiles.push(movingFile);
+      resequenceFolderFiles(targetFolder, destFiles);
+      saveFolderFiles(targetFolder, destFiles);
+
+      if (activeExplorerFile && activeExplorerFile.folderKey === srcFolderKey && activeExplorerFile.fileId === fileId) {
+        activeExplorerFile.folderKey = targetFolder;
+        try { localStorage.setItem('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (err) {}
+      }
+
+      collapsedFolders[targetFolder] = false;
+      renderChambersExplorerTree();
+      const allFolders = getAppFolders();
+      const dest = allFolders.find(f => f.key === targetFolder);
+      showToast(`تم نقل ملف "${movingFile.title}" إلى مجلد "${dest ? dest.name : targetFolder}" بنجاح! 📂`, 'success', 1600);
+
+      if (modal) modal.style.display = 'none';
+      moveFolderTarget = null;
+      return;
+    }
+
+    // 2. إذا كان العنصر المنقول حجرة
+    const targetChamber = (moveFolderTarget && moveFolderTarget.chamberNum) || moveFolderTargetChamber;
+    if (targetChamber) {
+      const meta = getChamberMeta(targetChamber);
+      const curFolder = meta.folder || (targetChamber <= 7 ? 'book' : 'drafts');
+      if (curFolder === targetFolder) {
+        showToast('الحجرة موجودة بالفعل داخل هذا المجلد!', 'info', 1500);
+        if (modal) modal.style.display = 'none';
+        moveFolderTarget = null;
+        moveFolderTargetChamber = null;
+        return;
+      }
+      window.moveChamberToFolder(targetChamber, targetFolder);
+      if (modal) modal.style.display = 'none';
+      moveFolderTarget = null;
+      moveFolderTargetChamber = null;
+    }
+  };
+
+  // إنشاء مجلد جديد ونقل الملف أو الحجرة إليه مباشرة وبنقرة واحدة
+  window.confirmCreateFolderAndMove = function () {
+    const input = document.getElementById('move-new-folder-name-input');
+    const name = (input?.value || '').trim();
+    if (!name) {
+      showToast('يرجى إدخال اسم المجلد الجديد!', 'warning', 1600);
+      input?.focus();
+      return;
+    }
+
+    const key = 'custom_' + Date.now().toString(36);
+    let customFolders = [];
+    try {
+      const saved = localStorage.getItem('vienix_custom_folders');
+      if (saved) customFolders = JSON.parse(saved);
+    } catch (e) {}
+
+    customFolders.push({ key, name, desc: 'مجلد مخصص', isCustom: true, parent: null });
+    try {
+      localStorage.setItem('vienix_custom_folders', JSON.stringify(customFolders));
+    } catch (e) {}
+
+    collapsedFolders[key] = false;
+
+    // نقل العنصر المستهدف فوراً إلى هذا المجلد الجديد المنشأ
+    confirmMoveFolder(key);
   };
 
   // ==========================================

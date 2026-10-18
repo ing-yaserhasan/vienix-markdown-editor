@@ -1137,19 +1137,32 @@
     </div>
   </div>
 
-  <!-- نافذة نقل الحجرة إلى مجلد آخر (Move Folder Modal) -->
+  <!-- نافذة نقل الحجرة أو الملف إلى مجلد آخر (Move Folder Modal) -->
   <div class="chamber-modal-overlay" id="move-folder-modal" style="display:none;" onclick="closeMoveFolderModal(event)">
     <div class="chamber-modal-dialog sm">
       <div class="chamber-modal-header">
         <div class="chamber-modal-title">
-          <h4>نقل الحجرة إلى مجلد</h4>
+          <h4 id="move-folder-modal-title">نقل إلى مجلد</h4>
         </div>
         <button type="button" class="diff-modal-close" onclick="closeMoveFolderModal()" title="إغلاق">&times;</button>
       </div>
       <div class="chamber-modal-body">
-        <p id="move-folder-chamber-desc" style="font-size:0.85rem; margin-bottom:10px; color:var(--text-secondary);"></p>
-        <div class="folder-pick-options" id="move-folder-options-container">
+        <p id="move-folder-chamber-desc" style="font-size:0.85rem; margin-bottom:12px; color:var(--text-secondary);"></p>
+        <div class="folder-pick-options" id="move-folder-options-container" style="max-height: 250px; overflow-y: auto; padding: 2px;">
           <!-- يتم التعبئة تلقائياً بكافة المجلدات (الافتراضية والمنشأة حديثاً) -->
+        </div>
+
+        <!-- قسم إنشاء مجلد جديد والنقل إليه مباشرة -->
+        <div class="move-folder-create-box" style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border-color, #e2e8f0);">
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600; margin-bottom: 8px; color: var(--text-color, #1e293b);">
+            <span>📁 أو إنشاء مجلد جديد والنقل إليه فوراً:</span>
+          </label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="move-new-folder-name-input" class="form-control" placeholder="اكتب اسم المجلد الجديد..." style="flex: 1; font-size: 0.84rem; padding: 7px 12px; border-radius: 6px; border: 1px solid var(--border-color, #cbd5e1);" onkeydown="if(event.key==='Enter') confirmCreateFolderAndMove()" />
+            <button type="button" class="btn btn-primary" onclick="confirmCreateFolderAndMove()" style="padding: 7px 14px; font-size: 0.84rem; white-space: nowrap; border-radius: 6px; font-weight: 600;">
+              إنشاء ونقل ✨
+            </button>
+          </div>
         </div>
       </div>
     </div>
