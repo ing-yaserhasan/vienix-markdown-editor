@@ -4616,10 +4616,9 @@ body.is-resizing-workspace .workspace-resizer {
 .wysiwyg-preview-btn {
   position: relative;
   height: 28px;
-  min-width: 38px;
-  padding: 1px 7px;
+  min-width: 32px;
+  padding: 0 7px;
   display: inline-flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: #efefef;
@@ -4634,65 +4633,41 @@ body.is-resizing-workspace .workspace-resizer {
   flex-shrink: 0;
   outline: none;
   line-height: 1;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: #515151; /* لون الخط الخاص بزر PUSH تماماً */
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.35px;
 }
 
 .wysiwyg-preview-btn:hover {
   background: #f5f5f5;
   box-shadow: -3px -3px 7px rgba(255, 255, 255, 1), 3px 3px 7px rgba(0, 0, 0, 0.15);
-  transform: translateY(-0.5px);
 }
 
-/* حالة الضغط النيومورفية المنخفضة للداخل (Inset Shadow) */
-.wysiwyg-preview-btn:active {
-  background: #ebebeb;
-  box-shadow: inset 1.5px 1.5px 3.5px rgba(0, 0, 0, 0.22),
-              inset -1.5px -1.5px 3.5px rgba(255, 255, 255, 0.9);
-  transform: translateY(0.5px);
-}
-
-/* حالة التفعيل (عندما يكون وضع التحرير المباشر قيد التشغيل) */
+/* حالة التفعيل: لا يتغير شكله أبداً (بدون غؤور ولا إطار)، فقط لون الخط والظل يتحولان للأزرق */
 .wysiwyg-preview-btn.active {
-  background: #ebebeb;
-  box-shadow: inset 1.5px 1.5px 3.5px rgba(0, 0, 0, 0.22),
-              inset -1.5px -1.5px 3.5px rgba(255, 255, 255, 0.9),
-              0 0 0 1.5px rgba(37, 99, 235, 0.55);
+  background: #efefef;
+  color: #2563eb; /* تحول لون الكتابة للأزرق */
+  box-shadow: -2.5px -2.5px 6px rgba(255, 255, 255, 0.95), 2.5px 2.5px 7.5px rgba(37, 99, 235, 0.42); /* تحول الظل للأزرق */
+}
+
+.wysiwyg-preview-btn.active:hover {
+  background: #f5f5f5;
+  color: #1d4ed8;
+  box-shadow: -3px -3px 7px rgba(255, 255, 255, 1), 3px 3px 8.5px rgba(37, 99, 235, 0.55);
 }
 
 .wysiwyg-btn-text {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  color: #515151; /* لون الخط الخاص بزر PUSH تماماً */
-  text-align: center;
+  display: inline-block;
+  line-height: 1;
   pointer-events: none;
-  gap: 1px;
-}
-
-.wysiwyg-line-edit {
-  font-size: 7.8px;
-  font-weight: 600;
-  letter-spacing: 0.35px;
-  line-height: 1;
-}
-
-.wysiwyg-line-preview {
-  font-size: 7.2px;
-  font-weight: 500;
-  letter-spacing: 0.2px;
-  line-height: 1;
-  opacity: 0.92;
-}
-
-.wysiwyg-preview-btn.active .wysiwyg-line-edit {
-  color: #2563eb;
-  font-weight: 700;
 }
 
 /* دعم الوضع الليلي */
 [data-theme="dark"] .wysiwyg-preview-btn {
   background: #232730;
+  color: #cbd5e1;
   box-shadow: -2px -2px 5px rgba(255, 255, 255, 0.05), 2px 2px 6px rgba(0, 0, 0, 0.5);
 }
 
@@ -4701,25 +4676,16 @@ body.is-resizing-workspace .workspace-resizer {
   box-shadow: -2.5px -2.5px 6px rgba(255, 255, 255, 0.08), 2.5px 2.5px 7px rgba(0, 0, 0, 0.6);
 }
 
-[data-theme="dark"] .wysiwyg-preview-btn .wysiwyg-btn-text {
-  color: #cbd5e1;
-}
-
-[data-theme="dark"] .wysiwyg-preview-btn:active {
-  background: #1e222a;
-  box-shadow: inset 1.5px 1.5px 3.5px rgba(0, 0, 0, 0.65),
-              inset -1.5px -1.5px 3.5px rgba(255, 255, 255, 0.08);
-}
-
 [data-theme="dark"] .wysiwyg-preview-btn.active {
-  background: #1e222a;
-  box-shadow: inset 1.5px 1.5px 3.5px rgba(0, 0, 0, 0.65),
-              inset -1.5px -1.5px 3.5px rgba(255, 255, 255, 0.08),
-              0 0 0 1.5px rgba(96, 165, 250, 0.65);
+  background: #232730;
+  color: #60a5fa; /* تحول لون الخط للأزرق الفاتح في الوضع الليلي */
+  box-shadow: -2px -2px 5px rgba(255, 255, 255, 0.05), 2px 2px 8px rgba(96, 165, 250, 0.55); /* تحول الظل للأزرق في الوضع الليلي */
 }
 
-[data-theme="dark"] .wysiwyg-preview-btn.active .wysiwyg-line-edit {
-  color: #60a5fa;
+[data-theme="dark"] .wysiwyg-preview-btn.active:hover {
+  background: #282d38;
+  color: #93c5fd;
+  box-shadow: -2.5px -2.5px 6px rgba(255, 255, 255, 0.08), 2.5px 2.5px 9px rgba(96, 165, 250, 0.7);
 }
 
 /* ========================================================

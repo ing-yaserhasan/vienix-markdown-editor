@@ -6983,6 +6983,9 @@
     if (e.key === 'Escape') {
       window.closeLegalModal();
       window.closeLegalMenu();
+      if (typeof window.closeWysiwygLinkModal === 'function') {
+        window.closeWysiwygLinkModal();
+      }
     }
   });
 
@@ -7213,10 +7216,28 @@
         const val = btn.getAttribute('data-value') || null;
 
         if (cmd === 'createLink') {
-          const url = prompt('أدخل رابط URL:', 'https://');
-          if (url && url.trim()) {
-            document.execCommand('createLink', false, url.trim());
+          openWysiwygLinkModal();
+          return;
+        } else if (cmd === 'removeFormat') {
+          // مسح التنسيق الشامل الاحترافي
+          const sel = window.getSelection();
+          if (sel && sel.rangeCount) {
+            document.execCommand('removeFormat', false, null);
+            document.execCommand('unlink', false, null);
+            document.execCommand('formatBlock', false, 'P');
+            const range = sel.getRangeAt(0);
+            let container = range.commonAncestorContainer;
+            if (container) {
+              const codeParent = (container.nodeType === Node.ELEMENT_NODE ? container : container.parentElement)?.closest('code');
+              if (codeParent && previewContent.contains(codeParent)) {
+                const textNode = document.createTextNode(codeParent.textContent);
+                codeParent.parentNode.replaceChild(textNode, codeParent);
+              }
+            }
           }
+          syncPreviewToMarkdown(true);
+          updateToolbarButtonStates();
+          return;
         } else if (cmd === 'code') {
           // تبديل كود مضمن inline code
           const sel = window.getSelection();
@@ -7384,6 +7405,100 @@
       });
     }
   }
+
+  // =========================================================================
+  // نافذة إدراج رابط احترافية (WYSIWYG Link Modal Logic)
+  // =========================================================================
+  let savedWysiwygSelectionRange = null;
+
+  window.openWysiwygLinkModal = function () {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      savedWysiwygSelectionRange = sel.getRangeAt(0).cloneRange();
+    } else {
+      savedWysiwygSelectionRange = null;
+    }
+
+    const selectedText = savedWysiwygSelectionRange ? savedWysiwygSelectionRange.toString().trim() : '';
+
+    const textInput = document.getElementById('wysiwyg-link-text-input');
+    const urlInput = document.getElementById('wysiwyg-link-url-input');
+    const modal = document.getElementById('wysiwyg-link-modal');
+
+    if (textInput) textInput.value = selectedText;
+    if (urlInput) {
+      let currentHref = '';
+      if (savedWysiwygSelectionRange) {
+        let node = savedWysiwygSelectionRange.commonAncestorContainer;
+        const anchor = (node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement)?.closest('a');
+        if (anchor) currentHref = anchor.getAttribute('href') || '';
+      }
+      urlInput.value = currentHref || '';
+    }
+
+    if (modal) {
+      modal.style.display = 'flex';
+      setTimeout(() => {
+        if (urlInput) {
+          urlInput.focus();
+          if (urlInput.value) urlInput.select();
+        }
+      }, 50);
+    }
+  };
+
+  window.closeWysiwygLinkModal = function (e) {
+    if (e && e.target && e.target.closest && e.target.closest('.chamber-modal-dialog')) return;
+    const modal = document.getElementById('wysiwyg-link-modal');
+    if (modal) modal.style.display = 'none';
+  };
+
+  window.confirmInsertWysiwygLink = function () {
+    const urlInput = document.getElementById('wysiwyg-link-url-input');
+    const textInput = document.getElementById('wysiwyg-link-text-input');
+    let url = urlInput ? urlInput.value.trim() : '';
+    let text = textInput ? textInput.value.trim() : '';
+
+    if (!url) {
+      if (urlInput) urlInput.focus();
+      return;
+    }
+
+    if (!/^(https?:\/\/|mailto:|tel:|#)/i.test(url)) {
+      url = 'https://' + url;
+    }
+
+    // Restore saved selection
+    if (savedWysiwygSelectionRange) {
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(savedWysiwygSelectionRange);
+    }
+
+    if (text && (!savedWysiwygSelectionRange || savedWysiwygSelectionRange.collapsed)) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.textContent = text;
+      if (savedWysiwygSelectionRange) {
+        savedWysiwygSelectionRange.insertNode(a);
+      } else if (previewContent) {
+        previewContent.appendChild(a);
+      }
+    } else {
+      document.execCommand('createLink', false, url);
+      if (text && savedWysiwygSelectionRange) {
+        const anchor = (savedWysiwygSelectionRange.commonAncestorContainer.nodeType === Node.ELEMENT_NODE ?
+                        savedWysiwygSelectionRange.commonAncestorContainer :
+                        savedWysiwygSelectionRange.commonAncestorContainer.parentElement)?.closest('a') ||
+                       (savedWysiwygSelectionRange.commonAncestorContainer.nodeType === Node.ELEMENT_NODE ?
+                        savedWysiwygSelectionRange.commonAncestorContainer.querySelector('a') : null);
+        if (anchor) anchor.textContent = text;
+      }
+    }
+
+    closeWysiwygLinkModal();
+    syncPreviewToMarkdown(true);
+  };
 
 })();
 

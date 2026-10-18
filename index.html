@@ -285,12 +285,9 @@
             <span class="win-folder-label">المستكشف</span>
           </button>
 
-          <!-- زر تحرير المعاينة المباشر بتقنية Neumorphic (Edit Preview Toggle) -->
+          <!-- زر تحرير المعاينة المباشر بتقنية Neumorphic (Edit Toggle) -->
           <button type="button" class="wysiwyg-preview-btn" id="btn-toggle-wysiwyg" onclick="toggleWysiwygPreviewMode()" title="تبديل وضع تحرير المعاينة المباشر (Edit Preview)">
-            <span class="wysiwyg-btn-text">
-              <span class="wysiwyg-line-edit">Edit</span>
-              <span class="wysiwyg-line-preview">Preview</span>
-            </span>
+            <span class="wysiwyg-btn-text">Edit</span>
           </button>
 
           <button class="tool-btn chamber-diff-btn" id="btn-chamber-diff" onclick="openChambersDiffModal()" title="مطابقة ومقارنة محتوى حجرتين جنباً إلى جنب">
@@ -363,11 +360,6 @@
         <!-- Reset to Sample -->
         <button class="tool-btn" onclick="resetToSample()" title="استعادة النموذج التجريبي والشرح">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.2"/></svg>
-        </button>
-
-        <!-- Clear -->
-        <button class="tool-btn" onclick="clearEditor()" title="مسح النص بالكامل">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
         </button>
       </div>
     </div>
@@ -1226,6 +1218,33 @@
     </div>
   </div>
 
+  <!-- نافذة إدراج رابط احترافية للمعاينة المباشرة (Insert Link Modal) -->
+  <div class="chamber-modal-overlay" id="wysiwyg-link-modal" style="display:none;" onclick="closeWysiwygLinkModal(event)">
+    <div class="chamber-modal-dialog sm" style="max-width: 440px;" onclick="event.stopPropagation()">
+      <div class="chamber-modal-header">
+        <div class="chamber-modal-title" style="display: flex; align-items: center; gap: 8px;">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--brand-primary, #2563eb);"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+          <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700;">إدراج رابط إنترنت (Hyperlink)</h4>
+        </div>
+        <button type="button" class="diff-modal-close" onclick="closeWysiwygLinkModal()" title="إغلاق">&times;</button>
+      </div>
+      <div class="chamber-modal-body" style="padding: 16px 20px;">
+        <div class="book-field" style="margin-bottom: 12px;">
+          <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:5px; color:var(--text-primary);">نص الرابط (Text to Display):</label>
+          <input type="text" id="wysiwyg-link-text-input" class="book-input" placeholder="اكتب النص الظاهر للرابط هنا..." style="width:100%;" />
+        </div>
+        <div class="book-field">
+          <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:5px; color:var(--text-primary);">عنوان الرابط (URL Address):</label>
+          <input type="url" id="wysiwyg-link-url-input" class="book-input" placeholder="https://example.com" style="width:100%; direction:ltr; text-align:left;" onkeydown="if(event.key==='Enter')confirmInsertWysiwygLink()" />
+        </div>
+      </div>
+      <div class="chamber-modal-footer" style="display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px;">
+        <button type="button" class="btn btn-ghost" onclick="closeWysiwygLinkModal()">إلغاء</button>
+        <button type="button" class="btn btn-primary" onclick="confirmInsertWysiwygLink()">إدراج الرابط 🔗</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div class="toast-container"></div>
 
@@ -1322,7 +1341,7 @@
   <script src="assets/vendor/turndown-plugin-gfm.js"></script>
 
   <!-- Application Main Script -->
-  <script src="app/js/rtlmd.js?v=obsidian17"></script>
+  <script src="app/js/rtlmd.js?v=obsidian18"></script>
 
 </body>
 </html>
