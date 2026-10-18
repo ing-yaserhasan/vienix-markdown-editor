@@ -260,7 +260,7 @@
     if (!meta || typeof meta !== 'object') {
       meta = {
         customTitle: '',
-        folder: chNum <= 5 ? 'book' : 'drafts',
+        folder: chNum <= 7 ? 'book' : 'drafts',
         updatedAt: Date.now() - (TOTAL_CHAMBERS - chNum) * 120000,
         words: 0,
         chars: 0
@@ -276,6 +276,23 @@
     safeSaveToStorage('vienix_chamber_meta_' + chNum, jsonStr);
     safeSaveToStorage('yaser_chamber_meta_' + chNum, jsonStr);
   }
+
+  // ترحيل تلقائي: نقل الحجرتين 6 و 7 افتراضياً إلى المجلد الرئيسي
+  (function migrateChambers67ToMainFolder() {
+    try {
+      const migrated = localStorage.getItem('vienix_chambers_6_7_to_book_v1');
+      if (!migrated) {
+        [6, 7].forEach(num => {
+          const m = getChamberMeta(num);
+          if (m && (!m.folder || m.folder === 'drafts')) {
+            m.folder = 'book';
+            saveChamberMeta(num, m);
+          }
+        });
+        localStorage.setItem('vienix_chambers_6_7_to_book_v1', 'true');
+      }
+    } catch (e) {}
+  })();
 
   // تحديث إحصائيات الحجرة التلقائية
   function updateChamberMetaStats(chNum, content) {
@@ -1709,7 +1726,7 @@
 
   window.openNewFileModal = function (folderKey) {
     const curMeta = getChamberMeta(activeChamber);
-    const fallbackFolder = curMeta.folder || (activeChamber <= 5 ? 'book' : 'drafts');
+    const fallbackFolder = curMeta.folder || (activeChamber <= 7 ? 'book' : 'drafts');
     pendingNewFileFolderKey = folderKey || contextTargetFolderKey || fallbackFolder;
 
     const modal = document.getElementById('new-file-modal');
@@ -1865,7 +1882,7 @@
         // 2. تفريغ الحجرات التابعة لهذا المجلد
         for (let i = 1; i <= TOTAL_CHAMBERS; i++) {
           const meta = getChamberMeta(i);
-          const assigned = meta.folder || (i <= 5 ? 'book' : 'drafts');
+          const assigned = meta.folder || (i <= 7 ? 'book' : 'drafts');
           if (assigned === contextTargetFolderKey) {
             detachChamberFromLinkedFiles(i);
             setChamberContent(i, '');
@@ -1878,7 +1895,7 @@
 
         // إذا كانت الحجرة النشطة الحالية تنتمي لهذا المجلد، نفرغ المحرر
         const curMeta = getChamberMeta(activeChamber);
-        const curAssigned = curMeta.folder || (activeChamber <= 5 ? 'book' : 'drafts');
+        const curAssigned = curMeta.folder || (activeChamber <= 7 ? 'book' : 'drafts');
         if (curAssigned === contextTargetFolderKey) {
           editor.value = '';
           if (classicEditor) classicEditor.value = '';
@@ -2885,7 +2902,7 @@
         // إعادة أي حجرات كانت تابعة لهذا المجلد إلى المجلد البديل
         for (let i = 1; i <= TOTAL_CHAMBERS; i++) {
           const meta = getChamberMeta(i);
-          const assigned = meta.folder || (i <= 5 ? 'book' : 'drafts');
+          const assigned = meta.folder || (i <= 7 ? 'book' : 'drafts');
           if (assigned === folderKey) {
             meta.folder = fallbackKey;
             saveChamberMeta(i, meta);
@@ -3011,7 +3028,7 @@
 
     // 1. نقل إلى المجلد في حال كان مختلفاً
     const meta = getChamberMeta(draggedChamberNum);
-    const prevFolder = meta.folder || (draggedChamberNum <= 5 ? 'book' : 'drafts');
+    const prevFolder = meta.folder || (draggedChamberNum <= 7 ? 'book' : 'drafts');
     if (prevFolder !== targetFolderKey) {
       meta.folder = targetFolderKey;
       saveChamberMeta(draggedChamberNum, meta);
@@ -3090,7 +3107,7 @@
     // 2. معالجة سحب وإفلات حجرة داخل مجلد
     if (!draggedChamberNum) return;
     const meta = getChamberMeta(draggedChamberNum);
-    const prevFolder = meta.folder || (draggedChamberNum <= 5 ? 'book' : 'drafts');
+    const prevFolder = meta.folder || (draggedChamberNum <= 7 ? 'book' : 'drafts');
     if (prevFolder !== targetFolderKey) {
       meta.folder = targetFolderKey;
       saveChamberMeta(draggedChamberNum, meta);
@@ -3232,7 +3249,7 @@
         }
       }
 
-      let assignedFolder = meta.folder || (i <= 5 ? 'book' : 'drafts');
+      let assignedFolder = meta.folder || (i <= 7 ? 'book' : 'drafts');
       if (!folderBuckets[assignedFolder]) assignedFolder = 'drafts';
       if (!folderBuckets[assignedFolder]) folderBuckets[assignedFolder] = [];
 
@@ -3659,6 +3676,7 @@
       setChamberContent(chNum, '');
       const curMeta = getChamberMeta(chNum);
       curMeta.customTitle = '';
+      curMeta.folder = (chNum <= 7 ? 'book' : 'drafts');
       curMeta.words = 0;
       curMeta.chars = 0;
       curMeta.updatedAt = Date.now();
