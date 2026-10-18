@@ -638,6 +638,38 @@ body.is-resizing-workspace .workspace-resizer {
   cursor: grabbing;
 }
 
+/* أيقونة أعلى شريط الأدوات العائم بدون حدود (clipboard-plus) */
+.floating-dock-top-btn {
+  background: transparent;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  border-radius: 6px;
+  margin-bottom: 3px;
+  transition: color 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
+  opacity: 0.75;
+}
+
+.floating-dock-top-btn:hover {
+  opacity: 1;
+  color: var(--accent-color, #3b82f6);
+  transform: scale(1.1);
+}
+
+[data-theme="dark"] .floating-dock-top-btn {
+  color: var(--text-muted, #94a3b8);
+}
+
+[data-theme="dark"] .floating-dock-top-btn:hover {
+  color: #60a5fa;
+}
+
 /* أيقونة مقبض السحب فوق الكونتينر */
 .floating-dock-handle {
   margin-bottom: 6px;      /* المقبض فوق الكونتينر — بعيد بمسافة بسيطة */
