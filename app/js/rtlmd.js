@@ -7025,6 +7025,9 @@
       if (typeof window.closeWysiwygColorPopover === 'function') {
         window.closeWysiwygColorPopover();
       }
+      if (typeof window.closeEmojiPicker === 'function') {
+        window.closeEmojiPicker();
+      }
     }
   });
 
@@ -7153,6 +7156,22 @@
         return content;
       }
     });
+
+    // قاعدة الحفاظ على أيقونات الإيموجي والشارات الملونة المحلية
+    turndownService.addRule('preserveInlineEmojis', {
+      filter: function (node) {
+        return (
+          node.nodeName === 'IMG' &&
+          (node.classList.contains('inline-emoji') || (node.getAttribute('src') || '').includes('assets/icons/emojis/'))
+        );
+      },
+      replacement: function (content, node) {
+        const src = node.getAttribute('src') || '';
+        const alt = node.getAttribute('alt') || 'emoji';
+        const title = node.getAttribute('title') || '';
+        return `<img src="${src}" width="22" height="22" class="inline-emoji" alt="${alt}" title="${title}">`;
+      }
+    });
   }
 
   // حماية العناصر غير القابلة للتحرير المباشر داخل المعاينة
@@ -7246,6 +7265,9 @@
     }
     if (typeof window.closeWysiwygColorPopover === 'function') {
       window.closeWysiwygColorPopover();
+    }
+    if (typeof window.closeEmojiPicker === 'function') {
+      window.closeEmojiPicker();
     }
   }
 
@@ -7742,7 +7764,180 @@
         window.closeWysiwygColorPopover();
       }
     }
+    const emojiPop = document.getElementById('emoji-picker-popover');
+    if (emojiPop && emojiPop.style.display !== 'none') {
+      if (!emojiPop.contains(e.target) && !e.target.closest('#btn-insert-emoji') && !e.target.closest('#wysiwyg-btn-emoji')) {
+        window.closeEmojiPicker();
+      }
+    }
   });
+
+  // =========================================================================
+  // نظام منتقي الأيقونات والإيموجي الملونة الفلات (Rich Flat Emoji & Badges)
+  // =========================================================================
+  const EMOJI_ITEMS = [
+    { id: 'cool', file: 'cool.svg', name: 'نظارة شمسية كول', cat: 'faces', tags: 'cool sunglasses shade وجه نظارة كول فخم أصفر' },
+    { id: 'heart-eyes', file: 'heart-eyes.svg', name: 'عيون قلوب حب', cat: 'faces', tags: 'love heart eyes عيون قلوب حب إعجاب رائع' },
+    { id: 'star-eyes', file: 'star-eyes.svg', name: 'عيون نجوم مبهر', cat: 'faces', tags: 'star eyes excited نجوم حماس إبهار مذهل' },
+    { id: 'laughing', file: 'laughing.svg', name: 'ضحك دموع فرح', cat: 'faces', tags: 'laugh joy tears ضحك دموع وناسة فرح' },
+    { id: 'grin', file: 'grin.svg', name: 'ابتسامة عريضة', cat: 'faces', tags: 'grin smile happy ابتسامة سعادة مرح' },
+    { id: 'thinking', file: 'thinking.svg', name: 'تفكير وتحليل', cat: 'faces', tags: 'think thinking idea تفكير ذكاء فكرة تأمل' },
+    { id: 'wink', file: 'wink.svg', name: 'غمزة ثقة', cat: 'faces', tags: 'wink confidence غمزة ثقة سر' },
+    { id: 'sad-blue', file: 'sad-blue.svg', name: 'حزن أزرق', cat: 'faces', tags: 'sad blue crying حزن زعل بكاء' },
+
+    { id: 'verified-blue', file: 'verified-blue.svg', name: 'توثيق أزرق معتمد', cat: 'badges', tags: 'verified blue check badge توثيق أزرق صح علامة صح معتمد رسمي' },
+    { id: 'verified-black', file: 'verified-black.svg', name: 'توثيق داكن ملكي', cat: 'badges', tags: 'verified black dark badge توثيق أسود داكن رسمي' },
+    { id: 'check-circle-blue', file: 'check-circle-blue.svg', name: 'دائرة صح زرقاء', cat: 'badges', tags: 'check circle blue صح دائرة أزرق تأكيد نجاح تم' },
+    { id: 'check-circle-green', file: 'check-circle-green.svg', name: 'دائرة صح خضراء', cat: 'badges', tags: 'check circle green صح دائرة أخضر تم قبول موافق' },
+    { id: 'star-gold', file: 'star-gold.svg', name: 'نجمة ذهبية مميزة', cat: 'badges', tags: 'star gold favorite نجمة ذهبي مميز مفضلة' },
+    { id: 'crown', file: 'crown.svg', name: 'تاج ذهبي ملكي', cat: 'badges', tags: 'crown gold king vip تاج ملك فخم ذهبي' },
+    { id: 'target', file: 'target.svg', name: 'هدف وإنجاز', cat: 'badges', tags: 'target goal bullseye هدف إنجاز دقة وصول' },
+
+    { id: 'fire', file: 'fire.svg', name: 'شعلة نار حماس', cat: 'symbols', tags: 'fire hot lit شعلة نار ترند حماس قوي اشتعال' },
+    { id: 'rocket', file: 'rocket.svg', name: 'صاروخ انطلاق وسرعة', cat: 'symbols', tags: 'rocket launch fast صاروخ انطلاق سرعة تطور قفزة' },
+    { id: 'sparkles', file: 'sparkles.svg', name: 'بريق ولمعان سحري', cat: 'symbols', tags: 'sparkles magic star بريق لمعان سحر جديد إشراق' },
+    { id: 'heart-red', file: 'heart-red.svg', name: 'قلب أحمر نقي', cat: 'symbols', tags: 'heart red love قلب أحمر حب إعجاب شغف' },
+    { id: 'idea', file: 'idea.svg', name: 'مصباح فكرة وإلهام', cat: 'symbols', tags: 'idea bulb light مصباح فكرة ذكاء إلهام اقتراح' },
+    { id: 'thumbs-up', file: 'thumbs-up.svg', name: 'إعجاب ممتاز', cat: 'symbols', tags: 'thumbs up like approve إعجاب موافق ممتاز تم تمام' },
+    { id: 'party', file: 'party.svg', name: 'احتفال ومفرقعات', cat: 'symbols', tags: 'party celebration احتفال نجاح مبروك فرح عيد' },
+    { id: 'gem', file: 'gem.svg', name: 'جوهرة ألماسة نادرة', cat: 'symbols', tags: 'gem diamond جوهرة ألماس قيمة ثمين جوهرة' },
+    { id: 'warning', file: 'warning.svg', name: 'تنبيه وتحذير', cat: 'symbols', tags: 'warning alert تنبيه تحذير انتباه هام خطر' }
+  ];
+
+  let currentEmojiCategory = 'all';
+
+  window.renderEmojiGrid = function (filterQuery = '') {
+    const grid = document.getElementById('emoji-picker-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    const query = (filterQuery || '').trim().toLowerCase();
+    const filtered = EMOJI_ITEMS.filter(item => {
+      const matchCat = currentEmojiCategory === 'all' || item.cat === currentEmojiCategory;
+      const matchQuery = !query || item.name.toLowerCase().includes(query) || item.tags.toLowerCase().includes(query);
+      return matchCat && matchQuery;
+    });
+
+    if (filtered.length === 0) {
+      grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #94a3b8; font-size: 0.78rem; padding: 20px 0;">لا توجد أيقونة مطابقة لهذا البحث</div>';
+      return;
+    }
+
+    filtered.forEach(item => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'emoji-grid-item';
+      btn.title = item.name;
+      btn.innerHTML = `<img src="assets/icons/emojis/${item.file}" alt="${item.id}" loading="lazy">`;
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.insertEmojiIcon(item);
+      };
+      grid.appendChild(btn);
+    });
+  };
+
+  window.toggleEmojiPicker = function (triggerBtn, event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    const popover = document.getElementById('emoji-picker-popover');
+    if (!popover) return;
+
+    if (popover.style.display !== 'none') {
+      window.closeEmojiPicker();
+      return;
+    }
+
+    // حفظ التحديد الحالي إن وجد
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      savedWysiwygSelectionRange = sel.getRangeAt(0).cloneRange();
+    }
+
+    currentEmojiCategory = 'all';
+    document.querySelectorAll('.emoji-cat-btn').forEach(b => {
+      b.classList.toggle('active', b.getAttribute('data-cat') === 'all');
+    });
+
+    const searchInput = document.getElementById('emoji-search-input');
+    if (searchInput) searchInput.value = '';
+
+    window.renderEmojiGrid('');
+    popover.style.display = 'flex';
+
+    // تموضع اللوحة المنبثقة
+    const btnRect = (triggerBtn || document.getElementById('btn-insert-emoji')).getBoundingClientRect();
+    const popWidth = popover.offsetWidth || 295;
+    const popHeight = popover.offsetHeight || 340;
+
+    let left = btnRect.left + btnRect.width / 2 - popWidth / 2;
+    left = Math.max(12, Math.min(left, window.innerWidth - popWidth - 12));
+
+    let top = btnRect.bottom + 8;
+    if (top + popHeight > window.innerHeight - 10) {
+      top = btnRect.top - popHeight - 8;
+    }
+
+    popover.style.left = `${left}px`;
+    popover.style.top = `${top}px`;
+
+    setTimeout(() => {
+      if (searchInput) searchInput.focus();
+    }, 50);
+  };
+
+  window.closeEmojiPicker = function () {
+    const popover = document.getElementById('emoji-picker-popover');
+    if (popover) {
+      popover.style.display = 'none';
+    }
+  };
+
+  window.selectEmojiCategory = function (category) {
+    currentEmojiCategory = category;
+    document.querySelectorAll('.emoji-cat-btn').forEach(b => {
+      b.classList.toggle('active', b.getAttribute('data-cat') === category);
+    });
+    const searchInput = document.getElementById('emoji-search-input');
+    window.renderEmojiGrid(searchInput ? searchInput.value : '');
+  };
+
+  window.filterEmojis = function (query) {
+    window.renderEmojiGrid(query);
+  };
+
+  window.insertEmojiIcon = function (iconItem) {
+    const imgHtml = `<img src="assets/icons/emojis/${iconItem.file}" width="22" height="22" class="inline-emoji" alt="${iconItem.id}" title="${iconItem.name}">`;
+
+    if (isWysiwygActive && previewContent) {
+      if (savedWysiwygSelectionRange) {
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(savedWysiwygSelectionRange);
+      }
+      try {
+        document.execCommand('insertHTML', false, imgHtml);
+      } catch (_) {
+        const span = document.createElement('span');
+        span.innerHTML = imgHtml;
+        if (savedWysiwygSelectionRange) {
+          savedWysiwygSelectionRange.insertNode(span.firstChild);
+        } else {
+          previewContent.appendChild(span.firstChild);
+        }
+      }
+      syncPreviewToMarkdown(true);
+    } else {
+      window.insertFormat('', '', imgHtml + ' ');
+    }
+
+    window.closeEmojiPicker();
+    showToast(`تم إدراج أيقونة ${iconItem.name} ✓`, 'success');
+  };
 
 })();
 

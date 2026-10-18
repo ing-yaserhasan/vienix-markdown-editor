@@ -1,0 +1,9 @@
+<svg viewBox="0 0 64 64" width="64" height="64" xmlns="http://www.w3.org/2000/svg">
+  <path d="M32 4C20 4 11 13 11 25c0 8 4 15 10 19v6c0 1 1 2 2 2h18c1 0 2-1 2-2v-6c6-4 10-11 10-19 0-12-9-21-21-21z" fill="#FACC15"/>
+  <path d="M23 54h18v4c0 1-1 2-2 2H25c-1 0-2-1-2-2v-4z" fill="#64748B"/>
+  <line x1="23" y1="48" x2="41" y2="48" stroke="#475569" stroke-width="2"/>
+  <!-- Glow rays -->
+  <line x1="32" y1="2" x2="32" y2="0" stroke="#F59E0B" stroke-width="3" stroke-linecap="round"/>
+  <line x1="6" y1="25" x2="2" y2="25" stroke="#F59E0B" stroke-width="3" stroke-linecap="round"/>
+  <line x1="62" y1="25" x2="58" y2="25" stroke="#F59E0B" stroke-width="3" stroke-linecap="round"/>
+</svg>

@@ -210,6 +210,15 @@
         <button class="tool-btn" onclick="insertHorizontalRule()" title="إدراج خط فاصل (---)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         </button>
+        <!-- Rich Emoji & Icons Picker (إدراج إيموجي وشارات ملونة) -->
+        <button class="tool-btn" id="btn-insert-emoji" onclick="toggleEmojiPicker(this, event)" title="إدراج إيموجي وشارات ملونة (Rich Flat Icons)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+            <line x1="9" y1="9" x2="9.01" y2="9"></line>
+            <line x1="15" y1="9" x2="15.01" y2="9"></line>
+          </svg>
+        </button>
 
         <div class="toolbar-divider"></div>
 
@@ -1309,6 +1318,15 @@
     <button type="button" class="wysiwyg-tool-btn wysiwyg-color-trigger-btn" id="wysiwyg-btn-hilitecolor" onclick="openWysiwygColorPopover('hiliteColor', this, event)" title="لون التمييز (Highlight Color)">
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path><path d="M15 5l3 3"></path></svg>
     </button>
+    <!-- زر إدراج إيموجي وشارات ملونة -->
+    <button type="button" class="wysiwyg-tool-btn" id="wysiwyg-btn-emoji" onclick="toggleEmojiPicker(this, event)" title="إدراج إيموجي وشارات ملونة (Rich Flat Icons)">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+        <line x1="9" y1="9" x2="9.01" y2="9"></line>
+        <line x1="15" y1="9" x2="15.01" y2="9"></line>
+      </svg>
+    </button>
     <div class="wysiwyg-toolbar-divider"></div>
     <button type="button" class="wysiwyg-tool-btn" data-command="formatBlock" data-value="H1" title="عنوان رئيسي (H1)">H1</button>
     <button type="button" class="wysiwyg-tool-btn" data-command="formatBlock" data-value="H2" title="عنوان فرعي (H2)">H2</button>
@@ -1350,6 +1368,24 @@
     </div>
   </div>
 
+  <!-- لوحة منتقي الأيقونات والإيموجي الملونة (Rich Flat Emoji & Icons Picker) -->
+  <div class="emoji-picker-popover" id="emoji-picker-popover" style="display:none;" role="dialog" aria-label="منتقي الأيقونات والإيموجي">
+    <div class="emoji-picker-header">
+      <div class="emoji-search-wrapper">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" id="emoji-search-input" class="emoji-search-input" placeholder="ابحث عن أيقونة... (نظارة، توثيق، نار...)" oninput="filterEmojis(this.value)" />
+      </div>
+      <button type="button" class="emoji-picker-close-btn" onclick="closeEmojiPicker()" title="إغلاق">&times;</button>
+    </div>
+    <div class="emoji-category-tabs">
+      <button type="button" class="emoji-cat-btn active" data-cat="all" onclick="selectEmojiCategory('all')">🌟 الكل</button>
+      <button type="button" class="emoji-cat-btn" data-cat="faces" onclick="selectEmojiCategory('faces')">😎 وجوه</button>
+      <button type="button" class="emoji-cat-btn" data-cat="badges" onclick="selectEmojiCategory('badges')">🎖️ شارات</button>
+      <button type="button" class="emoji-cat-btn" data-cat="symbols" onclick="selectEmojiCategory('symbols')">🚀 تفاعلات</button>
+    </div>
+    <div class="emoji-picker-grid" id="emoji-picker-grid"></div>
+  </div>
+
   <!-- Hidden File Input for Image Uploading -->
   <input type="file" id="image-upload-input" accept="image/*" style="display:none;" />
 
@@ -1363,7 +1399,7 @@
   <script src="assets/vendor/turndown-plugin-gfm.js"></script>
 
   <!-- Application Main Script -->
-  <script src="app/js/rtlmd.js?v=obsidian21"></script>
+  <script src="app/js/rtlmd.js?v=obsidian22"></script>
 
 </body>
 </html>

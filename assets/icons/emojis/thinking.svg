@@ -1,0 +1,16 @@
+<svg viewBox="0 0 64 64" width="64" height="64" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="32" cy="30" r="28" fill="#FFC83B"/>
+  <!-- Eyebrows -->
+  <path d="M16 18c3-2 7-2 9 0" fill="none" stroke="#78350F" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M39 16c3 2 7 2 9 0" fill="none" stroke="#78350F" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Eyes looking up -->
+  <circle cx="21" cy="22" r="3.5" fill="#1E293B"/>
+  <circle cx="43" cy="22" r="3.5" fill="#1E293B"/>
+  <!-- Thoughtful mouth -->
+  <path d="M25 40c4-2 9-2 13 1" fill="none" stroke="#78350F" stroke-width="3" stroke-linecap="round"/>
+  <!-- Hand on chin -->
+  <path d="M22 48c0-3 2-6 5-6h12c3 0 5 3 5 6v5H22v-5z" fill="#F59E0B"/>
+  <circle cx="20" cy="51" r="5" fill="#FFC83B"/>
+  <circle cx="26" cy="53" r="4.5" fill="#FFC83B"/>
+  <circle cx="33" cy="54" r="4" fill="#FFC83B"/>
+</svg>
