@@ -348,10 +348,8 @@
         <button class="tool-btn view-toggle-btn active" id="btn-mode-split" onclick="setViewMode('split')" title="عرض مزدوج (محرر + معاينة)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="3" x2="12" y2="21"></line></svg>
         </button>
-        <button class="tool-btn view-toggle-btn" id="btn-mode-editor" onclick="setViewMode('editor')" title="محرر فقط (وضع التركيز بالكتابة)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="8" y1="9" x2="16" y2="9"></line><line x1="8" y1="13" x2="16" y2="13"></line></svg>
-        </button>
-        <button class="tool-btn view-toggle-btn" id="btn-mode-preview" onclick="setViewMode('preview')" title="معاينة فقط (وضع القراءة)">
+        <!-- Smart Single-View Toggle (تبديل ذكي بين محرر فقط ومعاينة فقط) -->
+        <button class="tool-btn view-toggle-btn" id="btn-mode-toggle" onclick="toggleSingleViewMode()" title="معاينة فقط (وضع القراءة)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
         </button>
 
@@ -1341,7 +1339,7 @@
   <script src="assets/vendor/turndown-plugin-gfm.js"></script>
 
   <!-- Application Main Script -->
-  <script src="app/js/rtlmd.js?v=obsidian18"></script>
+  <script src="app/js/rtlmd.js?v=obsidian19"></script>
 
 </body>
 </html>

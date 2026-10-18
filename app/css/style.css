@@ -379,7 +379,7 @@ html, body {
 .toolbar-container {
   background: var(--bg-toolbar);
   border-bottom: 1px solid var(--border-color);
-  padding: 6px 18px;
+  padding: 6px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1816,8 +1816,7 @@ body.is-resizing-workspace .workspace-resizer {
 
   /* Hide redundant desktop view buttons inside toolbar on mobile */
   #btn-mode-split,
-  #btn-mode-editor,
-  #btn-mode-preview,
+  #btn-mode-toggle,
   #btn-zoom-out,
   #btn-zoom-in,
   #btn-sync-scroll,

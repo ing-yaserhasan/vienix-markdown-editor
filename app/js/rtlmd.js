@@ -1030,24 +1030,55 @@
   };
 
   // View Mode Switching (Split, Editor only, Preview only)
+  let currentViewMode = 'split';
+
   window.setViewMode = function (mode) {
+    currentViewMode = mode;
     workspace.classList.remove('mode-editor-only', 'mode-preview-only');
     document.querySelectorAll('.view-toggle-btn').forEach((b) => b.classList.remove('active'));
     document.querySelectorAll('.mobile-tab-btn').forEach((b) => b.classList.remove('active'));
 
+    const toggleBtn = document.getElementById('btn-mode-toggle');
+    const splitBtn = document.getElementById('btn-mode-split');
+
+    const eyeSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+    const editorSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="8" y1="9" x2="16" y2="9"></line><line x1="8" y1="13" x2="16" y2="13"></line></svg>';
+
     if (mode === 'editor') {
       workspace.classList.add('mode-editor-only');
-      document.getElementById('btn-mode-editor')?.classList.add('active');
+      toggleBtn?.classList.add('active');
+      if (toggleBtn) {
+        toggleBtn.innerHTML = eyeSvg;
+        toggleBtn.title = 'معاينة فقط (وضع القراءة)';
+      }
       document.getElementById('mobile-tab-editor')?.classList.add('active');
     } else if (mode === 'preview') {
       workspace.classList.add('mode-preview-only');
-      document.getElementById('btn-mode-preview')?.classList.add('active');
+      toggleBtn?.classList.add('active');
+      if (toggleBtn) {
+        toggleBtn.innerHTML = editorSvg;
+        toggleBtn.title = 'محرر فقط (وضع التركيز بالكتابة)';
+      }
       document.getElementById('mobile-tab-preview')?.classList.add('active');
       // Ensure rendered markdown is updated
       renderMarkdown();
     } else {
-      document.getElementById('btn-mode-split')?.classList.add('active');
+      // Split mode
+      splitBtn?.classList.add('active');
+      if (toggleBtn) {
+        toggleBtn.innerHTML = eyeSvg;
+        toggleBtn.title = 'معاينة فقط (وضع القراءة)';
+      }
       document.getElementById('mobile-tab-editor')?.classList.add('active');
+    }
+  };
+
+  // تبديل ذكي بين وضعي التركيز المنفردين (محرر فقط ⟷ معاينة فقط)
+  window.toggleSingleViewMode = function () {
+    if (currentViewMode === 'preview') {
+      setViewMode('editor');
+    } else {
+      setViewMode('preview');
     }
   };
 
