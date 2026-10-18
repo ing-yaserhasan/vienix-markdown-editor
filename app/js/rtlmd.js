@@ -1947,21 +1947,7 @@
     const menu = document.getElementById('chamber-context-menu');
     if (menu) menu.style.display = 'none';
     if (!contextTargetChamber) return;
-
-    if (typeof detachChamberFromLinkedFiles === 'function') {
-      detachChamberFromLinkedFiles(contextTargetChamber);
-    }
-
-    if (contextTargetChamber === activeChamber) {
-      window.clearWorkspaceContent();
-    } else {
-      setChamberContent(contextTargetChamber, '');
-      updateChambersUI();
-      if (typeof renderChambersExplorerTree === 'function') {
-        renderChambersExplorerTree();
-      }
-      showToast(`تم إفراغ الحجرة ${contextTargetChamber}`, 'info', 1200);
-    }
+    window.clearChamberFromTree(null, contextTargetChamber);
   };
 
   window.contextCopyChamber = function () {
@@ -2511,9 +2497,56 @@
     const files = getFolderFiles(folderKey);
     const file = files.find(f => f.id === fileId);
     if (!file) return;
-    const newName = prompt('أدخل الاسم الجديد للملف:', file.title);
-    if (newName && newName.trim() && newName.trim() !== file.title) {
-      file.title = newName.trim();
+
+    const titleRow = document.getElementById('tree-title-row-file-' + fileId);
+    if (!titleRow) return;
+
+    titleRow.innerHTML = `
+      <div class="obsidian-inline-edit-box" onclick="event.stopPropagation()">
+        <input type="text" class="obsidian-rename-input" id="file-rename-input-${fileId}" value="${escapeHtml(file.title)}" placeholder="اسم الملف..." />
+        <button type="button" class="obsidian-edit-save-btn" onclick="saveFolderFileInlineRename(event, '${folderKey}', '${fileId}')" title="حفظ الاسم">✓</button>
+        <button type="button" class="obsidian-edit-cancel-btn" onclick="cancelTreeInlineRename(event)" title="إلغاء">✕</button>
+      </div>
+    `;
+
+    if (typeof attachInlineRenameOutsideListener === 'function') {
+      attachInlineRenameOutsideListener(() => {
+        cancelTreeInlineRename();
+      });
+    }
+
+    const input = document.getElementById('file-rename-input-' + fileId);
+    if (input) {
+      input.focus();
+      input.select();
+      input.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          window.saveFolderFileInlineRename(ev, folderKey, fileId);
+        } else if (ev.key === 'Escape') {
+          ev.preventDefault();
+          window.cancelTreeInlineRename(ev);
+        }
+      });
+    }
+  };
+
+  window.saveFolderFileInlineRename = function (e, folderKey, fileId) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (typeof cleanupInlineRenameOutsideListener === 'function') {
+      cleanupInlineRenameOutsideListener();
+    }
+    const input = document.getElementById('file-rename-input-' + fileId);
+    const val = input ? input.value.trim() : '';
+    if (!val) {
+      renderChambersExplorerTree();
+      return;
+    }
+    const files = getFolderFiles(folderKey);
+    const file = files.find(f => f.id === fileId);
+    if (file && val !== file.title) {
+      file.title = val;
+      file.updatedAt = Date.now();
       saveFolderFiles(folderKey, files);
       if (activeExplorerFile && activeExplorerFile.folderKey === folderKey && activeExplorerFile.fileId === fileId) {
         activeExplorerFile.title = file.title;
@@ -2522,10 +2555,10 @@
           setChamberCustomTitle(8, file.title);
         }
       }
-      renderChambersExplorerTree();
-      updateChambersUI();
-      showToast(`تمت إعادة تسمية الملف إلى "${newName.trim()}" ✏️`, 'success', 1200);
+      showToast(`تمت إعادة تسمية الملف إلى "${val}" ✏️`, 'success', 1200);
     }
+    renderChambersExplorerTree();
+    updateChambersUI();
   };
 
   window.copyFolderFileContent = function (e, folderKey, fileId) {
@@ -2606,26 +2639,41 @@
     let files = getFolderFiles(folderKey);
     const file = files.find(f => f.id === fileId);
     if (!file) return;
-    if (!confirm(`هل أنت متأكد من حذف ملف "${file.title}" من هذا المجلد؟`)) return;
-    files = files.filter(f => f.id !== fileId);
-    saveFolderFiles(folderKey, files);
 
-    // إذا كان الملف المحذوف هو المعروض حالياً في حجرة 8، نفرغها
-    if (activeExplorerFile && activeExplorerFile.folderKey === folderKey && activeExplorerFile.fileId === fileId) {
-      activeExplorerFile = null;
-      try { localStorage.removeItem('vienix_active_explorer_file'); } catch (err) {}
-      if (activeChamber === 8) {
-        setChamberContent(8, '');
-        setChamberCustomTitle(8, '');
-        if (isClassicMode && classicEditor) classicEditor.value = '';
-        else if (editor) editor.value = '';
-        if (isClassicMode) renderClassicMarkdown(); else renderMarkdown();
-        updateStats();
+    const doDelete = () => {
+      files = files.filter(f => f.id !== fileId);
+      saveFolderFiles(folderKey, files);
+
+      // إذا كان الملف المحذوف هو المعروض حالياً في حجرة 8، نفرغها
+      if (activeExplorerFile && activeExplorerFile.folderKey === folderKey && activeExplorerFile.fileId === fileId) {
+        activeExplorerFile = null;
+        try { localStorage.removeItem('vienix_active_explorer_file'); } catch (err) {}
+        if (activeChamber === 8) {
+          setChamberContent(8, '');
+          setChamberCustomTitle(8, '');
+          if (isClassicMode && classicEditor) classicEditor.value = '';
+          else if (editor) editor.value = '';
+          if (isClassicMode) renderClassicMarkdown(); else renderMarkdown();
+          updateStats();
+        }
+      }
+      renderChambersExplorerTree();
+      updateChambersUI();
+      showToast(`تم حذف ملف "${file.title}" من المجلد 🗑️`, 'info', 1400);
+    };
+
+    if (typeof window.openActionConfirmModal === 'function') {
+      window.openActionConfirmModal(
+        '⚠️ تأكيد حذف الملف',
+        `هل أنت متأكد تماماً من حذف ملف <strong>"${escapeHtml(file.title)}"</strong> من هذا المجلد؟`,
+        'نعم، احذف الملف',
+        doDelete
+      );
+    } else {
+      if (confirm(`هل أنت متأكد من حذف ملف "${file.title}" من هذا المجلد؟`)) {
+        doDelete();
       }
     }
-    renderChambersExplorerTree();
-    updateChambersUI();
-    showToast(`تم حذف ملف "${file.title}" من المجلد`, 'info', 1200);
   };
 
   function getDeletedDefaultFolders() {
@@ -3276,7 +3324,7 @@
             <button type="button" class="obsidian-action-btn" onclick="pasteToChamberFromTree(event, ${item.num})" title="لصق المحتوى للحجرة">
               ${pasteIcon}
             </button>
-            <button type="button" class="obsidian-action-btn danger" onclick="clearChamberFromTree(event, ${item.num})" title="تفريغ الحجرة">
+            <button type="button" class="obsidian-action-btn danger" onclick="clearChamberFromTree(event, ${item.num})" title="حذف وإفراغ الحجرة">
               ${clearIcon}
             </button>
           </div>
@@ -3447,6 +3495,33 @@
   // ==========================================
   // إعادة التسمية التفاعلية المباشرة (Inline Rename)
   // ==========================================
+  let activeInlineRenameOutsideHandler = null;
+
+  function attachInlineRenameOutsideListener(onCancel) {
+    cleanupInlineRenameOutsideListener();
+
+    activeInlineRenameOutsideHandler = function (ev) {
+      if (ev.target && ev.target.closest && ev.target.closest('.obsidian-inline-edit-box')) {
+        return;
+      }
+      cleanupInlineRenameOutsideListener();
+      if (typeof onCancel === 'function') {
+        onCancel();
+      }
+    };
+
+    setTimeout(() => {
+      document.addEventListener('pointerdown', activeInlineRenameOutsideHandler, true);
+    }, 50);
+  }
+
+  function cleanupInlineRenameOutsideListener() {
+    if (activeInlineRenameOutsideHandler) {
+      document.removeEventListener('pointerdown', activeInlineRenameOutsideHandler, true);
+      activeInlineRenameOutsideHandler = null;
+    }
+  }
+
   window.startTreeInlineRename = function (e, chNum) {
     if (e && e.stopPropagation) e.stopPropagation();
     const titleRow = document.getElementById('tree-title-row-' + chNum);
@@ -3462,6 +3537,10 @@
         <button type="button" class="obsidian-edit-cancel-btn" onclick="cancelTreeInlineRename(event)" title="إلغاء">✕</button>
       </div>
     `;
+
+    attachInlineRenameOutsideListener(() => {
+      cancelTreeInlineRename();
+    });
 
     const input = document.getElementById('tree-rename-input-' + chNum);
     if (input) {
@@ -3481,6 +3560,7 @@
 
   window.saveTreeInlineRename = function (e, chNum) {
     if (e && e.stopPropagation) e.stopPropagation();
+    cleanupInlineRenameOutsideListener();
     const input = document.getElementById('tree-rename-input-' + chNum);
     const val = input ? input.value.trim() : '';
     window.setChamberCustomTitle(chNum, val);
@@ -3488,6 +3568,7 @@
 
   window.cancelTreeInlineRename = function (e) {
     if (e && e.stopPropagation) e.stopPropagation();
+    cleanupInlineRenameOutsideListener();
     renderChambersExplorerTree();
   };
 
@@ -3556,31 +3637,60 @@
 
   window.clearChamberFromTree = function (e, chNum) {
     if (e && e.stopPropagation) e.stopPropagation();
+    chNum = parseInt(chNum, 10);
     const val = getChamberContent(chNum);
-    if (!val || val.trim() === '') {
-      showToast(`الحجرة ${chNum} فارغة بالفعل! ✨`, 'info', 1400);
+    const meta = getChamberMeta(chNum);
+    const hasCustomTitle = !!(meta && meta.customTitle && meta.customTitle.trim().length > 0);
+    const hasContent = !!(val && val.trim().length > 0);
+
+    if (!hasContent && !hasCustomTitle) {
+      showToast(`الحجرة ${chNum} فارغة وافتراضية بالفعل! ✨`, 'info', 1400);
       return;
     }
 
     const title = getChamberTitle(chNum);
-    if (!confirm(`هل أنت متأكد من تفريغ الحجرة ${chNum} (${title})؟`)) return;
+    const confirmMsg = `هل أنت متأكد من تفريغ الحجرة ${chNum} (${escapeHtml(title)}) وحذف التسمية المخصصة وإعادتها للوضع الافتراضي؟`;
 
-    if (typeof detachChamberFromLinkedFiles === 'function') {
-      detachChamberFromLinkedFiles(chNum);
-    }
+    const doClear = () => {
+      if (typeof detachChamberFromLinkedFiles === 'function') {
+        detachChamberFromLinkedFiles(chNum);
+      }
 
-    if (chNum === activeChamber) {
-      window.clearWorkspaceContent();
-    } else {
       setChamberContent(chNum, '');
-      const meta = getChamberMeta(chNum);
-      meta.customTitle = '';
-      meta.words = 0;
-      meta.chars = 0;
-      saveChamberMeta(chNum, meta);
+      const curMeta = getChamberMeta(chNum);
+      curMeta.customTitle = '';
+      curMeta.words = 0;
+      curMeta.chars = 0;
+      curMeta.updatedAt = Date.now();
+      saveChamberMeta(chNum, curMeta);
+
+      if (chNum === activeChamber) {
+        if (isClassicMode && classicEditor) {
+          classicEditor.value = '';
+          renderClassicMarkdown();
+        } else if (editor) {
+          editor.value = '';
+          renderMarkdown();
+        }
+        updateStats();
+      }
+
       updateChambersUI();
       renderChambersExplorerTree();
-      showToast(`تم إفراغ الحجرة ${chNum} بنجاح 🗑️`, 'info', 1500);
+      showToast(`تم إفراغ الحجرة ${chNum} واستعادة وضعها الافتراضي 🗑️`, 'info', 1500);
+    };
+
+    if (typeof window.openActionConfirmModal === 'function') {
+      window.openActionConfirmModal(
+        '⚠️ تأكيد تفريغ الحجرة وحذف التخصيص',
+        `هل أنت متأكد تماماً من تفريغ الحجرة ${chNum} <strong>"${escapeHtml(title)}"</strong> وحذف تخصيصها بالكامل؟`,
+        'نعم، إفراغ الحجرة',
+        doClear
+      );
+    } else {
+      if (confirm(confirmMsg.replace(/<[^>]+>/g, ''))) {
+        doClear();
+      }
     }
   };
 
