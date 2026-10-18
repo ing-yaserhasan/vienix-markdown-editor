@@ -1177,12 +1177,63 @@ body.is-resizing-workspace .workspace-resizer {
   cursor: pointer;
 }
 
-/* حالة التركيز واختيار الصورة */
+/* إزالة الظلال والحدود عن الإيموجي والستيكرات داخل حاوية التحجيم */
+.image-resizer-wrapper img.inline-emoji,
+.emoji-resizer-wrapper img {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* حالة التركيز واختيار الصورة العادية */
 .image-resizer-wrapper:hover,
 .image-resizer-wrapper.active {
   outline: 2px solid var(--accent-color, #2563eb);
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18);
   border-radius: 8px;
+}
+
+/* تنسيق حاوية تحجيم الإيموجي والستيكرات لتكون مدمجة بانسيابية */
+.image-resizer-wrapper.is-emoji-wrapper {
+  display: inline-block;
+  margin: 2px 4px;
+  vertical-align: middle;
+  outline: none;
+  box-shadow: none;
+  border: none;
+  background: transparent;
+}
+
+.image-resizer-wrapper.is-emoji-wrapper[data-align="center"] {
+  display: block;
+  margin: 12px auto;
+  text-align: center;
+}
+
+.image-resizer-wrapper.is-emoji-wrapper[data-align="right"] {
+  display: block;
+  margin: 12px 0 12px auto;
+}
+
+.image-resizer-wrapper.is-emoji-wrapper[data-align="left"] {
+  display: block;
+  margin: 12px auto 12px 0;
+}
+
+.image-resizer-wrapper.is-emoji-wrapper[data-align="inline"] {
+  display: inline-block !important;
+  margin: 2px 4px !important;
+  vertical-align: middle !important;
+}
+
+/* حالة التركيز للإيموجي والستيكرات: بدون أي إطار أزرق عريض أو ظلال */
+.emoji-resizer-wrapper:hover,
+.emoji-resizer-wrapper.active,
+.image-resizer-wrapper.is-emoji-wrapper:hover,
+.image-resizer-wrapper.is-emoji-wrapper.active {
+  outline: 1.5px dashed rgba(37, 99, 235, 0.6) !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12) !important;
+  border-radius: 4px !important;
 }
 
 /* شريط الأدوات المصغر فوق الصورة */
@@ -4951,27 +5002,51 @@ body.is-resizing-workspace .workspace-resizer {
    أيقونات وإيموجي فلات ملونة (Rich Flat Emoji & Badges)
    ======================================================== */
 .inline-emoji,
-.markdown-body img.inline-emoji,
-#preview-content img.inline-emoji,
-#wysiwyg-editor img.inline-emoji,
-.image-resizer-wrapper img.inline-emoji {
-  width: 1.35em !important;
-  height: 1.35em !important;
-  min-width: 1.35em !important;
-  max-width: 1.35em !important;
-  vertical-align: -0.22em !important;
-  display: inline-block !important;
-  margin: 0 3px !important;
-  padding: 0 !important;
+.markdown-body img.inline-emoji:not([width]):not([style*="width"]),
+#preview-content img.inline-emoji:not([width]):not([style*="width"]),
+#wysiwyg-editor img.inline-emoji:not([width]):not([style*="width"]) {
+  width: 1.35em;
+  height: 1.35em;
+  vertical-align: -0.22em;
+  display: inline-block;
+  margin: 0 3px;
+  padding: 0;
   border: none !important;
   outline: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
   background: transparent !important;
-  object-fit: contain !important;
+  object-fit: contain;
 }
 
-/* لوحة منتقي الأيقونات والإيموجي الملونة (Emoji Popover) */
+/* احترام أي حجم مخصص محدد على الأيقونة بالماركداون أو بأداة التحجيم */
+.inline-emoji[width],
+.inline-emoji[style*="width"],
+#preview-content img.inline-emoji[width],
+#preview-content img.inline-emoji[style*="width"],
+#wysiwyg-editor img.inline-emoji[width],
+#wysiwyg-editor img.inline-emoji[style*="width"],
+.markdown-body img.inline-emoji[width],
+.markdown-body img.inline-emoji[style*="width"] {
+  height: auto !important;
+  max-width: 100%;
+  vertical-align: middle;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* داخل حاوية التحجيم تملأ الأيقونة حجم الحاوية وتتحكم بها بسلاسة */
+.image-resizer-wrapper img.inline-emoji,
+.image-resizer-wrapper.is-emoji-wrapper img {
+  width: 100% !important;
+  height: auto !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
 /* لوحة منتقي الأيقونات والإيموجي الملونة (Emoji Popover) */
 .emoji-picker-popover {
   position: fixed;

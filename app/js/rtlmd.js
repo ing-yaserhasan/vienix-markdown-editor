@@ -6371,36 +6371,26 @@
   function setupImageResizers(container) {
     if (!container) return;
 
-    // فك أي تغليف خاطئ للأيقونات والإيموجي المضمنة لتعود نصوصاً طبيعية بدون إطارات
-    container.querySelectorAll('.image-resizer-wrapper').forEach((wrapper) => {
-      const emojiImg = wrapper.querySelector('img.inline-emoji, img[src*="assets/icons/emojis/"], img[src*="assets/icons/twemoji/"]');
-      if (emojiImg && wrapper.parentNode) {
-        wrapper.parentNode.replaceChild(emojiImg, wrapper);
-      }
-    });
-
     const images = container.querySelectorAll('img');
 
     images.forEach((img) => {
-      // استثناء مخططات mermaid وأزرار التكبير وأيقونات الإيموجي المضمنة
-      if (
-        img.closest('.mermaid') ||
-        img.closest('.diagram-zoom-controls') ||
-        img.classList.contains('inline-emoji') ||
-        (img.getAttribute('src') || '').includes('assets/icons/emojis/') ||
-        (img.getAttribute('src') || '').includes('assets/icons/twemoji/') ||
-        img.closest('.inline-emoji')
-      ) {
+      // استثناء مخططات mermaid وأزرار التكبير فقط
+      if (img.closest('.mermaid') || img.closest('.diagram-zoom-controls')) {
         return;
       }
       if (img.parentElement && img.parentElement.classList.contains('image-resizer-wrapper')) {
         return;
       }
 
-      const originalWidth = img.getAttribute('width') || (img.style.width ? img.style.width : '');
+      const isEmojiOrSticker =
+        img.classList.contains('inline-emoji') ||
+        (img.getAttribute('src') || '').includes('assets/icons/emojis/') ||
+        (img.getAttribute('src') || '').includes('assets/icons/twemoji/');
+
+      const originalWidth = img.getAttribute('width') || (img.style.width ? img.style.width : (isEmojiOrSticker ? '28px' : ''));
       const wrapper = document.createElement('div');
-      wrapper.className = 'image-resizer-wrapper';
-      wrapper.setAttribute('data-align', 'center');
+      wrapper.className = isEmojiOrSticker ? 'image-resizer-wrapper is-emoji-wrapper' : 'image-resizer-wrapper';
+      wrapper.setAttribute('data-align', isEmojiOrSticker ? 'inline' : 'center');
 
       if (originalWidth) {
         wrapper.style.width = originalWidth.endsWith('%') || originalWidth.endsWith('px') ? originalWidth : `${originalWidth}px`;
@@ -6410,24 +6400,52 @@
       const toolbar = document.createElement('div');
       toolbar.className = 'image-resizer-toolbar';
       toolbar.setAttribute('contenteditable', 'false');
-      toolbar.innerHTML = `
-        <button type="button" class="resizer-btn" data-preset="25%" title="تصغير إلى 25%">25%</button>
-        <button type="button" class="resizer-btn" data-preset="50%" title="تصغير إلى 50%">50%</button>
-        <button type="button" class="resizer-btn" data-preset="75%" title="تصغير إلى 75%">75%</button>
-        <button type="button" class="resizer-btn" data-preset="100%" title="عرض كامل 100%">100%</button>
-        <span class="resizer-divider"></span>
-        <button type="button" class="resizer-btn" data-align="right" title="محاذاة لليمين">
-          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="12" x2="9" y2="12"></line><line x1="21" y1="18" x2="5" y2="18"></line></svg>
-        </button>
-        <button type="button" class="resizer-btn active" data-align="center" title="توسيط">
-          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="6"></line><line x1="21" y1="12" x2="3" y2="12"></line><line x1="18" y1="18" x2="6" y2="18"></line></svg>
-        </button>
-        <button type="button" class="resizer-btn" data-align="left" title="محاذاة لليسار">
-          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="15" y1="12" x2="3" y2="12"></line><line x1="19" y1="18" x2="3" y2="18"></line></svg>
-        </button>
-        <span class="resizer-divider"></span>
-        <span class="resizer-size-badge"></span>
-      `;
+
+      if (isEmojiOrSticker) {
+        toolbar.innerHTML = `
+          <button type="button" class="resizer-btn" data-preset="24px" title="أيقونة نصية (24px)">24px</button>
+          <button type="button" class="resizer-btn" data-preset="48px" title="ستيكر متوسط (48px)">48px</button>
+          <button type="button" class="resizer-btn" data-preset="80px" title="ستيكر كبير بارز (80px)">80px</button>
+          <span class="resizer-divider"></span>
+          <button type="button" class="resizer-btn" data-preset="25%" title="25% من عرض السطر">25%</button>
+          <button type="button" class="resizer-btn" data-preset="50%" title="50% من عرض السطر">50%</button>
+          <button type="button" class="resizer-btn" data-preset="100%" title="100% عرض كامل">100%</button>
+          <span class="resizer-divider"></span>
+          <button type="button" class="resizer-btn active" data-align="inline" title="محاذاة مع النص (Inline)">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="14" y2="12"></line><line x1="4" y1="18" x2="20" y2="18"></line></svg>
+          </button>
+          <button type="button" class="resizer-btn" data-align="right" title="محاذاة لليمين">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="12" x2="9" y2="12"></line><line x1="21" y1="18" x2="5" y2="18"></line></svg>
+          </button>
+          <button type="button" class="resizer-btn" data-align="center" title="توسيط مستقل">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="6"></line><line x1="21" y1="12" x2="3" y2="12"></line><line x1="18" y1="18" x2="6" y2="18"></line></svg>
+          </button>
+          <button type="button" class="resizer-btn" data-align="left" title="محاذاة لليسار">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="15" y1="12" x2="3" y2="12"></line><line x1="19" y1="18" x2="3" y2="18"></line></svg>
+          </button>
+          <span class="resizer-divider"></span>
+          <span class="resizer-size-badge"></span>
+        `;
+      } else {
+        toolbar.innerHTML = `
+          <button type="button" class="resizer-btn" data-preset="25%" title="تصغير إلى 25%">25%</button>
+          <button type="button" class="resizer-btn" data-preset="50%" title="تصغير إلى 50%">50%</button>
+          <button type="button" class="resizer-btn" data-preset="75%" title="تصغير إلى 75%">75%</button>
+          <button type="button" class="resizer-btn" data-preset="100%" title="عرض كامل 100%">100%</button>
+          <span class="resizer-divider"></span>
+          <button type="button" class="resizer-btn" data-align="right" title="محاذاة لليمين">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="12" x2="9" y2="12"></line><line x1="21" y1="18" x2="5" y2="18"></line></svg>
+          </button>
+          <button type="button" class="resizer-btn active" data-align="center" title="توسيط">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="6"></line><line x1="21" y1="12" x2="3" y2="12"></line><line x1="18" y1="18" x2="6" y2="18"></line></svg>
+          </button>
+          <button type="button" class="resizer-btn" data-align="left" title="محاذاة لليسار">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="15" y1="12" x2="3" y2="12"></line><line x1="19" y1="18" x2="3" y2="18"></line></svg>
+          </button>
+          <span class="resizer-divider"></span>
+          <span class="resizer-size-badge"></span>
+        `;
+      }
 
       // Handles
       const handlesHtml = `
@@ -6461,8 +6479,20 @@
           e.stopPropagation();
           const preset = btn.getAttribute('data-preset');
           wrapper.style.width = preset;
+          if (preset.endsWith('%')) {
+            img.style.width = preset;
+            img.setAttribute('width', preset);
+          } else {
+            const cleanNum = preset.replace('px', '');
+            img.style.width = `${cleanNum}px`;
+            img.setAttribute('width', cleanNum);
+          }
+          img.style.height = 'auto';
           updateBadge();
           updateImageWidthInMarkdown(img.getAttribute('src'), preset);
+          if (typeof isWysiwygActive !== 'undefined' && isWysiwygActive) {
+            syncPreviewToMarkdown(true);
+          }
         });
       });
 
@@ -6474,6 +6504,9 @@
           btn.classList.add('active');
           const align = btn.getAttribute('data-align');
           wrapper.setAttribute('data-align', align);
+          if (typeof isWysiwygActive !== 'undefined' && isWysiwygActive) {
+            syncPreviewToMarkdown(true);
+          }
         });
       });
 
@@ -6512,8 +6545,11 @@
               newWidth = startWidth - deltaX;
             }
 
-            newWidth = Math.max(80, Math.min(newWidth, containerWidth));
+            const minW = isEmojiOrSticker ? 16 : 80;
+            newWidth = Math.max(minW, Math.min(newWidth, containerWidth));
             wrapper.style.width = `${Math.round(newWidth)}px`;
+            img.setAttribute('width', Math.round(newWidth));
+            img.style.width = `${Math.round(newWidth)}px`;
             updateBadge();
           };
 
@@ -6524,7 +6560,14 @@
             document.removeEventListener('touchend', onPointerUp);
 
             const finalWidth = Math.round(wrapper.getBoundingClientRect().width);
-            updateImageWidthInMarkdown(img.getAttribute('src'), `${finalWidth}px`);
+            const wVal = `${finalWidth}px`;
+            img.setAttribute('width', finalWidth);
+            img.style.width = wVal;
+            img.style.height = 'auto';
+            updateImageWidthInMarkdown(img.getAttribute('src'), wVal);
+            if (typeof isWysiwygActive !== 'undefined' && isWysiwygActive) {
+              syncPreviewToMarkdown(true);
+            }
           };
 
           document.addEventListener('mousemove', onPointerMove);
@@ -6561,11 +6604,16 @@
     const htmlImgRegex = new RegExp(`(<img\\s+[^>]*src=["']${escapedSrc}["'][^>]*>)`, 'i');
     if (htmlImgRegex.test(currentText)) {
       updatedText = currentText.replace(htmlImgRegex, (match) => {
-        if (/width=["'][^"']*["']/i.test(match)) {
-          return match.replace(/width=["'][^"']*["']/i, `width="${newWidthVal}"`);
+        let res = match;
+        if (/width=["'][^"']*["']/i.test(res)) {
+          res = res.replace(/width=["'][^"']*["']/i, `width="${newWidthVal}"`);
         } else {
-          return match.replace(/\/?>$/, ` width="${newWidthVal}" />`);
+          res = res.replace(/\/?>$/, ` width="${newWidthVal}" />`);
         }
+        if (/height=["'][^"']*["']/i.test(res)) {
+          res = res.replace(/height=["'][^"']*["']/i, `height="${newWidthVal}"`);
+        }
+        return res;
       });
     } else {
       // 2. فحص كود الماركداون: ![alt](src) أو ![alt|width](src)
@@ -7189,7 +7237,12 @@
         const src = node.getAttribute('src') || '';
         const alt = node.getAttribute('alt') || 'emoji';
         const title = node.getAttribute('title') || '';
-        return `<img src="${src}" width="22" height="22" class="inline-emoji" alt="${alt}" title="${title}">`;
+        let w = node.getAttribute('width') || (node.style && node.style.width ? node.style.width : '');
+        if (!w && node.parentElement && node.parentElement.classList.contains('image-resizer-wrapper')) {
+          w = node.parentElement.style.width;
+        }
+        w = w ? w.toString().trim() : '24';
+        return `<img src="${src}" width="${w}" height="${w}" class="inline-emoji" alt="${alt}" title="${title}">`;
       }
     });
   }
@@ -7796,35 +7849,38 @@
   // نظام منتقي الأيقونات والإيموجي الملونة الفلات (Rich Flat Emoji & Badges)
   // =========================================================================
   // =========================================================================
-  // نظام منتقي الأيقونات والإيموجي الملونة الفلات (Rich Flat Emoji & Badges + Twemoji 3,689 SVG)
+  // نظام منتقي الأيقونات والإيموجي الملونة الفلات (Flaticon 24 + Twemoji 3,689 SVG)
   // =========================================================================
-  const FEATURED_EMOJIS = [
-    { id: 'cool', file: 'cool.svg', path: 'assets/icons/emojis/', name: 'نظارة شمسية كول', cat: 'featured', tags: 'cool sunglasses shade وجه نظارة كول فخم أصفر' },
-    { id: 'heart-eyes', file: 'heart-eyes.svg', path: 'assets/icons/emojis/', name: 'عيون قلوب حب', cat: 'featured', tags: 'love heart eyes عيون قلوب حب إعجاب رائع' },
-    { id: 'star-eyes', file: 'star-eyes.svg', path: 'assets/icons/emojis/', name: 'عيون نجوم مبهر', cat: 'featured', tags: 'star eyes excited نجوم حماس إبهار مذهل' },
-    { id: 'laughing', file: 'laughing.svg', path: 'assets/icons/emojis/', name: 'ضحك دموع فرح', cat: 'featured', tags: 'laugh joy tears ضحك دموع وناسة فرح' },
-    { id: 'grin', file: 'grin.svg', path: 'assets/icons/emojis/', name: 'ابتسامة عريضة', cat: 'featured', tags: 'grin smile happy ابتسامة سعادة مرح' },
-    { id: 'thinking', file: 'thinking.svg', path: 'assets/icons/emojis/', name: 'تفكير وتحليل', cat: 'featured', tags: 'think thinking idea تفكير ذكاء فكرة تأمل' },
-    { id: 'wink', file: 'wink.svg', path: 'assets/icons/emojis/', name: 'غمزة ثقة', cat: 'featured', tags: 'wink confidence غمزة ثقة سر' },
-    { id: 'sad-blue', file: 'sad-blue.svg', path: 'assets/icons/emojis/', name: 'حزن أزرق', cat: 'featured', tags: 'sad blue crying حزن زعل بكاء' },
+  const FLATICON_EMOJIS = [
+    // وجوه ومشاعر (Smileys)
+    { id: 'cool', file: 'cool.svg', path: 'assets/icons/emojis/', name: 'نظارة شمسية كول', cat: 'smileys', isFlaticon: true, tags: 'cool sunglasses shade وجه نظارة كول فخم أصفر ستيكر flaticon' },
+    { id: 'heart-eyes', file: 'heart-eyes.svg', path: 'assets/icons/emojis/', name: 'عيون قلوب حب', cat: 'smileys', isFlaticon: true, tags: 'love heart eyes عيون قلوب حب إعجاب رائع ستيكر flaticon' },
+    { id: 'star-eyes', file: 'star-eyes.svg', path: 'assets/icons/emojis/', name: 'عيون نجوم مبهر', cat: 'smileys', isFlaticon: true, tags: 'star eyes excited نجوم حماس إبهار مذهل ستيكر flaticon' },
+    { id: 'laughing', file: 'laughing.svg', path: 'assets/icons/emojis/', name: 'ضحك دموع فرح', cat: 'smileys', isFlaticon: true, tags: 'laugh joy tears ضحك دموع وناسة فرح ستيكر flaticon' },
+    { id: 'grin', file: 'grin.svg', path: 'assets/icons/emojis/', name: 'ابتسامة عريضة', cat: 'smileys', isFlaticon: true, tags: 'grin smile happy ابتسامة سعادة مرح ستيكر flaticon' },
+    { id: 'thinking', file: 'thinking.svg', path: 'assets/icons/emojis/', name: 'تفكير وتحليل', cat: 'smileys', isFlaticon: true, tags: 'think thinking idea تفكير ذكاء فكرة تأمل ستيكر flaticon' },
+    { id: 'wink', file: 'wink.svg', path: 'assets/icons/emojis/', name: 'غمزة ثقة', cat: 'smileys', isFlaticon: true, tags: 'wink confidence غمزة ثقة سر ستيكر flaticon' },
+    { id: 'sad-blue', file: 'sad-blue.svg', path: 'assets/icons/emojis/', name: 'حزن أزرق', cat: 'smileys', isFlaticon: true, tags: 'sad blue crying حزن زعل بكاء ستيكر flaticon' },
 
-    { id: 'verified-blue', file: 'verified-blue.svg', path: 'assets/icons/emojis/', name: 'توثيق أزرق معتمد', cat: 'featured', tags: 'verified blue check badge توثيق أزرق صح علامة صح معتمد رسمي' },
-    { id: 'verified-black', file: 'verified-black.svg', path: 'assets/icons/emojis/', name: 'توثيق داكن ملكي', cat: 'featured', tags: 'verified black dark badge توثيق أسود داكن رسمي' },
-    { id: 'check-circle-blue', file: 'check-circle-blue.svg', path: 'assets/icons/emojis/', name: 'دائرة صح زرقاء', cat: 'featured', tags: 'check circle blue صح دائرة أزرق تأكيد نجاح تم' },
-    { id: 'check-circle-green', file: 'check-circle-green.svg', path: 'assets/icons/emojis/', name: 'دائرة صح خضراء', cat: 'featured', tags: 'check circle green صح دائرة أخضر تم قبول موافق' },
-    { id: 'star-gold', file: 'star-gold.svg', path: 'assets/icons/emojis/', name: 'نجمة ذهبية مميزة', cat: 'featured', tags: 'star gold favorite نجمة ذهبي مميز مفضلة' },
-    { id: 'crown', file: 'crown.svg', path: 'assets/icons/emojis/', name: 'تاج ذهبي ملكي', cat: 'featured', tags: 'crown gold king vip تاج ملك فخم ذهبي' },
-    { id: 'target', file: 'target.svg', path: 'assets/icons/emojis/', name: 'هدف وإنجاز', cat: 'featured', tags: 'target goal bullseye هدف إنجاز دقة وصول' },
+    // شارات وتوثيق ورموز (Symbols & Badges)
+    { id: 'verified-blue', file: 'verified-blue.svg', path: 'assets/icons/emojis/', name: 'توثيق أزرق معتمد', cat: 'symbols', isFlaticon: true, tags: 'verified blue check badge توثيق أزرق صح علامة صح معتمد رسمي ستيكر flaticon' },
+    { id: 'verified-black', file: 'verified-black.svg', path: 'assets/icons/emojis/', name: 'توثيق داكن ملكي', cat: 'symbols', isFlaticon: true, tags: 'verified black dark badge توثيق أسود داكن رسمي ستيكر flaticon' },
+    { id: 'check-circle-blue', file: 'check-circle-blue.svg', path: 'assets/icons/emojis/', name: 'دائرة صح زرقاء', cat: 'symbols', isFlaticon: true, tags: 'check circle blue صح دائرة أزرق تأكيد نجاح تم ستيكر flaticon' },
+    { id: 'check-circle-green', file: 'check-circle-green.svg', path: 'assets/icons/emojis/', name: 'دائرة صح خضراء', cat: 'symbols', isFlaticon: true, tags: 'check circle green صح دائرة أخضر تم قبول موافق ستيكر flaticon' },
+    { id: 'star-gold', file: 'star-gold.svg', path: 'assets/icons/emojis/', name: 'نجمة ذهبية مميزة', cat: 'symbols', isFlaticon: true, tags: 'star gold favorite نجمة ذهبي مميز مفضلة ستيكر flaticon' },
+    { id: 'crown', file: 'crown.svg', path: 'assets/icons/emojis/', name: 'تاج ذهبي ملكي', cat: 'symbols', isFlaticon: true, tags: 'crown gold king vip تاج ملك فخم ذهبي ستيكر flaticon' },
+    { id: 'target', file: 'target.svg', path: 'assets/icons/emojis/', name: 'هدف وإنجاز', cat: 'symbols', isFlaticon: true, tags: 'target goal bullseye هدف إنجاز دقة وصول ستيكر flaticon' },
+    { id: 'gem', file: 'gem.svg', path: 'assets/icons/emojis/', name: 'جوهرة ألماسة نادرة', cat: 'symbols', isFlaticon: true, tags: 'gem diamond جوهرة ألماس قيمة ثمين جوهرة ستيكر flaticon' },
+    { id: 'warning', file: 'warning.svg', path: 'assets/icons/emojis/', name: 'تنبيه وتحذير', cat: 'symbols', isFlaticon: true, tags: 'warning alert تنبيه تحذير انتباه هام خطر ستيكر flaticon' },
+    { id: 'heart-red', file: 'heart-red.svg', path: 'assets/icons/emojis/', name: 'قلب أحمر نقي', cat: 'symbols', isFlaticon: true, tags: 'heart red love قلب أحمر حب إعجاب شغف ستيكر flaticon' },
+    { id: 'fire', file: 'fire.svg', path: 'assets/icons/emojis/', name: 'شعلة نار حماس', cat: 'symbols', isFlaticon: true, tags: 'fire hot lit شعلة نار ترند حماس قوي اشتعال ستيكر flaticon' },
+    { id: 'sparkles', file: 'sparkles.svg', path: 'assets/icons/emojis/', name: 'بريق ولمعان سحري', cat: 'symbols', isFlaticon: true, tags: 'sparkles magic star بريق لمعان سحر جديد إشراق ستيكر flaticon' },
 
-    { id: 'fire', file: 'fire.svg', path: 'assets/icons/emojis/', name: 'شعلة نار حماس', cat: 'featured', tags: 'fire hot lit شعلة نار ترند حماس قوي اشتعال' },
-    { id: 'rocket', file: 'rocket.svg', path: 'assets/icons/emojis/', name: 'صاروخ انطلاق وسرعة', cat: 'featured', tags: 'rocket launch fast صاروخ انطلاق سرعة تطور قفزة' },
-    { id: 'sparkles', file: 'sparkles.svg', path: 'assets/icons/emojis/', name: 'بريق ولمعان سحري', cat: 'featured', tags: 'sparkles magic star بريق لمعان سحر جديد إشراق' },
-    { id: 'heart-red', file: 'heart-red.svg', path: 'assets/icons/emojis/', name: 'قلب أحمر نقي', cat: 'featured', tags: 'heart red love قلب أحمر حب إعجاب شغف' },
-    { id: 'idea', file: 'idea.svg', path: 'assets/icons/emojis/', name: 'مصباح فكرة وإلهام', cat: 'featured', tags: 'idea bulb light مصباح فكرة ذكاء إلهام اقتراح' },
-    { id: 'thumbs-up', file: 'thumbs-up.svg', path: 'assets/icons/emojis/', name: 'إعجاب ممتاز', cat: 'featured', tags: 'thumbs up like approve إعجاب موافق ممتاز تم تمام' },
-    { id: 'party', file: 'party.svg', path: 'assets/icons/emojis/', name: 'احتفال ومفرقعات', cat: 'featured', tags: 'party celebration احتفال نجاح مبروك فرح عيد' },
-    { id: 'gem', file: 'gem.svg', path: 'assets/icons/emojis/', name: 'جوهرة ألماسة نادرة', cat: 'featured', tags: 'gem diamond جوهرة ألماس قيمة ثمين جوهرة' },
-    { id: 'warning', file: 'warning.svg', path: 'assets/icons/emojis/', name: 'تنبيه وتحذير', cat: 'featured', tags: 'warning alert تنبيه تحذير انتباه هام خطر' }
+    // أشخاص وأدوات (People & Objects & Activities)
+    { id: 'thumbs-up', file: 'thumbs-up.svg', path: 'assets/icons/emojis/', name: 'إعجاب ممتاز', cat: 'people', isFlaticon: true, tags: 'thumbs up like approve إعجاب موافق ممتاز تم تمام ستيكر flaticon' },
+    { id: 'rocket', file: 'rocket.svg', path: 'assets/icons/emojis/', name: 'صاروخ انطلاق وسرعة', cat: 'objects', isFlaticon: true, tags: 'rocket launch fast صاروخ انطلاق سرعة تطور قفزة ستيكر flaticon' },
+    { id: 'idea', file: 'idea.svg', path: 'assets/icons/emojis/', name: 'مصباح فكرة وإلهام', cat: 'objects', isFlaticon: true, tags: 'idea bulb light مصباح فكرة ذكاء إلهام اقتراح ستيكر flaticon' },
+    { id: 'party', file: 'party.svg', path: 'assets/icons/emojis/', name: 'احتفال ومفرقعات', cat: 'activities', isFlaticon: true, tags: 'party celebration احتفال نجاح مبروك فرح عيد ستيكر flaticon' }
   ];
 
   let ALL_EMOJI_ITEMS = [];
@@ -7835,11 +7891,11 @@
       ...item,
       path: 'assets/icons/twemoji/'
     }));
-    ALL_EMOJI_ITEMS = [...FEATURED_EMOJIS, ...twemojiList];
+    ALL_EMOJI_ITEMS = [...FLATICON_EMOJIS, ...twemojiList];
     return ALL_EMOJI_ITEMS;
   }
 
-  let currentEmojiCategory = 'all';
+  let currentEmojiCategory = 'flaticon';
   let filteredEmojiCache = [];
   let renderedEmojiCount = 0;
   const EMOJI_CHUNK_SIZE = 140;
@@ -7856,6 +7912,9 @@
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'emoji-grid-item';
+      if (item.isFlaticon) {
+        btn.classList.add('is-flaticon-item');
+      }
       const tooltipName = item.name + (item.ar ? ` • ${item.ar.split(' ').slice(0, 3).join(' ')}` : '');
       btn.title = tooltipName;
       const basePath = item.path || 'assets/icons/twemoji/';
@@ -7882,10 +7941,14 @@
     const query = (filterQuery || '').trim().toLowerCase();
 
     filteredEmojiCache = allItems.filter(item => {
-      const matchCat =
-        currentEmojiCategory === 'all' ||
-        item.cat === currentEmojiCategory ||
-        (currentEmojiCategory === 'featured' && item.cat === 'featured');
+      let matchCat = false;
+      if (currentEmojiCategory === 'flaticon') {
+        matchCat = item.isFlaticon === true;
+      } else if (currentEmojiCategory === 'all') {
+        matchCat = true;
+      } else {
+        matchCat = item.cat === currentEmojiCategory;
+      }
       if (!matchCat) return false;
       if (!query) return true;
 
@@ -7934,9 +7997,9 @@
       savedWysiwygSelectionRange = sel.getRangeAt(0).cloneRange();
     }
 
-    currentEmojiCategory = 'all';
+    currentEmojiCategory = 'flaticon';
     document.querySelectorAll('.emoji-cat-btn').forEach(b => {
-      b.classList.toggle('active', b.getAttribute('data-cat') === 'all');
+      b.classList.toggle('active', b.getAttribute('data-cat') === 'flaticon');
     });
 
     const searchInput = document.getElementById('emoji-search-input');
@@ -7988,7 +8051,7 @@
 
   window.insertEmojiIcon = function (iconItem) {
     const basePath = iconItem.path || 'assets/icons/twemoji/';
-    const imgHtml = `<img src="${basePath}${iconItem.file}" width="22" height="22" class="inline-emoji" alt="${iconItem.id}" title="${iconItem.name}">`;
+    const imgHtml = `<img src="${basePath}${iconItem.file}" width="24" height="24" class="inline-emoji" alt="${iconItem.id}" title="${iconItem.name}">`;
 
     if (isWysiwygActive && previewContent) {
       if (savedWysiwygSelectionRange) {
