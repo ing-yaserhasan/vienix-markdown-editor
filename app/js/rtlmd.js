@@ -2361,12 +2361,6 @@
 
     if (isExplorerOpen) {
       window.updateDrawerOverlayBounds();
-      // عند فتح المستكشف يكون الوضع الافتراضي دائماً طي كافة المجلدات
-      if (!prevState) {
-        getAppFolders().forEach(f => {
-          collapsedFolders[f.key] = true;
-        });
-      }
     }
 
     drawer.classList.toggle('active', isExplorerOpen);
@@ -4123,12 +4117,19 @@
       });
     });
 
-    const totalWordsEl = document.getElementById('explorer-total-words');
-    const filledCountEl = document.getElementById('explorer-filled-count');
+    let totalFilesCount = 0;
+    foldersDef.forEach(f => {
+      totalFilesCount += (folderBuckets[f.key] || []).length;
+      totalFilesCount += getFolderFiles(f.key).length;
+    });
+    const totalFoldersCount = foldersDef.length;
+
+    const foldersCountEl = document.getElementById('explorer-folders-count') || document.getElementById('explorer-total-words');
+    const filesCountEl = document.getElementById('explorer-files-count') || document.getElementById('explorer-filled-count');
     const activeNumEl = document.getElementById('explorer-active-num');
     // استخدام الأرقام اللاتينية بشكل صارم (Western Latin Numerals 1, 2, 3...)
-    if (totalWordsEl) totalWordsEl.textContent = `${totalProjectWords.toLocaleString('en-US')} كلمة`;
-    if (filledCountEl) filledCountEl.textContent = `${filledChambersCount}/7 فصول`;
+    if (foldersCountEl) foldersCountEl.textContent = `${totalFoldersCount} مجلدات`;
+    if (filesCountEl) filesCountEl.textContent = `${totalFilesCount} ملف`;
     if (activeNumEl) activeNumEl.textContent = activeChamber === 8 ? 'المستعرض: 🟢 ملف' : `النشطة: #${activeChamber}`;
 
     // حساب عدد الحجرات التراكمي للمجلد والمجلدات المتفرعة منه
