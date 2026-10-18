@@ -1702,15 +1702,26 @@
     const deleteDivider = document.getElementById('folder-context-delete-divider');
     const clearContentBtn = document.getElementById('folder-context-clear-content-btn');
     const makeRootBtn = document.getElementById('folder-context-make-root-btn');
+    const migrateToFolderBtn = document.getElementById('folder-context-migrate-to-folder-btn');
+    const migrateToRootBtn = document.getElementById('folder-context-migrate-to-root-btn');
 
     if (deleteBtn) deleteBtn.style.display = 'flex';
     if (deleteDivider) deleteDivider.style.display = 'block';
     if (clearContentBtn) clearContentBtn.style.display = 'flex';
     if (makeRootBtn) makeRootBtn.style.display = (isCustom && hasParent) ? 'flex' : 'none';
 
+    // خيار ترحيل الملفات الحالية لمجلد آخر (خاص بالمجلد الرئيسي فقط)
+    if (migrateToFolderBtn) {
+      migrateToFolderBtn.style.display = (folderKey === 'book') ? 'flex' : 'none';
+    }
+    // خيار ترحيل الملفات الحالية للمجلد الرئيسي (يسري على كافة المجلدات ما عدا المجلد الرئيسي)
+    if (migrateToRootBtn) {
+      migrateToRootBtn.style.display = (folderKey !== 'book') ? 'flex' : 'none';
+    }
+
     menu.style.display = 'block';
     const menuW = 205;
-    const menuH = 295;
+    const menuH = 340;
     let x = e ? e.clientX : window.innerWidth / 2;
     let y = e ? e.clientY : window.innerHeight / 2;
     if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 10;
@@ -1919,6 +1930,329 @@
     if (menu) menu.style.display = 'none';
     if (!contextTargetFolderKey) return;
     window.deleteCustomFolder(contextTargetFolderKey);
+  };
+
+  // ==========================================
+  // ميزة ترحيل الملفات الشاملة (Chamber & Folder Files Migration)
+  // ==========================================
+  let pendingMigrateSrcFolderKey = null;
+
+  // 1. ترحيل ملفات المجلد الرئيسي لمجلد آخر (خاص بالمجلد الرئيسي فقط)
+  window.contextMigrateMainFilesToFolder = function () {
+    const menu = document.getElementById('folder-context-menu');
+    if (menu) menu.style.display = 'none';
+
+    // حفظ المحرر الحالي لضمان حداثة النصوص
+    const currentVal = isClassicMode ? (classicEditor?.value || editor.value) : editor.value;
+    setChamberContent(activeChamber, currentVal);
+
+    // جمع الحجرات الممتلئة (1 إلى 7)
+    const filledChambers = [];
+    for (let i = 1; i <= 7; i++) {
+      const content = getChamberContent(i) || '';
+      if (content.trim().length > 0) {
+        filledChambers.push({
+          num: i,
+          title: getChamberTitle(i),
+          content: content,
+          meta: getChamberMeta(i)
+        });
+      }
+    }
+    const bookFiles = getFolderFiles('book');
+    const totalCount = filledChambers.length + bookFiles.length;
+
+    if (totalCount === 0) {
+      showToast('لا توجد أي حجرات أو ملفات تحتوي على نصوص في المجلد الرئيسي ليتم ترحيلها!', 'info', 2200);
+      return;
+    }
+
+    const modal = document.getElementById('migrate-files-modal');
+    const titleEl = document.getElementById('migrate-files-modal-title');
+    const descEl = document.getElementById('migrate-files-modal-desc');
+    const warningEl = document.getElementById('migrate-files-warning');
+    const newFolderSection = document.getElementById('migrate-new-folder-section');
+    const toRootActionSection = document.getElementById('migrate-to-root-action-section');
+    const optionsContainer = document.getElementById('migrate-files-options-container');
+    const newFolderInput = document.getElementById('migrate-new-folder-name-input');
+
+    if (!modal) return;
+
+    if (titleEl) titleEl.textContent = 'ترحيل ملفات المجلد الرئيسي لمجلد آخر';
+    if (descEl) {
+      descEl.innerHTML = `سيتم ترحيل <strong>(${totalCount}) ملفات وحجرات ممتلئة</strong> من المجلد الرئيسي إلى المجلد المختار أدناه، <strong>وستُفرغ كافة الحجرات (1-7)</strong> لتصبح جاهزة لبدء فصول جديدة:`;
+    }
+    if (warningEl) warningEl.style.display = 'none';
+    if (newFolderSection) newFolderSection.style.display = 'block';
+    if (toRootActionSection) toRootActionSection.style.display = 'none';
+    if (newFolderInput) newFolderInput.value = '';
+
+    // رندرة قائمة المجلدات المتاحة للترحيل (باستثناء book)
+    const allFolders = getAppFolders().filter(f => f.key !== 'book');
+    if (optionsContainer) {
+      optionsContainer.style.display = 'block';
+      optionsContainer.innerHTML = allFolders.map(f => {
+        return `
+          <button type="button" class="folder-pick-btn" onclick="executeMigrateMainToFolder('${f.key}')" title="ترحيل إلى ${escapeHtml(f.name)}">
+            <span class="folder-pick-icon">${f.key === 'archive' ? '🗄️' : '📁'}</span>
+            <div class="folder-pick-info" style="flex:1;">
+              <strong>${escapeHtml(f.name)}</strong>
+              <small>${escapeHtml(f.desc || '')}</small>
+            </div>
+            <span style="font-size:0.75rem; color:#2563eb; font-weight:600;">ترحيل هنا ↵</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    modal.style.display = 'flex';
+  };
+
+  // تأكيد إنشاء مجلد جديد وترحيل ملفات المجلد الرئيسي إليه فوراً
+  window.confirmCreateFolderAndMigrate = function () {
+    const input = document.getElementById('migrate-new-folder-name-input');
+    const name = (input?.value || '').trim();
+    if (!name) {
+      showToast('يرجى إدخال اسم المجلد الجديد!', 'warning', 1600);
+      input?.focus();
+      return;
+    }
+
+    const key = 'custom_' + Date.now().toString(36);
+    let customFolders = [];
+    try {
+      const saved = localStorage.getItem('vienix_custom_folders');
+      if (saved) customFolders = JSON.parse(saved);
+    } catch (e) {}
+
+    customFolders.push({ key, name, desc: 'مجلد مخصص', isCustom: true, parent: null });
+    try {
+      localStorage.setItem('vienix_custom_folders', JSON.stringify(customFolders));
+    } catch (e) {}
+
+    collapsedFolders[key] = false;
+    executeMigrateMainToFolder(key);
+  };
+
+  // تنفيذ ترحيل ملفات وحجرات المجلد الرئيسي إلى مجلد محدد مع تفريغ الحجرات
+  window.executeMigrateMainToFolder = function (targetFolderKey) {
+    const modal = document.getElementById('migrate-files-modal');
+    if (modal) modal.style.display = 'none';
+
+    // جمع الحجرات الممتلئة من 1 إلى 7
+    const filledChambers = [];
+    for (let i = 1; i <= 7; i++) {
+      const content = getChamberContent(i) || '';
+      if (content.trim().length > 0) {
+        filledChambers.push({
+          num: i,
+          title: getChamberTitle(i),
+          content: content,
+          meta: getChamberMeta(i)
+        });
+      }
+    }
+    const bookFiles = getFolderFiles('book');
+
+    const destFiles = getFolderFiles(targetFolderKey);
+    let nextNum = destFiles.length > 0 ? (Math.max(...destFiles.map(f => parseInt(f.num, 10) || 0)) + 1) : 1;
+
+    // 1. تحويل الحجرات الممتلئة لملفات داخل المجلد المستهدف
+    filledChambers.forEach(ch => {
+      destFiles.push({
+        id: 'file_' + targetFolderKey + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5),
+        num: nextNum++,
+        title: ch.title,
+        content: ch.content,
+        words: ch.meta.words || 0,
+        chars: ch.meta.chars || 0,
+        updatedAt: ch.meta.updatedAt || Date.now(),
+        linkedChamber: null
+      });
+    });
+
+    // 2. ترحيل أي ملفات إضافية كانت في المجلد الرئيسي
+    bookFiles.forEach(bf => {
+      destFiles.push({
+        ...bf,
+        id: 'file_' + targetFolderKey + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5),
+        num: nextNum++
+      });
+    });
+
+    saveFolderFiles(targetFolderKey, destFiles);
+    saveFolderFiles('book', []);
+
+    // 3. تفريغ الحجرات كلها من 1 إلى 7
+    for (let i = 1; i <= 7; i++) {
+      detachChamberFromLinkedFiles(i);
+      setChamberContent(i, '');
+      const meta = getChamberMeta(i);
+      meta.customTitle = '';
+      meta.words = 0;
+      meta.chars = 0;
+      saveChamberMeta(i, meta);
+    }
+
+    // تفريغ المحرر النشط فوراً إذا كانت الحجرة الحالية 1..7
+    if (activeChamber <= 7) {
+      editor.value = '';
+      if (classicEditor) classicEditor.value = '';
+      initHistoryWithContent('');
+      if (isClassicMode) renderClassicMarkdown(); else renderMarkdown();
+      updateStats();
+    }
+
+    collapsedFolders[targetFolderKey] = false;
+    renderChambersExplorerTree();
+    updateChambersUI();
+
+    const allFolders = getAppFolders();
+    const dest = allFolders.find(f => f.key === targetFolderKey);
+    const destName = dest ? dest.name : targetFolderKey;
+    showToast(`تم ترحيل كافة الملفات إلى مجلد "${destName}" وتفريغ الحجرات بنجاح! 🚀`, 'success', 2500);
+  };
+
+  // 2. ترحيل الملفات الحالية من أي مجلد إلى المجلد الرئيسي وتعبئة الحجرات (1-7)
+  window.contextMigrateFolderFilesToRoot = function () {
+    const menu = document.getElementById('folder-context-menu');
+    if (menu) menu.style.display = 'none';
+
+    if (!contextTargetFolderKey || contextTargetFolderKey === 'book') return;
+    pendingMigrateSrcFolderKey = contextTargetFolderKey;
+
+    const srcFiles = getFolderFiles(pendingMigrateSrcFolderKey);
+    if (srcFiles.length === 0) {
+      showToast('لا توجد ملفات داخل هذا المجلد لترحيلها للمجلد الرئيسي!', 'info', 2200);
+      return;
+    }
+
+    const allFolders = getAppFolders();
+    const srcFolder = allFolders.find(f => f.key === pendingMigrateSrcFolderKey);
+    const srcFolderName = srcFolder ? srcFolder.name : pendingMigrateSrcFolderKey;
+
+    const modal = document.getElementById('migrate-files-modal');
+    const titleEl = document.getElementById('migrate-files-modal-title');
+    const descEl = document.getElementById('migrate-files-modal-desc');
+    const warningEl = document.getElementById('migrate-files-warning');
+    const newFolderSection = document.getElementById('migrate-new-folder-section');
+    const toRootActionSection = document.getElementById('migrate-to-root-action-section');
+    const optionsContainer = document.getElementById('migrate-files-options-container');
+
+    if (!modal) return;
+
+    if (titleEl) titleEl.textContent = `ترحيل ملفات "${srcFolderName}" إلى المجلد الرئيسي`;
+    if (descEl) {
+      descEl.innerHTML = `سيتم نقل <strong>(${srcFiles.length}) ملفات</strong> من هذا المجلد إلى المجلد الرئيسي، وتعبئة الحجرات (1-7) بمحتواها لتتمكن من تحريرها والعمل عليها فوراً.`;
+    }
+
+    // التحقق من الحجرات غير الفارغة في المجلد الرئيسي
+    const filledMainCount = [1, 2, 3, 4, 5, 6, 7].filter(i => (getChamberContent(i) || '').trim().length > 0).length;
+    if (warningEl) {
+      if (filledMainCount > 0) {
+        warningEl.innerHTML = `⚠️ <strong>تنبيه:</strong> توجد حالياً (${filledMainCount}) حجرات غير فارغة في المجلد الرئيسي. متابعة الترحيل ستستبدل محتويات تلك الحجرات بمحتويات الملفات المنقولة. (إذا كنت تريد حفظ المحتوى الحالي أولاً، يمكنك إلغاء الأمر وترحيل المجلد الرئيسي).`;
+        warningEl.style.display = 'block';
+      } else {
+        warningEl.style.display = 'none';
+      }
+    }
+
+    if (newFolderSection) newFolderSection.style.display = 'none';
+    if (toRootActionSection) toRootActionSection.style.display = 'block';
+
+    // معاينة الملفات وتوزيعها على الحجرات
+    if (optionsContainer) {
+      optionsContainer.style.display = 'block';
+      optionsContainer.innerHTML = `
+        <div style="background:var(--bg-secondary, #f8fafc); border:1px solid var(--border-color, #e2e8f0); border-radius:6px; padding:10px; font-size:0.8rem;">
+          <div style="font-weight:600; margin-bottom:6px; color:var(--text-color);">معاينة الملفات وتوزيعها على الحجرات:</div>
+          ${srcFiles.map((f, idx) => {
+            const chText = idx < 7 ? `حجرة ${idx + 1}` : `ملف إضافي في المجلد الرئيسي`;
+            return `
+              <div style="display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dotted var(--border-color, #e2e8f0);">
+                <span style="font-weight:500;">📄 ${escapeHtml(f.title || 'ملف ' + (idx + 1))}</span>
+                <span style="color:#2563eb; font-size:0.75rem;">← ${chText}</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    modal.style.display = 'flex';
+  };
+
+  // تنفيذ ترحيل الملفات للمجلد الرئيسي وتعبئة الحجرات 1..7
+  window.executeMigrateToRoot = function () {
+    const modal = document.getElementById('migrate-files-modal');
+    if (modal) modal.style.display = 'none';
+
+    if (!pendingMigrateSrcFolderKey) return;
+    const srcFiles = getFolderFiles(pendingMigrateSrcFolderKey);
+    if (srcFiles.length === 0) return;
+
+    // 1. تعبئة الحجرات 1 إلى 7 بأول 7 ملفات
+    const filesToChambers = srcFiles.slice(0, 7);
+    filesToChambers.forEach((file, idx) => {
+      const chNum = idx + 1;
+      setChamberContent(chNum, file.content || '');
+      const meta = getChamberMeta(chNum);
+      meta.customTitle = file.title || ('ملف ' + chNum);
+      meta.folder = 'book';
+      saveChamberMeta(chNum, meta);
+    });
+
+    // 2. تفريغ الحجرات المتبقية إذا كان عدد الملفات أقل من 7
+    for (let chNum = filesToChambers.length + 1; chNum <= 7; chNum++) {
+      detachChamberFromLinkedFiles(chNum);
+      setChamberContent(chNum, '');
+      const meta = getChamberMeta(chNum);
+      meta.customTitle = '';
+      meta.words = 0;
+      meta.chars = 0;
+      meta.folder = 'book';
+      saveChamberMeta(chNum, meta);
+    }
+
+    // 3. إذا كان هناك أكثر من 7 ملفات، يتم حفظ الملفات الزائدة كملفات في المجلد الرئيسي
+    if (srcFiles.length > 7) {
+      const extraFiles = srcFiles.slice(7);
+      const bookFiles = getFolderFiles('book');
+      let nextBookNum = getNextFolderFileNum('book');
+      extraFiles.forEach(ef => {
+        bookFiles.push({
+          ...ef,
+          id: 'file_book_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5),
+          num: nextBookNum++
+        });
+      });
+      saveFolderFiles('book', bookFiles);
+    }
+
+    // 4. تفريغ المجلد المصدر
+    saveFolderFiles(pendingMigrateSrcFolderKey, []);
+
+    // 5. الانتقال للحجرة 1 وتحديث المحرر
+    switchChamber(1);
+
+    // 6. فتح المجلد الرئيسي وتحديث الواجهة
+    collapsedFolders['book'] = false;
+    renderChambersExplorerTree();
+    updateChambersUI();
+
+    const allFolders = getAppFolders();
+    const srcFolder = allFolders.find(f => f.key === pendingMigrateSrcFolderKey);
+    const srcFolderName = srcFolder ? srcFolder.name : pendingMigrateSrcFolderKey;
+    showToast(`تم ترحيل ملفات "${srcFolderName}" إلى المجلد الرئيسي وتعبئة الحجرات بنجاح! 📖✨`, 'success', 2500);
+    pendingMigrateSrcFolderKey = null;
+  };
+
+  window.closeMigrateFilesModal = function (e) {
+    if (e && e.target && e.target.id !== 'migrate-files-modal' && !e.target.classList.contains('diff-modal-close') && e.target.tagName !== 'BUTTON') {
+      return;
+    }
+    const modal = document.getElementById('migrate-files-modal');
+    if (modal) modal.style.display = 'none';
   };
 
   window.handleTreeItemContextMenu = function (e, chNum) {
