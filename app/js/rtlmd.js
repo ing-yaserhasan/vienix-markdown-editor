@@ -8670,8 +8670,36 @@ function exportDocument(format) {
     return 'en-US';
   }
 
+  function showSpeechWarningToast(msg) {
+    let existing = document.getElementById('vienix-speech-alert');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'vienix-speech-alert';
+    toast.className = 'speech-alert-toast';
+    toast.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+        <line x1="12" y1="9" x2="12" y2="13"></line>
+        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+      </svg>
+      <span>${msg}</span>
+      <button type="button" class="speech-alert-close" onclick="this.parentElement.remove()" title="إغلاق">✕</button>
+    `;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+      toast.style.opacity = '0';
+      toast.style.transform = 'translate(-50%, -15px)';
+      setTimeout(() => toast.remove(), 400);
+    }, 5500);
+  }
+  window.showSpeechWarningToast = showSpeechWarningToast;
+
   function speakText(text, explicitLang, callbacks = {}) {
-    if (!text || typeof speechSynthesis === 'undefined') {
+    if (!text || typeof speechSynthesis === 'undefined' || !window.speechSynthesis) {
+      showSpeechWarningToast('متصفحك الحالي يقيّد النطق الصوتي، يُرجى استخدام Chrome أو تفعيل حزمة الصوت من إعدادات الهاتف ⚠️');
       if (callbacks.onError) callbacks.onError(new Error('SpeechSynthesis not available'));
       return null;
     }
@@ -8690,61 +8718,70 @@ function exportDocument(format) {
 
     window._isPronunciationSpeaking = true;
 
-    // Chromium safe cancel
-    if (speechSynthesis.speaking || speechSynthesis.pending) {
-      speechSynthesis.cancel();
-    }
-
-    // Delay 35ms to bypass Chromium cancel-speak race condition
-    setTimeout(() => {
-      try {
-        const utterance = new SpeechSynthesisUtterance(cleanSpeech);
-        utterance.lang = lang;
-        utterance.rate = Math.max(0.5, Math.min(2.0, parseFloat(vienixSettings.speechRate) || 0.8));
-        utterance.pitch = Math.max(0.5, Math.min(1.5, parseFloat(vienixSettings.speechPitch) || 1.0));
-        utterance.volume = Math.max(0, Math.min(1.0, parseFloat(vienixSettings.speechVolume) || 1.0));
-
-        const matchedVoice = pickBestVoice(lang);
-        if (matchedVoice) {
-          utterance.voice = matchedVoice;
-        }
-
-        // Anchor in window array to prevent Chrome GC bug
-        window._activeUtterances.push(utterance);
-
-        utterance.onstart = () => {
-          window._isPronunciationSpeaking = true;
-          if (callbacks.onStart) callbacks.onStart();
-        };
-
-        utterance.onboundary = (event) => {
-          if (event.name === 'word' && callbacks.onWordBoundary) {
-            callbacks.onWordBoundary(event.charIndex, event.charLength);
-          }
-        };
-        const cleanup = () => {
-          window._isPronunciationSpeaking = false;
-          const idx = window._activeUtterances.indexOf(utterance);
-          if (idx > -1) window._activeUtterances.splice(idx, 1);
-        };
-
-        utterance.onend = () => {
-          cleanup();
-          if (callbacks.onEnd) callbacks.onEnd();
-        };
-
-        utterance.onerror = (err) => {
-          cleanup();
-          console.warn('Speech error:', err);
-          if (callbacks.onError) callbacks.onError(err);
-        };
-
-        speechSynthesis.speak(utterance);
-      } catch (err) {
-        console.error('Speech synthesis execution failed:', err);
-        if (callbacks.onError) callbacks.onError(err);
+    try {
+      // Direct cancel of previous speech
+      if (speechSynthesis.speaking || speechSynthesis.pending) {
+        speechSynthesis.cancel();
       }
-    }, 35);
+
+      const utterance = new SpeechSynthesisUtterance(cleanSpeech);
+      utterance.lang = lang;
+      utterance.rate = Math.max(0.5, Math.min(2.0, parseFloat(vienixSettings.speechRate) || 0.8));
+      utterance.pitch = Math.max(0.5, Math.min(1.5, parseFloat(vienixSettings.speechPitch) || 1.0));
+      utterance.volume = Math.max(0, Math.min(1.0, parseFloat(vienixSettings.speechVolume) || 1.0));
+
+      const matchedVoice = pickBestVoice(lang);
+      if (matchedVoice) {
+        utterance.voice = matchedVoice;
+      }
+
+      // Anchor in window array to prevent Chrome GC bug
+      window._activeUtterances.push(utterance);
+
+      utterance.onstart = () => {
+        window._isPronunciationSpeaking = true;
+        if (callbacks.onStart) callbacks.onStart();
+      };
+
+      utterance.onboundary = (event) => {
+        if (event.name === 'word' && callbacks.onWordBoundary) {
+          callbacks.onWordBoundary(event.charIndex, event.charLength);
+        }
+      };
+
+      const cleanup = () => {
+        window._isPronunciationSpeaking = false;
+        const idx = window._activeUtterances.indexOf(utterance);
+        if (idx > -1) window._activeUtterances.splice(idx, 1);
+      };
+
+      utterance.onend = () => {
+        cleanup();
+        if (callbacks.onEnd) callbacks.onEnd();
+      };
+
+      utterance.onerror = (err) => {
+        cleanup();
+        console.warn('Speech error:', err);
+        if (err && err.error && err.error !== 'canceled' && err.error !== 'interrupted') {
+          showSpeechWarningToast('متصفحك الحالي يقيّد النطق الصوتي، يُرجى استخدام Chrome أو تفعيل حزمة الصوت من إعدادات الهاتف ⚠️');
+        }
+        if (callbacks.onError) callbacks.onError(err);
+      };
+
+      // Call speechSynthesis.speak immediately in the synchronous user interaction frame
+      speechSynthesis.speak(utterance);
+
+      // On Android / MIUI: resume if engine started in paused state
+      if (speechSynthesis.paused) {
+        speechSynthesis.resume();
+      }
+    } catch (err) {
+      window._isPronunciationSpeaking = false;
+      console.error('Speech synthesis execution failed:', err);
+      showSpeechWarningToast('متصفحك الحالي يقيّد النطق الصوتي، يُرجى استخدام Chrome أو تفعيل حزمة الصوت من إعدادات الهاتف ⚠️');
+      if (callbacks.onError) callbacks.onError(err);
+    }
   }
 
   function stopAllPronunciationSpeech() {
