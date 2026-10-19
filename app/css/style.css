@@ -6817,3 +6817,131 @@ body.is-resizing-workspace .workspace-resizer {
   color: var(--accent-color, #6366f1);
   margin-left: 6px;
 }
+
+
+/* =========================================================
+   نظام الترجمة المزدوجة المنسدلة (Bilingual Translation System)
+   ========================================================= */
+
+/* 1. زر الترجمة الفردي لكل عبارة (文A) */
+.pronunciation-trans-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: 0 3px;
+  padding: 0;
+  background: var(--bg-hover, #f1f5f9);
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 6px;
+  color: var(--text-secondary, #475569);
+  cursor: pointer;
+  vertical-align: middle;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  line-height: 1;
+}
+
+.pronunciation-trans-btn:hover {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #059669;
+  transform: scale(1.06);
+}
+
+.pronunciation-trans-btn.is-active {
+  background: #dcfce7 !important;
+  border-color: #86efac !important;
+  color: #16a34a !important;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25) !important;
+}
+
+[data-theme="dark"] .pronunciation-trans-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pronunciation-trans-btn:hover {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+
+[data-theme="dark"] .pronunciation-trans-btn.is-active {
+  background: rgba(16, 185, 129, 0.22) !important;
+  border-color: rgba(16, 185, 129, 0.5) !important;
+  color: #4ade80 !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25) !important;
+}
+
+/* 2. كارت الترجمة المنزلق الانسيابي (Accordion Push-down) */
+.inline-translation-box {
+  display: block;
+  width: 100%;
+  clear: both;
+  box-sizing: border-box;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: max-height 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, transform 0.28s ease, margin 0.28s ease, padding 0.28s ease;
+  margin: 0;
+  padding: 0 16px;
+  direction: rtl;
+  text-align: right;
+  font-family: 'Tajawal', sans-serif;
+  border-radius: 12px;
+  background: #fefce8; /* Soft warm cream */
+  border: 1px solid #fef08a;
+  color: #1e293b;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
+  font-size: 0.96rem;
+  line-height: 1.6;
+}
+
+[data-theme="dark"] .inline-translation-box {
+  background: rgba(30, 41, 59, 0.92);
+  border-color: rgba(99, 102, 241, 0.3);
+  color: #f1f5f9;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.inline-translation-box.is-open {
+  max-height: 350px;
+  opacity: 1;
+  transform: translateY(0);
+  margin: 10px 0 14px 0;
+  padding: 12px 18px;
+}
+
+.inline-translation-box .itb-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.inline-translation-box .itb-text {
+  font-weight: 700;
+  color: inherit;
+  margin: 0;
+}
+
+/* 3. زر الترجمة الشاملة في شريط الأدوات */
+.global-trans-tool-btn.active,
+.global-trans-tool-btn.is-active {
+  background: #dcfce7 !important;
+  border-color: #86efac !important;
+  color: #16a34a !important;
+}
+
+[data-theme="dark"] .global-trans-tool-btn.active,
+[data-theme="dark"] .global-trans-tool-btn.is-active {
+  background: rgba(16, 185, 129, 0.22) !important;
+  border-color: rgba(16, 185, 129, 0.5) !important;
+  color: #4ade80 !important;
+}

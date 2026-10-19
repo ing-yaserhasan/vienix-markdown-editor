@@ -57,6 +57,8 @@
     quickLang2: 'en-US',        // Quick language shortcut 2 in context menu
     syncWordHighlight: false,   // Synchronized word-by-word highlight during phrase speech
     wordTranslationBubble: true, // Show translation bubble on word click (Hybrid 1+3)
+    inlinePhraseTranslation: true,    // Scenario 1: Show 文A inline button beside each phrase
+    globalBilingualTranslation: true, // Scenario 2: Show global bilingual icon in toolbar
     voiceName: '',
     // API
     googleTtsKey: '',
@@ -151,6 +153,9 @@
       case 'dottedUnderline':
       case 'interactionMode':
       case 'speechRate':
+      case 'inlinePhraseTranslation':
+      case 'globalBilingualTranslation':
+        updateGlobalBilingualBtnVisibility();
         renderMarkdown();
         break;
     }
@@ -8603,6 +8608,12 @@ function exportDocument(format) {
     const wordBubble = document.getElementById('s-word-translation-bubble');
     if (wordBubble) wordBubble.checked = s.wordTranslationBubble !== false;
 
+    const inlineTrans = document.getElementById('s-inline-phrase-trans');
+    if (inlineTrans) inlineTrans.checked = s.inlinePhraseTranslation !== false;
+
+    const globalTrans = document.getElementById('s-global-bilingual-trans');
+    if (globalTrans) globalTrans.checked = s.globalBilingualTranslation !== false;
+
     const ql1 = document.getElementById('s-quick-lang-1');
     if (ql1) ql1.value = s.quickLang1 || 'de-AT';
     const ql2 = document.getElementById('s-quick-lang-2');
@@ -9596,6 +9607,119 @@ function exportDocument(format) {
     if (e.key === 'Escape') closePronunciationContextMenu();
   });
 
+  
+  // ==========================================================================
+  // BILINGUAL DUAL VIEW SYSTEM (السيناريوهان 1 و 2 للترجمة المزدوجة المنسدلة)
+  // ==========================================================================
+
+  // تحديث إظهار أو إخفاء أيقونة الترجمة العامة حسب إعدادات المستخدم
+  function updateGlobalBilingualBtnVisibility() {
+    const show = vienixSettings.globalBilingualTranslation !== false;
+    const btn = document.getElementById('btn-global-bilingual-trans');
+    if (btn) btn.style.display = show ? 'inline-flex' : 'none';
+  }
+  window.updateGlobalBilingualBtnVisibility = updateGlobalBilingualBtnVisibility;
+
+  // السيناريو 1: تبديل كارت الترجمة المنزلق لعبارة محددة (Accordion Push-down)
+  window.toggleInlinePhraseTranslation = async function (btn, boxEl, phraseText, langCode) {
+    if (!btn || !boxEl) return;
+
+    const isOpen = boxEl.classList.contains('is-open');
+
+    if (isOpen) {
+      // إغلاق الكارت وسحب النص لأعلى
+      boxEl.classList.remove('is-open');
+      btn.classList.remove('is-active');
+      checkAndUpdateGlobalBtnState();
+      return;
+    }
+
+    // فتح الكارت ودفع النص لأسفل
+    boxEl.classList.add('is-open');
+    btn.classList.add('is-active');
+    checkAndUpdateGlobalBtnState();
+
+    const textEl = boxEl.querySelector('.itb-text');
+    const loadEl = boxEl.querySelector('.itb-loading');
+
+    // إذا كانت الترجمة موجودة ومحمّلة مسبقاً لا داعي لإعادة طلبها
+    if (textEl && textEl.textContent.trim().length > 0) {
+      if (loadEl) loadEl.style.display = 'none';
+      textEl.style.display = 'block';
+      return;
+    }
+
+    // جلب الترجمة عبر محرك الشلال الهجين (كاش 0ms + محلي + سحابي مجاني)
+    try {
+      if (loadEl) loadEl.style.display = 'flex';
+      if (textEl) textEl.style.display = 'none';
+
+      const res = await fetchWordTranslation(phraseText, langCode);
+      if (res && res.text) {
+        if (textEl) {
+          textEl.textContent = res.text;
+          textEl.style.display = 'block';
+        }
+      } else {
+        if (textEl) {
+          textEl.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">تعذر جلب الترجمة في هذه اللحظة.</span>';
+          textEl.style.display = 'block';
+        }
+      }
+    } catch (_) {
+      if (textEl) {
+        textEl.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">تعذر جلب الترجمة.</span>';
+        textEl.style.display = 'block';
+      }
+    } finally {
+      if (loadEl) loadEl.style.display = 'none';
+    }
+  };
+
+  // السيناريو 2: تبديل وضع الترجمة المزدوجة لكامل المقال (Global Bilingual Dual View)
+  window._isGlobalBilingualActive = false;
+
+  window.toggleGlobalBilingualMode = function () {
+    window._isGlobalBilingualActive = !window._isGlobalBilingualActive;
+    const active = window._isGlobalBilingualActive;
+
+    const btn = document.getElementById('btn-global-bilingual-trans');
+    if (btn) btn.classList.toggle('is-active', active);
+
+    const transBtns = document.querySelectorAll('.pronunciation-trans-btn');
+    transBtns.forEach(b => {
+      const box = b._associatedBox;
+      const phrase = b._associatedPhrase;
+      const lang = b._associatedLang;
+      if (b && box) {
+        const isOpen = box.classList.contains('is-open');
+        if (active && !isOpen) {
+          toggleInlinePhraseTranslation(b, box, phrase, lang);
+        } else if (!active && isOpen) {
+          box.classList.remove('is-open');
+          b.classList.remove('is-active');
+        }
+      }
+    });
+
+    if (active) {
+      showToast('تم تفعيل وضع القراءة المزدوجة لكامل المقال 🌐', 'success', 2000);
+    } else {
+      showToast('تم طي ترجمات المقال واستعادة العرض الأصلي ✓', 'info', 1800);
+    }
+  };
+
+  function checkAndUpdateGlobalBtnState() {
+    const allBoxes = document.querySelectorAll('.inline-translation-box');
+    if (allBoxes.length === 0) return;
+    const openBoxes = document.querySelectorAll('.inline-translation-box.is-open');
+    const allOpen = openBoxes.length === allBoxes.length && allBoxes.length > 0;
+    window._isGlobalBilingualActive = allOpen;
+
+    const btn = document.getElementById('btn-global-bilingual-trans');
+    if (btn) btn.classList.toggle('is-active', allOpen);
+  }
+
   function processPronunciationInPreview() {
     if (!vienixSettings.pronunciationEnabled) return;
     if (!previewContent) return;
@@ -9778,6 +9902,36 @@ function exportDocument(format) {
             });
 
             phraseWrapper.appendChild(btn);
+          }
+
+          // إضافة زر الترجمة المنسدلة للعبارة (文A) وكارت الترجمة الحصري إذا كانت الميزة مفعلة
+          if (vienixSettings.inlinePhraseTranslation !== false) {
+            const transBtn = document.createElement('button');
+            transBtn.type = 'button';
+            transBtn.className = 'pronunciation-trans-btn';
+            transBtn.title = 'ترجمة العبارة وعرضها بالأسفل (دفع النص)';
+            transBtn.setAttribute('aria-label', 'Translate phrase inline');
+            transBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>';
+
+            // إنشاء كارت الترجمة المنزلق
+            const transBox = document.createElement('div');
+            transBox.className = 'inline-translation-box';
+            transBox.setAttribute('dir', 'rtl');
+            transBox.innerHTML = '<div class="itb-loading"><span class="wtb-spinner"></span><span>جارٍ استحضار ترجمة العبارة...</span></div><p class="itb-text" style="display:none;"></p>';
+
+            transBtn._associatedBox = transBox;
+            transBtn._associatedPhrase = part.content;
+            transBtn._associatedLang = detectedLang;
+
+            transBtn.addEventListener('click', function (e) {
+              e.stopPropagation();
+              e.preventDefault();
+              const effectiveLang = phraseWrapper.getAttribute('data-override-lang') || detectedLang;
+              toggleInlinePhraseTranslation(transBtn, transBox, part.content, effectiveLang);
+            });
+
+            phraseWrapper.appendChild(transBtn);
+            phraseWrapper.appendChild(transBox);
           }
 
           fragment.appendChild(phraseWrapper);

@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Fira+Code:wght@400;500&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/earlyaccess/droidarabicnaskh.css">
   <link rel="stylesheet" href="assets/fonts/tajawal.css">
-  <link rel="stylesheet" href="app/css/style.css?v=obsidian37">
+  <link rel="stylesheet" href="app/css/style.css?v=obsidian38">
   <link rel="stylesheet" href="app/css/classic.css?v=obsidian4">
 </head>
 <body>
@@ -317,6 +317,18 @@
               <path d="M4 4l5 5"></path>
             </svg>
             <span class="chamber-diff-label">مطابقة</span>
+          </button>
+
+          <!-- أيقونة الترجمة المزدوجة العامة للمقال (بالمكان المحدد بالسهم الأحمر) -->
+          <button type="button" class="tool-btn global-trans-tool-btn" id="btn-global-bilingual-trans" onclick="toggleGlobalBilingualMode()" title="ترجمة مزدوجة للمقال (عرض/طي ترجمات جميع الفقرات)">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m5 8 6 6"></path>
+              <path d="m4 14 6-6 2-3"></path>
+              <path d="M2 5h12"></path>
+              <path d="M7 2h1"></path>
+              <path d="m22 22-5-10-5 10"></path>
+              <path d="M14 18h6"></path>
+            </svg>
           </button>
         </div>
       </div>
@@ -1760,6 +1772,42 @@
                 </div>
               </div>
 
+              <!-- Word translation bubble toggle -->
+              <div class="settings-group">
+                <label class="settings-label">فقاعة الترجمة الفورية عند النقر على الكلمة 💬</label>
+                <div class="settings-toggle-row">
+                  <span class="settings-toggle-desc">تنبثق فقاعة أنيقة تعرض معنى الكلمة بالعربية فوراً مع زر للنطق البطيء (بدون API — ذكاء محلي + سحابي مجاني)</span>
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="s-word-translation-bubble" checked onchange="applySetting('wordTranslationBubble', this.checked)">
+                    <span class="settings-toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Scenario 1: Inline Phrase Translation Toggle -->
+              <div class="settings-group">
+                <label class="settings-label">زر الترجمة الفردي لكل عبارة (文A)</label>
+                <div class="settings-toggle-row">
+                  <span class="settings-toggle-desc">إظهار أيقونة ترجمة مدمجة بجانب كل جملة أجنبية لفتح كارت الترجمة أسفلها ودفش النص بسلاسة</span>
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="s-inline-phrase-trans" checked onchange="applySetting('inlinePhraseTranslation', this.checked)">
+                    <span class="settings-toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Scenario 2: Global Bilingual Translation Toggle -->
+              <div class="settings-group">
+                <label class="settings-label">أيقونة الترجمة الشاملة للمقال (في شريط الأدوات)</label>
+                <div class="settings-toggle-row">
+                  <span class="settings-toggle-desc">إظهار أيقونة الترجمة العامة في شريط الأدوات لفتح كروت ترجمة كافة فقرات المقال دفعة واحدة لقراءة مزدوجة</span>
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="s-global-bilingual-trans" checked onchange="applySetting('globalBilingualTranslation', this.checked)">
+                    <span class="settings-toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+
             </div>
           </div>
 
@@ -1885,7 +1933,7 @@
   <script src="assets/icons/twemoji/twemoji_data.js"></script>
 
   <!-- Application Main Script -->
-  <script src="app/js/rtlmd.js?v=obsidian37"></script>
+  <script src="app/js/rtlmd.js?v=obsidian38"></script>
 
 </body>
 </html>
