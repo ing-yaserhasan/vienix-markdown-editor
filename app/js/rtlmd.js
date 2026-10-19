@@ -542,6 +542,11 @@
       previewContent.classList.add('preview-editable');
       protectNonEditableElements();
     }
+
+    // مساعد النطق — معالجة النصوص الأجنبية بعد الرندر
+    if (typeof vienixSettings !== 'undefined' && vienixSettings.pronunciationEnabled) {
+      processPronunciationInPreview();
+    }
   }
 
   // Extract Mermaid Blocks to prevent Marked from mangling syntax
@@ -8201,6 +8206,720 @@
   } else {
     initDrag();
   }
+
+  // ==========================================================================
+  // SETTINGS MANAGER — مدير الإعدادات المركزي
+  // ==========================================================================
+
+  const SETTINGS_KEY = 'vienix_settings';
+
+  const SETTINGS_DEFAULTS = {
+    // Appearance
+    theme: 'dark',
+    previewFontSize: '16',
+    editorFontSize: '15',
+    accentColor: '#6366f1',
+    // Editor
+    wordWrap: true,
+    autoBrackets: true,
+    editorFont: "'Fira Code', monospace",
+    textDirection: 'rtl',
+    autoSaveInterval: '5000',
+    // Pronunciation
+    pronunciationEnabled: false,
+    pronunciationEngine: 'native',
+    speechRate: '1.0',
+    speechPitch: '1.0',
+    speechVolume: '1',
+    interactionMode: 'mixed',
+    langDetection: 'auto',
+    defaultLang: 'en',
+    dialect: '',
+    voiceName: '',
+    dottedUnderline: true,
+    // API
+    googleTtsKey: '',
+    groqKey: ''
+  };
+
+  var vienixSettings = {};
+
+  function loadSettings() {
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if (raw) {
+        vienixSettings = Object.assign({}, SETTINGS_DEFAULTS, JSON.parse(raw));
+      } else {
+        vienixSettings = Object.assign({}, SETTINGS_DEFAULTS);
+        // Sync existing theme preference
+        const existingTheme = getStored('vienix_theme', 'yaser_theme');
+        if (existingTheme) {
+          vienixSettings.theme = existingTheme;
+        }
+      }
+    } catch (e) {
+      vienixSettings = Object.assign({}, SETTINGS_DEFAULTS);
+    }
+  }
+
+  function saveSettings() {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(vienixSettings));
+    } catch (e) {
+      console.warn('Unable to save settings:', e);
+    }
+  }
+
+  window.applySetting = function (key, value) {
+    vienixSettings[key] = value;
+    saveSettings();
+    applySettingsToUI(key, value);
+  };
+
+  function applySettingsToUI(key, value) {
+    switch (key) {
+      case 'theme':
+        if (value === 'auto') {
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          isDarkMode = prefersDark;
+        } else {
+          isDarkMode = value === 'dark';
+        }
+        try {
+          localStorage.setItem('vienix_theme', isDarkMode ? 'dark' : 'light');
+          localStorage.setItem('yaser_theme', isDarkMode ? 'dark' : 'light');
+        } catch (e) {}
+        initTheme();
+        initMermaid();
+        renderMarkdown();
+        break;
+
+      case 'previewFontSize':
+        document.getElementById('s-preview-font-size-val').textContent = value + 'px';
+        if (previewContent) previewContent.style.fontSize = value + 'px';
+        break;
+
+      case 'editorFontSize':
+        document.getElementById('s-editor-font-size-val').textContent = value + 'px';
+        if (editor) editor.style.fontSize = value + 'px';
+        break;
+
+      case 'accentColor':
+        document.getElementById('s-accent-color-label').textContent = value;
+        document.documentElement.style.setProperty('--accent-color', value);
+        break;
+
+      case 'wordWrap':
+        if (editor) editor.style.whiteSpace = value ? 'pre-wrap' : 'pre';
+        break;
+
+      case 'editorFont':
+        if (editor) editor.style.fontFamily = value;
+        break;
+
+      case 'textDirection':
+        if (editor) editor.dir = value === 'auto' ? 'auto' : value;
+        break;
+
+      case 'pronunciationEnabled':
+        renderMarkdown();
+        break;
+
+      case 'dottedUnderline':
+      case 'interactionMode':
+        renderMarkdown();
+        break;
+    }
+  }
+
+  function applyAllSettings() {
+    // Apply font sizes
+    if (vienixSettings.previewFontSize && previewContent) {
+      previewContent.style.fontSize = vienixSettings.previewFontSize + 'px';
+    }
+    if (vienixSettings.editorFontSize && editor) {
+      editor.style.fontSize = vienixSettings.editorFontSize + 'px';
+    }
+    if (vienixSettings.editorFont && editor) {
+      editor.style.fontFamily = vienixSettings.editorFont;
+    }
+    if (vienixSettings.wordWrap !== undefined && editor) {
+      editor.style.whiteSpace = vienixSettings.wordWrap ? 'pre-wrap' : 'pre';
+    }
+    if (vienixSettings.textDirection && editor) {
+      editor.dir = vienixSettings.textDirection === 'auto' ? 'auto' : vienixSettings.textDirection;
+    }
+    if (vienixSettings.accentColor) {
+      document.documentElement.style.setProperty('--accent-color', vienixSettings.accentColor);
+    }
+  }
+
+  // ==========================================================================
+  // SETTINGS MODAL UI FUNCTIONS
+  // ==========================================================================
+
+  window.openSettingsModal = function () {
+    loadSettings();
+    syncSettingsUI();
+    populateVoicesList();
+    calculateStorageUsage();
+    const overlay = document.getElementById('settings-modal-overlay');
+    if (overlay) overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  };
+
+  window.closeSettingsModal = function (event) {
+    if (event && event.target !== event.currentTarget) return;
+    const overlay = document.getElementById('settings-modal-overlay');
+    if (overlay) overlay.classList.remove('active');
+    document.body.style.overflow = '';
+  };
+
+  window.switchSettingsTab = function (tabId) {
+    document.querySelectorAll('.settings-tab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === tabId);
+    });
+    document.querySelectorAll('.settings-panel').forEach(panel => {
+      panel.classList.toggle('active', panel.id === 'settings-panel-' + tabId);
+    });
+  };
+
+  window.togglePronunciationSubSettings = function (enabled) {
+    const sub = document.getElementById('pronunciation-sub-settings');
+    if (sub) sub.style.display = enabled ? 'block' : 'none';
+  };
+
+  window.toggleManualLang = function (show) {
+    const langGroup = document.getElementById('s-manual-lang-group');
+    const dialectGroup = document.getElementById('s-dialect-group');
+    if (langGroup) langGroup.style.display = show ? 'block' : 'none';
+    if (dialectGroup) dialectGroup.style.display = show ? 'block' : 'none';
+    if (show) updateDialectOptions(vienixSettings.defaultLang || 'en');
+  };
+
+  window.toggleApiHint = function (engine) {
+    const hint = document.getElementById('s-engine-hint');
+    if (!hint) return;
+    const hints = {
+      native: 'محرك المتصفح المدمج — مجاني 100% ويعمل بدون إنترنت.',
+      google: '⚠️ يحتاج مفتاح API من Google Cloud. اذهب لتبويب "مفاتيح API" لإدخاله.',
+      groq: '⚠️ يحتاج مفتاح Groq API. اذهب لتبويب "مفاتيح API" لإدخاله.'
+    };
+    hint.textContent = hints[engine] || '';
+  };
+
+  window.toggleApiKeyVisibility = function (inputId) {
+    const input = document.getElementById(inputId);
+    if (input) input.type = input.type === 'password' ? 'text' : 'password';
+  };
+
+  const DIALECT_MAP = {
+    de: [['de-DE', '🇩🇪 ألمانيا (Hochdeutsch)'], ['de-AT', '🇦🇹 النمسا (Österreichisch)'], ['de-CH', '🇨🇭 سويسرا (Schweizerdeutsch)']],
+    en: [['en-US', '🇺🇸 أمريكا'], ['en-GB', '🇬🇧 بريطانيا'], ['en-AU', '🇦🇺 أستراليا'], ['en-IN', '🇮🇳 الهند']],
+    fr: [['fr-FR', '🇫🇷 فرنسا'], ['fr-CA', '🇨🇦 كندا'], ['fr-BE', '🇧🇪 بلجيكا']],
+    es: [['es-ES', '🇪🇸 إسبانيا'], ['es-MX', '🇲🇽 المكسيك'], ['es-AR', '🇦🇷 الأرجنتين']],
+    pt: [['pt-PT', '🇵🇹 البرتغال'], ['pt-BR', '🇧🇷 البرازيل']],
+    ar: [['ar-SA', '🇸🇦 السعودية'], ['ar-EG', '🇪🇬 مصر'], ['ar-MA', '🇲🇦 المغرب']],
+    it: [['it-IT', '🇮🇹 إيطاليا']],
+    tr: [['tr-TR', '🇹🇷 تركيا']],
+    ru: [['ru-RU', '🇷🇺 روسيا']],
+    ja: [['ja-JP', '🇯🇵 اليابان']],
+    ko: [['ko-KR', '🇰🇷 كوريا']],
+    zh: [['zh-CN', '🇨🇳 الصين (مبسّط)'], ['zh-TW', '🇹🇼 تايوان (تقليدي)']],
+    nl: [['nl-NL', '🇳🇱 هولندا'], ['nl-BE', '🇧🇪 بلجيكا']],
+    sv: [['sv-SE', '🇸🇪 السويد']],
+    pl: [['pl-PL', '🇵🇱 بولندا']]
+  };
+
+  window.updateDialectOptions = function (lang) {
+    const select = document.getElementById('s-dialect');
+    if (!select) return;
+    select.innerHTML = '';
+    const dialects = DIALECT_MAP[lang] || [[lang, lang]];
+    dialects.forEach(([code, label]) => {
+      const opt = document.createElement('option');
+      opt.value = code;
+      opt.textContent = label;
+      select.appendChild(opt);
+    });
+    if (vienixSettings.dialect) {
+      select.value = vienixSettings.dialect;
+    }
+    document.getElementById('s-dialect-group').style.display = dialects.length > 1 ? 'block' : 'none';
+  };
+
+  function populateVoicesList() {
+    const select = document.getElementById('s-voice-select');
+    if (!select || typeof speechSynthesis === 'undefined') return;
+
+    function fillVoices() {
+      const voices = speechSynthesis.getVoices();
+      select.innerHTML = '<option value="">الصوت الافتراضي للمتصفح</option>';
+      voices.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v.name;
+        opt.textContent = `${v.name} (${v.lang})${v.localService ? ' — محلي' : ''}`;
+        select.appendChild(opt);
+      });
+      if (vienixSettings.voiceName) {
+        select.value = vienixSettings.voiceName;
+      }
+    }
+
+    fillVoices();
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+      speechSynthesis.onvoiceschanged = fillVoices;
+    }
+  }
+
+  function calculateStorageUsage() {
+    const el = document.getElementById('s-storage-used');
+    if (!el) return;
+    let total = 0;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        total += (key.length + (localStorage.getItem(key) || '').length) * 2;
+      }
+    } catch (e) {}
+    const kb = (total / 1024).toFixed(1);
+    const mb = (total / (1024 * 1024)).toFixed(2);
+    el.textContent = total > 1048576 ? `${mb} MB مستخدم` : `${kb} KB مستخدم`;
+  }
+
+  function syncSettingsUI() {
+    const s = vienixSettings;
+
+    // Theme
+    const themeRadio = document.querySelector(`input[name="s-theme"][value="${s.theme}"]`);
+    if (themeRadio) themeRadio.checked = true;
+
+    // Font sizes
+    const previewFontSlider = document.getElementById('s-preview-font-size');
+    if (previewFontSlider) { previewFontSlider.value = s.previewFontSize || '16'; }
+    const previewFontVal = document.getElementById('s-preview-font-size-val');
+    if (previewFontVal) previewFontVal.textContent = (s.previewFontSize || '16') + 'px';
+
+    const editorFontSlider = document.getElementById('s-editor-font-size');
+    if (editorFontSlider) { editorFontSlider.value = s.editorFontSize || '15'; }
+    const editorFontVal = document.getElementById('s-editor-font-size-val');
+    if (editorFontVal) editorFontVal.textContent = (s.editorFontSize || '15') + 'px';
+
+    // Accent color
+    const accentPicker = document.getElementById('s-accent-color');
+    if (accentPicker) accentPicker.value = s.accentColor || '#6366f1';
+    const accentLabel = document.getElementById('s-accent-color-label');
+    if (accentLabel) accentLabel.textContent = s.accentColor || '#6366f1';
+
+    // Editor settings
+    const wordWrap = document.getElementById('s-word-wrap');
+    if (wordWrap) wordWrap.checked = s.wordWrap !== false;
+    const autoBrackets = document.getElementById('s-auto-brackets');
+    if (autoBrackets) autoBrackets.checked = s.autoBrackets !== false;
+    const editorFont = document.getElementById('s-editor-font');
+    if (editorFont) editorFont.value = s.editorFont || "'Fira Code', monospace";
+    const textDirRadio = document.querySelector(`input[name="s-text-dir"][value="${s.textDirection || 'rtl'}"]`);
+    if (textDirRadio) textDirRadio.checked = true;
+    const autoSave = document.getElementById('s-auto-save-interval');
+    if (autoSave) autoSave.value = s.autoSaveInterval || '5000';
+
+    // Pronunciation
+    const pronEnabled = document.getElementById('s-pronunciation-enabled');
+    if (pronEnabled) pronEnabled.checked = s.pronunciationEnabled === true;
+    togglePronunciationSubSettings(s.pronunciationEnabled === true);
+
+    const pronEngine = document.getElementById('s-pronunciation-engine');
+    if (pronEngine) pronEngine.value = s.pronunciationEngine || 'native';
+    toggleApiHint(s.pronunciationEngine || 'native');
+
+    const rateSlider = document.getElementById('s-speech-rate');
+    if (rateSlider) rateSlider.value = s.speechRate || '1.0';
+    const rateVal = document.getElementById('s-speech-rate-val');
+    if (rateVal) rateVal.textContent = (s.speechRate || '1.0') + '×';
+
+    const pitchSlider = document.getElementById('s-speech-pitch');
+    if (pitchSlider) pitchSlider.value = s.speechPitch || '1.0';
+    const pitchVal = document.getElementById('s-speech-pitch-val');
+    if (pitchVal) pitchVal.textContent = s.speechPitch || '1.0';
+
+    const volSlider = document.getElementById('s-speech-volume');
+    if (volSlider) volSlider.value = s.speechVolume || '1';
+    const volVal = document.getElementById('s-speech-volume-val');
+    if (volVal) volVal.textContent = Math.round((s.speechVolume || 1) * 100) + '%';
+
+    const interactRadio = document.querySelector(`input[name="s-interact-mode"][value="${s.interactionMode || 'mixed'}"]`);
+    if (interactRadio) interactRadio.checked = true;
+
+    const langDetectRadio = document.querySelector(`input[name="s-lang-detect"][value="${s.langDetection || 'auto'}"]`);
+    if (langDetectRadio) langDetectRadio.checked = true;
+    toggleManualLang(s.langDetection === 'manual');
+
+    const defLang = document.getElementById('s-default-lang');
+    if (defLang) defLang.value = s.defaultLang || 'en';
+
+    const dotted = document.getElementById('s-dotted-underline');
+    if (dotted) dotted.checked = s.dottedUnderline !== false;
+
+    // API keys
+    const googleKey = document.getElementById('s-google-tts-key');
+    if (googleKey) googleKey.value = s.googleTtsKey || '';
+    const groqKey = document.getElementById('s-groq-key');
+    if (groqKey) groqKey.value = s.groqKey || '';
+  }
+
+  window.exportSettings = function () {
+    const blob = new Blob([JSON.stringify(vienixSettings, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'vienix-settings.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('تم تصدير الإعدادات بنجاح ✅', 'info');
+  };
+
+  window.resetAllSettings = function () {
+    if (!confirm('هل أنت متأكد؟ سيتم مسح جميع الإعدادات المحفوظة وإعادتها للقيم الافتراضية.')) return;
+    vienixSettings = Object.assign({}, SETTINGS_DEFAULTS);
+    saveSettings();
+    syncSettingsUI();
+    applyAllSettings();
+    renderMarkdown();
+    showToast('تم إعادة ضبط جميع الإعدادات ✅', 'info');
+  };
+
+  window.resetCurrentTabDefaults = function () {
+    const activePanel = document.querySelector('.settings-panel.active');
+    if (!activePanel) return;
+    const tabId = activePanel.id.replace('settings-panel-', '');
+    const tabDefaults = {
+      appearance: ['theme', 'previewFontSize', 'editorFontSize', 'accentColor'],
+      editor: ['wordWrap', 'autoBrackets', 'editorFont', 'textDirection', 'autoSaveInterval'],
+      pronunciation: ['pronunciationEnabled', 'pronunciationEngine', 'speechRate', 'speechPitch', 'speechVolume', 'interactionMode', 'langDetection', 'defaultLang', 'dialect', 'voiceName', 'dottedUnderline'],
+      api: ['googleTtsKey', 'groqKey']
+    };
+    const keys = tabDefaults[tabId];
+    if (keys) {
+      keys.forEach(k => { vienixSettings[k] = SETTINGS_DEFAULTS[k]; });
+      saveSettings();
+      syncSettingsUI();
+      applyAllSettings();
+      renderMarkdown();
+      showToast('تم إعادة إعدادات هذا التبويب للافتراضي ✅', 'info');
+    }
+  };
+
+  window.testApiKey = function (provider) {
+    showToast('جاري اختبار الاتصال...', 'info');
+    if (provider === 'google') {
+      const key = vienixSettings.googleTtsKey;
+      if (!key) { showToast('أدخل مفتاح Google TTS أولاً', 'warning'); return; }
+      showToast('مفتاح Google TTS تم حفظه. سيُستخدم عند تشغيل النطق.', 'info');
+    } else if (provider === 'groq') {
+      const key = vienixSettings.groqKey;
+      if (!key) { showToast('أدخل مفتاح Groq API أولاً', 'warning'); return; }
+      showToast('مفتاح Groq API تم حفظه. سيُستخدم عند تشغيل النطق.', 'info');
+    }
+  };
+
+  // Settings Import Handler
+  document.addEventListener('DOMContentLoaded', function () {
+    const importInput = document.getElementById('settings-import-input');
+    if (importInput) {
+      importInput.addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (ev) {
+          try {
+            const imported = JSON.parse(ev.target.result);
+            vienixSettings = Object.assign({}, SETTINGS_DEFAULTS, imported);
+            saveSettings();
+            syncSettingsUI();
+            applyAllSettings();
+            renderMarkdown();
+            showToast('تم استيراد الإعدادات بنجاح ✅', 'info');
+          } catch (err) {
+            showToast('خطأ في قراءة الملف. تأكد أنه ملف إعدادات صحيح.', 'warning');
+          }
+        };
+        reader.readAsText(file);
+        importInput.value = '';
+      });
+    }
+  });
+
+  // ==========================================================================
+  // PRONUNCIATION ENGINE — محرك النطق
+  // ==========================================================================
+
+  // Language Detection (local algorithm based on Unicode ranges)
+  function detectLanguage(text) {
+    if (!text || text.trim().length === 0) return null;
+
+    const cleaned = text.replace(/[\d\s\p{P}\p{S}]/gu, '');
+    if (cleaned.length === 0) return null;
+
+    // Arabic check
+    const arabicChars = (cleaned.match(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g) || []).length;
+    const totalChars = cleaned.length;
+    if (arabicChars / totalChars > 0.3) return 'ar';
+
+    // CJK
+    if (/[\u3040-\u309F\u30A0-\u30FF]/.test(cleaned)) return 'ja';
+    if (/[\uAC00-\uD7AF]/.test(cleaned)) return 'ko';
+    if (/[\u4E00-\u9FFF]/.test(cleaned)) return 'zh';
+
+    // Cyrillic
+    if (/[\u0400-\u04FF]/.test(cleaned)) return 'ru';
+
+    // Latin-based languages (use character patterns)
+    const lower = text.toLowerCase();
+    if (/[äöüß]/.test(lower) || /\b(und|der|die|das|ist|ein|für|mit|auf|nicht|ich|wir|sie|auch|haben|werden|kann)\b/.test(lower)) return 'de';
+    if (/[éèêëàâçôùûïî]/.test(lower) || /\b(le|la|les|des|est|une|pour|avec|dans|sur|que|pas|sont|cette|nous|vous|ils|elle)\b/.test(lower)) return 'fr';
+    if (/[ñ¿¡áéíóú]/.test(lower) || /\b(el|los|las|una|del|por|con|para|como|pero|todo|esta|más|sin|muy|entre)\b/.test(lower)) return 'es';
+    if (/[àèìòùé]/.test(lower) || /\b(il|gli|una|del|per|con|che|non|sono|come|anche|questo|della|nella|tutto)\b/.test(lower)) return 'it';
+    if (/[ãõçáéíóú]/.test(lower) || /\b(que|não|com|para|uma|dos|por|mais|como|sua|ele|tem|ser|está|foi)\b/.test(lower)) return 'pt';
+    if (/[çşğıöü]/.test(lower) || /\b(bir|ve|bu|ile|için|olan|var|çok|daha|gibi)\b/.test(lower)) return 'tr';
+    if (/[åäö]/.test(lower) || /\b(och|att|det|som|för|med|har|den|inte|till|kan)\b/.test(lower)) return 'sv';
+    if (/[ąćęłńóśźż]/.test(lower) || /\b(jest|nie|się|jak|ale|tak|czy|już|tylko|może)\b/.test(lower)) return 'pl';
+    if (/\b(the|is|are|was|and|for|that|this|with|have|from|they|been|will|would|could|should)\b/.test(lower)) return 'en';
+
+    // Default to English for Latin text
+    if (/[a-zA-Z]/.test(cleaned)) return 'en';
+
+    return null;
+  }
+
+  function isNonArabicText(text) {
+    if (!text || text.trim().length === 0) return false;
+    const cleaned = text.replace(/[\d\s\p{P}\p{S}]/gu, '');
+    if (cleaned.length === 0) return false;
+    const arabicChars = (cleaned.match(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g) || []).length;
+    return arabicChars / cleaned.length < 0.3;
+  }
+
+  // Speak text using Web Speech API
+  function speakText(text, lang) {
+    if (typeof speechSynthesis === 'undefined') {
+      showToast('المتصفح لا يدعم النطق الصوتي', 'warning');
+      return;
+    }
+
+    // Stop any ongoing speech
+    speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+
+    // Determine language
+    if (vienixSettings.langDetection === 'manual' && vienixSettings.dialect) {
+      utterance.lang = vienixSettings.dialect;
+    } else if (vienixSettings.langDetection === 'manual' && vienixSettings.defaultLang) {
+      utterance.lang = vienixSettings.defaultLang;
+    } else {
+      utterance.lang = lang || detectLanguage(text) || 'en';
+      // Map to dialect if available
+      const dialectMap = DIALECT_MAP[utterance.lang];
+      if (dialectMap && dialectMap.length > 0) {
+        utterance.lang = dialectMap[0][0]; // Use first dialect (e.g., de-DE)
+      }
+    }
+
+    utterance.rate = parseFloat(vienixSettings.speechRate) || 1.0;
+    utterance.pitch = parseFloat(vienixSettings.speechPitch) || 1.0;
+    utterance.volume = parseFloat(vienixSettings.speechVolume) || 1.0;
+
+    // Use selected voice
+    if (vienixSettings.voiceName) {
+      const voices = speechSynthesis.getVoices();
+      const voice = voices.find(v => v.name === vienixSettings.voiceName);
+      if (voice) utterance.voice = voice;
+    }
+
+    speechSynthesis.speak(utterance);
+    return utterance;
+  }
+
+  window.speakPronunciation = function (text, btnElement) {
+    if (!text) return;
+    const utterance = speakText(text);
+    if (!utterance) return;
+
+    // Visual feedback
+    if (btnElement) {
+      btnElement.classList.add('speaking');
+      utterance.onend = () => btnElement.classList.remove('speaking');
+      utterance.onerror = () => btnElement.classList.remove('speaking');
+    }
+  };
+
+  window.speakWord = function (text, wordElement) {
+    if (!text) return;
+    const utterance = speakText(text);
+    if (!utterance) return;
+
+    if (wordElement) {
+      wordElement.classList.add('speaking');
+      utterance.onend = () => wordElement.classList.remove('speaking');
+      utterance.onerror = () => wordElement.classList.remove('speaking');
+    }
+  };
+
+  window.testPronunciation = function () {
+    const testTexts = {
+      de: 'Willkommen zum Vienix Markdown Editor',
+      en: 'Welcome to Vienix Markdown Editor',
+      fr: 'Bienvenue dans Vienix Markdown Editor',
+      es: 'Bienvenido al editor Vienix Markdown',
+      it: 'Benvenuto nell\'editor Vienix Markdown',
+      ar: 'مرحباً بكم في محرر ماركداون',
+      ja: 'ようこそ、Vienixマークダウンエディターへ',
+      ko: '비닉스 마크다운 에디터에 오신 것을 환영합니다',
+      zh: '欢迎使用Vienix Markdown编辑器',
+      tr: 'Vienix Markdown Editörüne hoş geldiniz',
+      ru: 'Добро пожаловать в Vienix Markdown Editor',
+      pt: 'Bem-vindo ao editor Vienix Markdown',
+      nl: 'Welkom bij Vienix Markdown Editor',
+      sv: 'Välkommen till Vienix Markdown Editor',
+      pl: 'Witamy w edytorze Vienix Markdown'
+    };
+    const lang = vienixSettings.defaultLang || 'en';
+    const text = testTexts[lang] || testTexts.en;
+    speakText(text);
+    showToast('🔊 جاري تشغيل اختبار النطق...', 'info');
+  };
+
+  // ==========================================================================
+  // PRONUNCIATION — Preview Processing (Post-render hook)
+  // ==========================================================================
+
+  function processPronunciationInPreview() {
+    if (!vienixSettings.pronunciationEnabled) return;
+    if (!previewContent) return;
+
+    const mode = vienixSettings.interactionMode || 'mixed';
+    const showDots = vienixSettings.dottedUnderline !== false;
+    const speakerSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>';
+
+    // Walk through all text nodes in the preview
+    const walker = document.createTreeWalker(previewContent, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (node) {
+        // Skip code blocks, pre, mermaid, script
+        const parent = node.parentElement;
+        if (!parent) return NodeFilter.FILTER_REJECT;
+        const tag = parent.tagName;
+        if (['CODE', 'PRE', 'SCRIPT', 'STYLE', 'SVG', 'BUTTON'].includes(tag)) return NodeFilter.FILTER_REJECT;
+        if (parent.closest('pre, code, .mermaid, .mermaid-wrapper, script, style, .diagram-zoom-controls')) return NodeFilter.FILTER_REJECT;
+        if (parent.classList.contains('pronunciation-word') || parent.classList.contains('pronunciation-speaker-btn')) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+
+    const textNodes = [];
+    while (walker.nextNode()) {
+      textNodes.push(walker.currentNode);
+    }
+
+    textNodes.forEach(textNode => {
+      const text = textNode.textContent;
+      if (!text || text.trim().length < 2) return;
+
+      // Split by word boundaries for mixed content (Arabic + foreign in same node)
+      // Find non-Arabic word sequences
+      const regex = /([a-zA-ZÀ-ÿĀ-žŐőŰűÄäÖöÜüß\u0400-\u04FF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF\u4E00-\u9FFF]+(?:\s+[a-zA-ZÀ-ÿĀ-žŐőŰűÄäÖöÜüß\u0400-\u04FF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF\u4E00-\u9FFF]+)*)/g;
+
+      let match;
+      const parts = [];
+      let lastIndex = 0;
+
+      while ((match = regex.exec(text)) !== null) {
+        const foreignText = match[1].trim();
+        if (foreignText.length < 2) continue;
+        if (!isNonArabicText(foreignText)) continue;
+
+        // Add text before this match
+        if (match.index > lastIndex) {
+          parts.push({ type: 'text', content: text.substring(lastIndex, match.index) });
+        }
+
+        parts.push({ type: 'foreign', content: foreignText });
+        lastIndex = match.index + match[0].length;
+      }
+
+      if (parts.length === 0) return; // No foreign text found
+
+      // Add remaining text
+      if (lastIndex < text.length) {
+        parts.push({ type: 'text', content: text.substring(lastIndex) });
+      }
+
+      // Build replacement fragment
+      const fragment = document.createDocumentFragment();
+      let hasForeign = false;
+
+      parts.forEach(part => {
+        if (part.type === 'text') {
+          fragment.appendChild(document.createTextNode(part.content));
+        } else {
+          hasForeign = true;
+          const span = document.createElement('span');
+          span.className = 'pronunciation-word' + (showDots ? '' : ' no-underline');
+          span.textContent = part.content;
+          span.setAttribute('data-lang', detectLanguage(part.content) || 'en');
+
+          if (mode === 'click' || mode === 'mixed') {
+            span.addEventListener('click', function (e) {
+              e.stopPropagation();
+              speakWord(part.content, this);
+            });
+          }
+
+          fragment.appendChild(span);
+
+          if (mode === 'icon' || mode === 'mixed') {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'pronunciation-speaker-btn';
+            btn.title = 'نطق: ' + part.content;
+            btn.innerHTML = speakerSvg;
+            btn.addEventListener('click', function (e) {
+              e.stopPropagation();
+              e.preventDefault();
+              speakPronunciation(part.content, this);
+            });
+            fragment.appendChild(btn);
+          }
+        }
+      });
+
+      if (hasForeign && textNode.parentNode) {
+        textNode.parentNode.replaceChild(fragment, textNode);
+      }
+    });
+  }
+
+  // NOTE: Pronunciation hook is now injected directly into renderMarkdown()
+  // (function declarations cannot be overridden by reassignment in the same scope)
+
+  // ==========================================================================
+  // INITIALIZATION — Load and apply settings on startup
+  // ==========================================================================
+
+  loadSettings();
+  applyAllSettings();
+
+  // ESC key to close settings modal
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      const overlay = document.getElementById('settings-modal-overlay');
+      if (overlay && overlay.classList.contains('active')) {
+        closeSettingsModal();
+        e.preventDefault();
+      }
+    }
+  });
 
 })();
 

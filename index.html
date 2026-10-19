@@ -136,6 +136,14 @@
           </div>
         </div>
 
+        <!-- Settings Gear Button -->
+        <button class="btn btn-ghost btn-icon-only settings-gear-btn" onclick="openSettingsModal()" title="الإعدادات (Settings)" id="btn-settings-gear">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+
         <!-- Theme Toggle -->
         <button class="btn btn-ghost btn-icon-only" onclick="toggleTheme()" title="تبديل الوضع الليلي / النهاري" id="theme-toggle-btn">
           <span id="theme-toggle-icon">
@@ -1395,6 +1403,395 @@
 
   <!-- Hidden File Input for Image Uploading -->
   <input type="file" id="image-upload-input" accept="image/*" style="display:none;" />
+  <!-- Hidden File Input for Settings Import -->
+  <input type="file" id="settings-import-input" accept=".json" style="display:none;" />
+
+  <!-- =========================================================
+       شاشة الإعدادات الاحترافية (Settings Modal)
+       ========================================================= -->
+  <div class="settings-modal-overlay" id="settings-modal-overlay" onclick="closeSettingsModal(event)">
+    <div class="settings-modal" onclick="event.stopPropagation()">
+      <!-- Header -->
+      <div class="settings-modal-header">
+        <div class="settings-modal-title">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <h2>إعدادات Vienix</h2>
+        </div>
+        <button class="settings-modal-close" onclick="closeSettingsModal()" title="إغلاق">&times;</button>
+      </div>
+
+      <!-- Body: Sidebar Tabs + Content -->
+      <div class="settings-modal-body">
+        <!-- Sidebar Tabs -->
+        <nav class="settings-sidebar" id="settings-sidebar">
+          <button class="settings-tab-btn active" data-tab="appearance" onclick="switchSettingsTab('appearance')">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            <span>المظهر</span>
+          </button>
+          <button class="settings-tab-btn" data-tab="editor" onclick="switchSettingsTab('editor')">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            <span>المحرر</span>
+          </button>
+          <button class="settings-tab-btn" data-tab="pronunciation" onclick="switchSettingsTab('pronunciation')">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+            <span>مساعد النطق</span>
+            <span class="settings-tab-badge">جديد</span>
+          </button>
+          <button class="settings-tab-btn" data-tab="data" onclick="switchSettingsTab('data')">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <span>البيانات</span>
+          </button>
+          <button class="settings-tab-btn" data-tab="api" onclick="switchSettingsTab('api')">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+            <span>مفاتيح API</span>
+          </button>
+          <button class="settings-tab-btn" data-tab="about" onclick="switchSettingsTab('about')">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            <span>حول</span>
+          </button>
+        </nav>
+
+        <!-- Tab Content Panels -->
+        <div class="settings-content" id="settings-content">
+
+          <!-- ═══════ Tab: Appearance ═══════ -->
+          <div class="settings-panel active" id="settings-panel-appearance">
+            <h3 class="settings-section-title">🎨 المظهر والعرض</h3>
+
+            <div class="settings-group">
+              <label class="settings-label">وضع المظهر</label>
+              <div class="settings-radio-group">
+                <label class="settings-radio-pill"><input type="radio" name="s-theme" value="light" onchange="applySetting('theme', 'light')"><span>☀️ فاتح</span></label>
+                <label class="settings-radio-pill"><input type="radio" name="s-theme" value="dark" onchange="applySetting('theme', 'dark')"><span>🌙 داكن</span></label>
+                <label class="settings-radio-pill"><input type="radio" name="s-theme" value="auto" onchange="applySetting('theme', 'auto')"><span>🖥️ تلقائي</span></label>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <label class="settings-label">حجم خط المعاينة</label>
+              <div class="settings-slider-row">
+                <input type="range" class="settings-slider" id="s-preview-font-size" min="12" max="24" value="16" step="1" oninput="applySetting('previewFontSize', this.value)">
+                <span class="settings-slider-value" id="s-preview-font-size-val">16px</span>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <label class="settings-label">حجم خط المحرر</label>
+              <div class="settings-slider-row">
+                <input type="range" class="settings-slider" id="s-editor-font-size" min="12" max="24" value="15" step="1" oninput="applySetting('editorFontSize', this.value)">
+                <span class="settings-slider-value" id="s-editor-font-size-val">15px</span>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <label class="settings-label">لون التمييز الرئيسي (Accent)</label>
+              <div class="settings-color-row">
+                <input type="color" class="settings-color-picker" id="s-accent-color" value="#6366f1" oninput="applySetting('accentColor', this.value)">
+                <span class="settings-color-label" id="s-accent-color-label">#6366f1</span>
+                <button class="settings-mini-btn" onclick="applySetting('accentColor', '#6366f1'); document.getElementById('s-accent-color').value='#6366f1'; document.getElementById('s-accent-color-label').textContent='#6366f1';">إعادة الافتراضي</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ═══════ Tab: Editor ═══════ -->
+          <div class="settings-panel" id="settings-panel-editor">
+            <h3 class="settings-section-title">✍️ إعدادات المحرر</h3>
+
+            <div class="settings-group">
+              <label class="settings-label">التفاف الأسطر (Word Wrap)</label>
+              <div class="settings-toggle-row">
+                <span class="settings-toggle-desc">التفاف الأسطر الطويلة تلقائياً</span>
+                <label class="settings-toggle">
+                  <input type="checkbox" id="s-word-wrap" checked onchange="applySetting('wordWrap', this.checked)">
+                  <span class="settings-toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <label class="settings-label">الإكمال التلقائي للأقواس</label>
+              <div class="settings-toggle-row">
+                <span class="settings-toggle-desc">إغلاق الأقواس والعلامات تلقائياً <code>() [] {} ""</code></span>
+                <label class="settings-toggle">
+                  <input type="checkbox" id="s-auto-brackets" checked onchange="applySetting('autoBrackets', this.checked)">
+                  <span class="settings-toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <label class="settings-label">خط المحرر</label>
+              <select class="settings-select" id="s-editor-font" onchange="applySetting('editorFont', this.value)">
+                <option value="'Fira Code', monospace" selected>Fira Code</option>
+                <option value="Consolas, monospace">Consolas</option>
+                <option value="'Courier New', monospace">Courier New</option>
+                <option value="monospace">Monospace (افتراضي النظام)</option>
+              </select>
+            </div>
+
+            <div class="settings-group">
+              <label class="settings-label">اتجاه الكتابة الافتراضي</label>
+              <div class="settings-radio-group">
+                <label class="settings-radio-pill"><input type="radio" name="s-text-dir" value="rtl" checked onchange="applySetting('textDirection', 'rtl')"><span>→ RTL (عربي)</span></label>
+                <label class="settings-radio-pill"><input type="radio" name="s-text-dir" value="ltr" onchange="applySetting('textDirection', 'ltr')"><span>← LTR (لاتيني)</span></label>
+                <label class="settings-radio-pill"><input type="radio" name="s-text-dir" value="auto" onchange="applySetting('textDirection', 'auto')"><span>🔄 تلقائي</span></label>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <label class="settings-label">فترة الحفظ التلقائي</label>
+              <select class="settings-select" id="s-auto-save-interval" onchange="applySetting('autoSaveInterval', this.value)">
+                <option value="2000">كل ثانيتين</option>
+                <option value="5000" selected>كل 5 ثوانٍ</option>
+                <option value="10000">كل 10 ثوانٍ</option>
+                <option value="30000">كل 30 ثانية</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- ═══════ Tab: Pronunciation (★ الميزة الرئيسية) ═══════ -->
+          <div class="settings-panel" id="settings-panel-pronunciation">
+            <h3 class="settings-section-title">🔊 مساعد التدرب على نطق اللغات</h3>
+            <p class="settings-section-desc">عند التفعيل، ستظهر أيقونات نطق بجانب النصوص الأجنبية في المعاينة. هذه الميزة للمشاهدة فقط ولا تؤثر على التصدير.</p>
+
+            <!-- Master Toggle -->
+            <div class="settings-group settings-master-toggle">
+              <div class="settings-toggle-row">
+                <div class="settings-toggle-info">
+                  <span class="settings-label" style="margin:0">تفعيل مساعد النطق</span>
+                  <span class="settings-toggle-desc">تشغيل/إيقاف الميزة بالكامل</span>
+                </div>
+                <label class="settings-toggle settings-toggle-lg">
+                  <input type="checkbox" id="s-pronunciation-enabled" onchange="applySetting('pronunciationEnabled', this.checked); togglePronunciationSubSettings(this.checked)">
+                  <span class="settings-toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Sub-settings (hidden when disabled) -->
+            <div class="settings-sub-group" id="pronunciation-sub-settings" style="display:none;">
+
+              <div class="settings-group">
+                <label class="settings-label">محرك النطق</label>
+                <select class="settings-select" id="s-pronunciation-engine" onchange="applySetting('pronunciationEngine', this.value); toggleApiHint(this.value)">
+                  <option value="native" selected>🌐 مدمج (Web Speech API — مجاني بدون إنترنت)</option>
+                  <option value="google">☁️ Google Cloud TTS (يحتاج مفتاح API)</option>
+                  <option value="groq">⚡ Groq API (يحتاج مفتاح API)</option>
+                </select>
+                <p class="settings-hint" id="s-engine-hint">محرك المتصفح المدمج — مجاني 100% ويعمل بدون إنترنت.</p>
+              </div>
+
+              <div class="settings-group">
+                <label class="settings-label">سرعة النطق</label>
+                <div class="settings-slider-row">
+                  <span class="settings-slider-label-start">0.5×</span>
+                  <input type="range" class="settings-slider" id="s-speech-rate" min="0.5" max="2.0" value="1.0" step="0.1" oninput="applySetting('speechRate', this.value); document.getElementById('s-speech-rate-val').textContent = this.value + '×'">
+                  <span class="settings-slider-label-end">2.0×</span>
+                  <span class="settings-slider-value" id="s-speech-rate-val">1.0×</span>
+                </div>
+              </div>
+
+              <div class="settings-group">
+                <label class="settings-label">حدة الصوت (Pitch)</label>
+                <div class="settings-slider-row">
+                  <span class="settings-slider-label-start">0.5</span>
+                  <input type="range" class="settings-slider" id="s-speech-pitch" min="0.5" max="2.0" value="1.0" step="0.1" oninput="applySetting('speechPitch', this.value); document.getElementById('s-speech-pitch-val').textContent = this.value">
+                  <span class="settings-slider-label-end">2.0</span>
+                  <span class="settings-slider-value" id="s-speech-pitch-val">1.0</span>
+                </div>
+              </div>
+
+              <div class="settings-group">
+                <label class="settings-label">مستوى الصوت</label>
+                <div class="settings-slider-row">
+                  <span class="settings-slider-label-start">🔇</span>
+                  <input type="range" class="settings-slider" id="s-speech-volume" min="0" max="1" value="1" step="0.1" oninput="applySetting('speechVolume', this.value); document.getElementById('s-speech-volume-val').textContent = Math.round(this.value*100) + '%'">
+                  <span class="settings-slider-label-end">🔊</span>
+                  <span class="settings-slider-value" id="s-speech-volume-val">100%</span>
+                </div>
+              </div>
+
+              <div class="settings-group">
+                <label class="settings-label">وضع التفاعل في المعاينة</label>
+                <div class="settings-radio-group">
+                  <label class="settings-radio-pill"><input type="radio" name="s-interact-mode" value="icon" onchange="applySetting('interactionMode', 'icon')"><span>🔊 أيقونة فقط</span></label>
+                  <label class="settings-radio-pill"><input type="radio" name="s-interact-mode" value="click" onchange="applySetting('interactionMode', 'click')"><span>👆 نقر فقط</span></label>
+                  <label class="settings-radio-pill"><input type="radio" name="s-interact-mode" value="mixed" checked onchange="applySetting('interactionMode', 'mixed')"><span>🔊+👆 مختلط</span></label>
+                </div>
+              </div>
+
+              <div class="settings-group">
+                <label class="settings-label">كشف اللغة</label>
+                <div class="settings-radio-group">
+                  <label class="settings-radio-pill"><input type="radio" name="s-lang-detect" value="auto" checked onchange="applySetting('langDetection', 'auto'); toggleManualLang(false)"><span>🤖 تلقائي</span></label>
+                  <label class="settings-radio-pill"><input type="radio" name="s-lang-detect" value="manual" onchange="applySetting('langDetection', 'manual'); toggleManualLang(true)"><span>🧑 يدوي</span></label>
+                </div>
+              </div>
+
+              <!-- Manual Language Selection (hidden by default) -->
+              <div class="settings-group" id="s-manual-lang-group" style="display:none;">
+                <label class="settings-label">اللغة الافتراضية</label>
+                <select class="settings-select" id="s-default-lang" onchange="applySetting('defaultLang', this.value); updateDialectOptions(this.value)">
+                  <option value="de">🇩🇪 الألمانية (Deutsch)</option>
+                  <option value="en" selected>🇬🇧 الإنجليزية (English)</option>
+                  <option value="fr">🇫🇷 الفرنسية (Français)</option>
+                  <option value="es">🇪🇸 الإسبانية (Español)</option>
+                  <option value="it">🇮🇹 الإيطالية (Italiano)</option>
+                  <option value="pt">🇵🇹 البرتغالية (Português)</option>
+                  <option value="tr">🇹🇷 التركية (Türkçe)</option>
+                  <option value="ru">🇷🇺 الروسية (Русский)</option>
+                  <option value="ja">🇯🇵 اليابانية (日本語)</option>
+                  <option value="ko">🇰🇷 الكورية (한국어)</option>
+                  <option value="zh">🇨🇳 الصينية (中文)</option>
+                  <option value="nl">🇳🇱 الهولندية (Nederlands)</option>
+                  <option value="sv">🇸🇪 السويدية (Svenska)</option>
+                  <option value="pl">🇵🇱 البولندية (Polski)</option>
+                  <option value="ar">🇸🇦 العربية (Arabic)</option>
+                </select>
+              </div>
+
+              <div class="settings-group" id="s-dialect-group" style="display:none;">
+                <label class="settings-label">اللهجة المفضلة</label>
+                <select class="settings-select" id="s-dialect" onchange="applySetting('dialect', this.value)">
+                  <!-- populated dynamically -->
+                </select>
+              </div>
+
+              <div class="settings-group">
+                <label class="settings-label">صوت المتحدث</label>
+                <div class="settings-voice-row">
+                  <select class="settings-select" id="s-voice-select" onchange="applySetting('voiceName', this.value)">
+                    <option value="">الصوت الافتراضي للمتصفح</option>
+                    <!-- populated dynamically from speechSynthesis.getVoices() -->
+                  </select>
+                  <button class="settings-mini-btn" onclick="testPronunciation()" title="اختبار النطق">🔊 اختبار</button>
+                </div>
+              </div>
+
+              <div class="settings-group">
+                <label class="settings-label">إظهار خط النقاط تحت الكلمات الأجنبية</label>
+                <div class="settings-toggle-row">
+                  <span class="settings-toggle-desc">خط منقط بنفسجي خفيف تحت الكلمات القابلة للنطق</span>
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="s-dotted-underline" checked onchange="applySetting('dottedUnderline', this.checked)">
+                    <span class="settings-toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ═══════ Tab: Data & Storage ═══════ -->
+          <div class="settings-panel" id="settings-panel-data">
+            <h3 class="settings-section-title">💾 البيانات والتخزين</h3>
+
+            <div class="settings-group">
+              <label class="settings-label">حجم البيانات المستخدم</label>
+              <div class="settings-info-box" id="s-storage-info">
+                <span class="settings-info-icon">📊</span>
+                <span id="s-storage-used">جارٍ الحساب...</span>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <label class="settings-label">تصدير الإعدادات</label>
+              <p class="settings-hint">تحميل ملف JSON يحتوي جميع الإعدادات والتفضيلات.</p>
+              <button class="settings-action-btn" onclick="exportSettings()">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                تصدير الإعدادات (JSON)
+              </button>
+            </div>
+
+            <div class="settings-group">
+              <label class="settings-label">استيراد الإعدادات</label>
+              <p class="settings-hint">استعادة الإعدادات من ملف JSON محفوظ مسبقاً.</p>
+              <button class="settings-action-btn" onclick="document.getElementById('settings-import-input').click()">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                استيراد من ملف JSON
+              </button>
+            </div>
+
+            <div class="settings-group settings-danger-zone">
+              <label class="settings-label" style="color: var(--danger-color, #ef4444);">⚠️ منطقة الخطر</label>
+              <p class="settings-hint">سيتم مسح جميع الإعدادات المحفوظة وإعادتها للقيم الافتراضية.</p>
+              <button class="settings-action-btn settings-danger-btn" onclick="resetAllSettings()">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                إعادة ضبط جميع الإعدادات
+              </button>
+            </div>
+          </div>
+
+          <!-- ═══════ Tab: API Keys ═══════ -->
+          <div class="settings-panel" id="settings-panel-api">
+            <h3 class="settings-section-title">🔌 مفاتيح API (للمتقدمين)</h3>
+            <p class="settings-section-desc">هذه المفاتيح اختيارية. المحرر يعمل بالكامل بدونها. تُحفظ محلياً فقط ولا تُرسل لأي خادم.</p>
+
+            <div class="settings-group">
+              <label class="settings-label">مفتاح Google Cloud TTS</label>
+              <p class="settings-hint">للحصول على جودة نطق عالية (WaveNet). <a href="https://cloud.google.com/text-to-speech/docs/quickstart-client-libraries" target="_blank" rel="noopener">كيف تحصل على المفتاح؟</a></p>
+              <div class="settings-api-row">
+                <input type="password" class="settings-input" id="s-google-tts-key" placeholder="AIza..." oninput="applySetting('googleTtsKey', this.value)">
+                <button class="settings-mini-btn" onclick="toggleApiKeyVisibility('s-google-tts-key')" title="إظهار/إخفاء">👁️</button>
+                <button class="settings-mini-btn" onclick="testApiKey('google')" title="اختبار الاتصال">🔗 اختبار</button>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <label class="settings-label">مفتاح Groq API</label>
+              <p class="settings-hint">بديل مجاني مع حدود استخدام. <a href="https://console.groq.com/keys" target="_blank" rel="noopener">الحصول على مفتاح مجاني</a></p>
+              <div class="settings-api-row">
+                <input type="password" class="settings-input" id="s-groq-key" placeholder="gsk_..." oninput="applySetting('groqKey', this.value)">
+                <button class="settings-mini-btn" onclick="toggleApiKeyVisibility('s-groq-key')" title="إظهار/إخفاء">👁️</button>
+                <button class="settings-mini-btn" onclick="testApiKey('groq')" title="اختبار الاتصال">🔗 اختبار</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ═══════ Tab: About ═══════ -->
+          <div class="settings-panel" id="settings-panel-about">
+            <h3 class="settings-section-title">ℹ️ حول Vienix Markdown Editor</h3>
+
+            <div class="settings-about-card">
+              <div class="settings-about-logo">
+                <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="var(--accent-color, #6366f1)" stroke-width="1.5">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+              </div>
+              <div class="settings-about-info">
+                <h4>Vienix Markdown Editor</h4>
+                <p class="settings-about-version">الإصدار 2.0 RTL Pro</p>
+                <p class="settings-about-desc">محرر ماركداون عربي احترافي يدعم الكتابة من اليمين لليسار، المخططات التفاعلية، تصدير PDF و DOCX و HTML، ومساعد التدرب على نطق اللغات.</p>
+              </div>
+            </div>
+
+            <div class="settings-about-meta">
+              <div class="settings-about-row"><span>👨‍💻 المطور</span><span>Vienix / Yaser Hasan</span></div>
+              <div class="settings-about-row"><span>⚖️ الرخصة</span><span>MIT License</span></div>
+              <div class="settings-about-row"><span>📅 سنة النشر</span><span>2026</span></div>
+              <div class="settings-about-row"><span>🌐 يعمل بدون إنترنت</span><span>نعم — 100% أوفلاين ⚡</span></div>
+            </div>
+          </div>
+
+        </div><!-- /.settings-content -->
+      </div><!-- /.settings-modal-body -->
+
+      <!-- Footer -->
+      <div class="settings-modal-footer">
+        <button class="btn btn-ghost" onclick="resetCurrentTabDefaults()" title="إعادة إعدادات التبويب الحالي فقط للافتراضي">إعادة الافتراضي</button>
+        <button class="btn btn-primary" onclick="closeSettingsModal()">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          حفظ وإغلاق
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Offline Local Vendor Libraries -->
   <script src="assets/vendor/marked.min.js"></script>
