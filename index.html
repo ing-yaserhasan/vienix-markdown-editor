@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Fira+Code:wght@400;500&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/earlyaccess/droidarabicnaskh.css">
   <link rel="stylesheet" href="assets/fonts/tajawal.css">
-  <link rel="stylesheet" href="app/css/style.css?v=obsidian33">
+  <link rel="stylesheet" href="app/css/style.css?v=obsidian34">
   <link rel="stylesheet" href="app/css/classic.css?v=obsidian4">
 </head>
 <body>
@@ -1594,7 +1594,7 @@
               <div class="settings-group">
                 <label class="settings-label">🎯 لغة التدرب والتعلم المستهدفة</label>
                 <select class="settings-select" id="s-target-lang" onchange="applySetting('targetLanguage', this.value); updateTargetLangVoiceHint(this.value)">
-                  <option value="de-AT" selected>🇦🇹 الألمانية — النمسا (Österreichisch)</option>
+                  <option value="de-AT">🇦🇹 الألمانية — النمسا (Österreichisch)</option>
                   <option value="de-DE">🇩🇪 الألمانية — ألمانيا (Hochdeutsch)</option>
                   <option value="de-CH">🇨🇭 الألمانية — سويسرا (Schweizerdeutsch)</option>
                   <option value="en-US">🇺🇸 الإنجليزية — أمريكا (US)</option>
@@ -1611,9 +1611,9 @@
                   <option value="nl-NL">🇳🇱 الهولندية (Nederlands)</option>
                   <option value="sv-SE">🇸🇪 السويدية (Svenska)</option>
                   <option value="pl-PL">🇵🇱 البولندية (Polski)</option>
-                  <option value="auto">🤖 كشف تلقائي ذكي لجميع اللغات</option>
+                  <option value="auto" selected>🤖 كشف تلقائي ذكي لجميع اللغات</option>
                 </select>
-                <p class="settings-hint" id="s-target-lang-hint">تحديد لغة التعلم يضمن نطق الكلمات اللاتينية بلكنة أصلية وصوت مطابق لنظام التشغيل.</p>
+                <p class="settings-hint" id="s-target-lang-hint">الوضع التلقائي: يحاول المتصفح استنتاج لغة كل عبارة تلقائياً بناءً على خصائص الحروف.</p>
               </div>
 
               <!-- Quick Language Switch Shortcuts in Context Menu -->
@@ -1885,7 +1885,7 @@
   <script src="assets/icons/twemoji/twemoji_data.js"></script>
 
   <!-- Application Main Script -->
-  <script src="app/js/rtlmd.js?v=obsidian33"></script>
+  <script src="app/js/rtlmd.js?v=obsidian34"></script>
 
 </body>
 </html>

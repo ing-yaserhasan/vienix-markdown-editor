@@ -46,7 +46,7 @@
     // Pronunciation Assistant (★ مساعد التدرب على نطق اللغات)
     pronunciationEnabled: true,
     pronunciationEngine: 'native',
-    targetLanguage: 'de-AT', // Default: Austrian German 🇦🇹
+    targetLanguage: 'auto',  // Default: Smart Auto-Detect 🤖
     speechRate: '0.8',       // 0.8× ideal for learning & clear syllable perception
     speechPitch: '1.0',
     speechVolume: '1.0',
@@ -8573,7 +8573,7 @@ function exportDocument(format) {
     togglePronunciationSubSettings(s.pronunciationEnabled !== false);
 
     const targetLang = document.getElementById('s-target-lang');
-    if (targetLang) targetLang.value = s.targetLanguage || 'de-AT';
+    if (targetLang) targetLang.value = s.targetLanguage || 'auto';
 
     const rateSlider = document.getElementById('s-speech-rate');
     if (rateSlider) rateSlider.value = s.speechRate || '0.8';
