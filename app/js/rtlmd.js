@@ -53,6 +53,8 @@
     interactionMode: 'mixed', // mixed: 🔊 for phrase + click for individual word
     dottedUnderline: true,
     keepSpeakingOnClick: false, // Default false: clicking preview stops speech automatically
+    quickLang1: 'de-AT',        // Quick language shortcut 1 in context menu
+    quickLang2: 'en-US',        // Quick language shortcut 2 in context menu
     voiceName: '',
     // API
     googleTtsKey: '',
@@ -8563,6 +8565,11 @@ function exportDocument(format) {
     const keepSpeaking = document.getElementById('s-keep-speaking-on-click');
     if (keepSpeaking) keepSpeaking.checked = !!s.keepSpeakingOnClick;
 
+    const ql1 = document.getElementById('s-quick-lang-1');
+    if (ql1) ql1.value = s.quickLang1 || 'de-AT';
+    const ql2 = document.getElementById('s-quick-lang-2');
+    if (ql2) ql2.value = s.quickLang2 || 'en-US';
+
     // API keys
     const googleKey = document.getElementById('s-google-tts-key');
     if (googleKey) googleKey.value = s.googleTtsKey || '';
@@ -8858,22 +8865,64 @@ function exportDocument(format) {
     menu.className = 'pronunciation-context-menu';
     menu.id = 'active-pronunciation-context-menu';
 
+    const langMetaMap = {
+      'de-AT': { code: 'de-AT', flag: '🇦🇹', shortName: 'DE', label: 'الألمانية (AT)' },
+      'de-DE': { code: 'de-DE', flag: '🇩🇪', shortName: 'DE', label: 'الألمانية (DE)' },
+      'de-CH': { code: 'de-CH', flag: '🇨🇭', shortName: 'CH', label: 'الألمانية (CH)' },
+      'en-US': { code: 'en-US', flag: '🇺🇸', shortName: 'EN', label: 'الإنجليزية (US)' },
+      'en-GB': { code: 'en-GB', flag: '🇬🇧', shortName: 'EN', label: 'الإنجليزية (UK)' },
+      'fr-FR': { code: 'fr-FR', flag: '🇫🇷', shortName: 'FR', label: 'الفرنسية' },
+      'es-ES': { code: 'es-ES', flag: '🇪🇸', shortName: 'ES', label: 'الإسبانية' },
+      'it-IT': { code: 'it-IT', flag: '🇮🇹', shortName: 'IT', label: 'الإيطالية' },
+      'tr-TR': { code: 'tr-TR', flag: '🇹🇷', shortName: 'TR', label: 'التركية' },
+      'ru-RU': { code: 'ru-RU', flag: '🇷🇺', shortName: 'RU', label: 'الروسية' },
+      'ja-JP': { code: 'ja-JP', flag: '🇯🇵', shortName: 'JA', label: 'اليابانية' },
+      'zh-CN': { code: 'zh-CN', flag: '🇨🇳', shortName: 'ZH', label: 'الصينية' },
+      'ko-KR': { code: 'ko-KR', flag: '🇰🇷', shortName: 'KO', label: 'الكورية' },
+      'pt-BR': { code: 'pt-BR', flag: '🇧🇷', shortName: 'PT', label: 'البرتغالية' },
+      'nl-NL': { code: 'nl-NL', flag: '🇳🇱', shortName: 'NL', label: 'الهولندية' },
+      'sv-SE': { code: 'sv-SE', flag: '🇸🇪', shortName: 'SV', label: 'السويدية' },
+      'pl-PL': { code: 'pl-PL', flag: '🇵🇱', shortName: 'PL', label: 'البولندية' }
+    };
+
+    function getLangMeta(code) {
+      if (!code) return { code: 'en-US', flag: '🌐', shortName: 'EN', label: 'English' };
+      if (langMetaMap[code]) return langMetaMap[code];
+      const prefix = code.split('-')[0].toLowerCase();
+      for (const k in langMetaMap) {
+        if (k.toLowerCase().startsWith(prefix)) return langMetaMap[k];
+      }
+      return { code: code, flag: '🌐', shortName: code.slice(0, 2).toUpperCase(), label: code };
+    }
+
     const cleanSnippet = text.length > 28 ? text.substring(0, 26) + '...' : text;
     const currentRate = parseFloat(vienixSettings.speechRate) || 0.8;
-    const currentLang = detectedLang || vienixSettings.targetLanguage || 'de-AT';
+    let activeLang = detectedLang || vienixSettings.targetLanguage || 'de-AT';
     const isPaused = typeof speechSynthesis !== 'undefined' && speechSynthesis.paused;
 
-    const langBadge = currentLang.startsWith('de-AT') ? '🇦🇹 Österreichisch (النمسا)' :
-                      currentLang.startsWith('de') ? '🇩🇪 Deutsch (ألماني)' :
-                      currentLang.startsWith('en') ? '🇬🇧 English (إنجليزي)' :
-                      currentLang.startsWith('fr') ? '🇫🇷 Français (فرنسي)' : currentLang;
+    const q1Code = vienixSettings.quickLang1 || 'de-AT';
+    const q2Code = vienixSettings.quickLang2 || 'en-US';
+    const q1Meta = getLangMeta(q1Code);
+    const q2Meta = getLangMeta(q2Code);
+    const activeMeta = getLangMeta(activeLang);
 
     menu.innerHTML = `
       <div class="pcm-header">
         <span class="pcm-phrase-preview" title="${text}">${cleanSnippet}</span>
-        <span class="pcm-badge">🔊 ${langBadge}</span>
+        <div class="pcm-header-bar">
+          <span class="pcm-badge" id="pcm-active-badge">🔊 ${activeMeta.flag} ${activeMeta.label}</span>
+          <div class="pcm-quick-group" title="اختصارات التبديل السريع للغات">
+            <button type="button" class="pcm-quick-btn ${activeLang === q1Code ? 'active' : ''}" id="pcm-qbtn-1" data-lang="${q1Code}" title="تعيين ونطق فوري كـ ${q1Meta.label}">
+              <span class="pcm-qflag">${q1Meta.flag}</span>
+              <span class="pcm-qcode">${q1Meta.shortName}</span>
+            </button>
+            <button type="button" class="pcm-quick-btn ${activeLang === q2Code ? 'active' : ''}" id="pcm-qbtn-2" data-lang="${q2Code}" title="تعيين ونطق فوري كـ ${q2Meta.label}">
+              <span class="pcm-qflag">${q2Meta.flag}</span>
+              <span class="pcm-qcode">${q2Meta.shortName}</span>
+            </button>
+          </div>
+        </div>
       </div>
-
       <div class="pcm-section-label">التحكم في النطق</div>
       <button type="button" class="pcm-item" id="pcm-play">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
@@ -8948,10 +8997,45 @@ function exportDocument(format) {
     }
 
     // 1. Play
+    function switchPhraseLang(chosenCode) {
+      const meta = getLangMeta(chosenCode);
+      activeLang = chosenCode;
+      const badgeEl = menu.querySelector('#pcm-active-badge');
+      if (badgeEl) badgeEl.innerHTML = `🔊 ${meta.flag} ${meta.label}`;
+      menu.querySelectorAll('.pcm-quick-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-lang') === chosenCode);
+      });
+      if (triggerElement) {
+        triggerElement.setAttribute('data-lang', chosenCode);
+        triggerElement.setAttribute('data-override-lang', chosenCode);
+        const wrapper = triggerElement.closest('.pronunciation-phrase');
+        if (wrapper) {
+          wrapper.setAttribute('data-lang', chosenCode);
+          wrapper.querySelectorAll('.pronunciation-word').forEach(w => {
+            w.setAttribute('data-lang', chosenCode);
+            w.setAttribute('data-override-lang', chosenCode);
+            w.title = `انقر لنطق (${meta.shortName}): ${w.getAttribute('data-word') || w.textContent}`;
+          });
+        }
+      }
+      speakPronunciation(text, triggerElement, chosenCode);
+      showToast(`تم تعيين لغة النطق: ${meta.flag} ${meta.label} 🎯`, 'success');
+    }
+
+    menu.querySelector('#pcm-qbtn-1').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      switchPhraseLang(q1Code);
+    });
+
+    menu.querySelector('#pcm-qbtn-2').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      switchPhraseLang(q2Code);
+    });
+
     menu.querySelector('#pcm-play').addEventListener('click', (ev) => {
       ev.stopPropagation();
       closePronunciationContextMenu();
-      speakPronunciation(text, triggerElement, currentLang);
+      speakPronunciation(text, triggerElement, activeLang);
     });
 
     // 2. Pause / Resume
@@ -9115,7 +9199,8 @@ function exportDocument(format) {
                 wordSpan.addEventListener('click', function (e) {
                   e.stopPropagation();
                   e.preventDefault();
-                  speakWord(tok, this, detectedLang);
+                  const effectiveLang = this.getAttribute('data-override-lang') || this.getAttribute('data-lang') || detectedLang;
+                  speakWord(tok, this, effectiveLang);
                 });
               }
 
@@ -9194,14 +9279,16 @@ function exportDocument(format) {
                 hasTriggeredLongPress = false;
                 return; // Suppress regular click if long-press just opened the menu
               }
-              speakPronunciation(part.content, this, detectedLang);
+              const effectiveLang = this.getAttribute('data-override-lang') || this.getAttribute('data-lang') || detectedLang;
+              speakPronunciation(part.content, this, effectiveLang);
             });
 
             // Right-click context menu on desktop
             btn.addEventListener('contextmenu', function (e) {
               e.stopPropagation();
               e.preventDefault();
-              openPronunciationContextMenu(e, part.content, detectedLang, this);
+              const effectiveLang = this.getAttribute('data-override-lang') || this.getAttribute('data-lang') || detectedLang;
+              openPronunciationContextMenu(e, part.content, effectiveLang, this);
             });
 
             phraseWrapper.appendChild(btn);

@@ -1600,6 +1600,58 @@
                 <p class="settings-hint" id="s-target-lang-hint">تحديد لغة التعلم يضمن نطق الكلمات اللاتينية بلكنة أصلية وصوت مطابق لنظام التشغيل.</p>
               </div>
 
+              <!-- Quick Language Switch Shortcuts in Context Menu -->
+              <div class="settings-group">
+                <label class="settings-label">⚡ لغات التبديل السريع (في قائمة كليك يمين للسبيكر)</label>
+                <p class="settings-hint">اختصاران سريعان يظهران بأعلى قائمة السبيكر للتبديل الفوري إذا أخطأ الكشف التلقائي في تحديد لغة العبارة.</p>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:6px;">
+                  <div>
+                    <span style="font-size:0.75rem; font-weight:600; color:var(--text-muted, #64748b); display:block; margin-bottom:4px;">اختصار اللغة الأول (1)</span>
+                    <select class="settings-select" id="s-quick-lang-1" onchange="applySetting('quickLang1', this.value)">
+                      <option value="de-AT" selected>🇦🇹 الألمانية — النمسا</option>
+                      <option value="de-DE">🇩🇪 الألمانية — ألمانيا</option>
+                      <option value="de-CH">🇨🇭 الألمانية — سويسرا</option>
+                      <option value="en-US">🇺🇸 الإنجليزية — أمريكا</option>
+                      <option value="en-GB">🇬🇧 الإنجليزية — بريطانيا</option>
+                      <option value="fr-FR">🇫🇷 الفرنسية</option>
+                      <option value="es-ES">🇪🇸 الإسبانية</option>
+                      <option value="it-IT">🇮🇹 الإيطالية</option>
+                      <option value="tr-TR">🇹🇷 التركية</option>
+                      <option value="ru-RU">🇷🇺 الروسية</option>
+                      <option value="ja-JP">🇯🇵 اليابانية</option>
+                      <option value="zh-CN">🇨🇳 الصينية</option>
+                      <option value="ko-KR">🇰🇷 الكورية</option>
+                      <option value="pt-BR">🇧🇷 البرتغالية</option>
+                      <option value="nl-NL">🇳🇱 الهولندية</option>
+                      <option value="sv-SE">🇸🇪 السويدية</option>
+                      <option value="pl-PL">🇵🇱 البولندية</option>
+                    </select>
+                  </div>
+                  <div>
+                    <span style="font-size:0.75rem; font-weight:600; color:var(--text-muted, #64748b); display:block; margin-bottom:4px;">اختصار اللغة الثاني (2)</span>
+                    <select class="settings-select" id="s-quick-lang-2" onchange="applySetting('quickLang2', this.value)">
+                      <option value="de-AT">🇦🇹 الألمانية — النمسا</option>
+                      <option value="de-DE">🇩🇪 الألمانية — ألمانيا</option>
+                      <option value="de-CH">🇨🇭 الألمانية — سويسرا</option>
+                      <option value="en-US" selected>🇺🇸 الإنجليزية — أمريكا</option>
+                      <option value="en-GB">🇬🇧 الإنجليزية — بريطانيا</option>
+                      <option value="fr-FR">🇫🇷 الفرنسية</option>
+                      <option value="es-ES">🇪🇸 الإسبانية</option>
+                      <option value="it-IT">🇮🇹 الإيطالية</option>
+                      <option value="tr-TR">🇹🇷 التركية</option>
+                      <option value="ru-RU">🇷🇺 الروسية</option>
+                      <option value="ja-JP">🇯🇵 اليابانية</option>
+                      <option value="zh-CN">🇨🇳 الصينية</option>
+                      <option value="ko-KR">🇰🇷 الكورية</option>
+                      <option value="pt-BR">🇧🇷 البرتغالية</option>
+                      <option value="nl-NL">🇳🇱 الهولندية</option>
+                      <option value="sv-SE">🇸🇪 السويدية</option>
+                      <option value="pl-PL">🇵🇱 البولندية</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               <!-- Speed & Learning Presets -->
               <div class="settings-group">
                 <div class="settings-label-row" style="display:flex; justify-content:space-between; align-items:center;">
