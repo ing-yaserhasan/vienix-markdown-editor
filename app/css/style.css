@@ -1322,13 +1322,17 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* حالة التركيز للإيموجي والستيكرات: بدون أي إطار أزرق عريض أو ظلال */
+/* حالة التركيز للإيموجي والستيكرات: بدون أي إطار أو خط منقط وبدون أي ظلال نهائياً بناءً على طلب المستخدم */
+.emoji-resizer-wrapper,
 .emoji-resizer-wrapper:hover,
 .emoji-resizer-wrapper.active,
+.image-resizer-wrapper.is-emoji-wrapper,
 .image-resizer-wrapper.is-emoji-wrapper:hover,
-.image-resizer-wrapper.is-emoji-wrapper.active {
-  outline: 1.5px dashed rgba(37, 99, 235, 0.6) !important;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12) !important;
-  border-radius: 4px !important;
+.image-resizer-wrapper.is-emoji-wrapper.active,
+.image-resizer-wrapper.is-floating {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 /* شريط الأدوات المصغر فوق الصورة */
@@ -6981,78 +6985,60 @@ body.is-resizing-workspace .workspace-resizer {
   display: flex !important;
 }
 
-/* وضع التحريك الحر فوق العناصر (Free Floating Mode) */
+/* وضع التحريك الحر فوق العناصر (Free Floating Mode) - نظيف بدون أي ظلال أو إطارات */
 .image-resizer-wrapper.is-floating {
   position: relative !important;
   z-index: 60 !important;
   display: inline-block !important;
   cursor: grab !important;
-  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.25) !important;
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .image-resizer-wrapper.is-floating:active {
   cursor: grabbing !important;
 }
 
-.image-resizer-wrapper.is-floating::after {
-  content: '✥ وضع التحريك الحر مفعّل — اسحب وحرّك بحرية فوق أي عنصر';
+/* مقبض تدوير بجانب الزاوية لتدوير يدوي حر على مزاج المستخدم */
+.resizer-corner-rotate-handle {
   position: absolute;
-  top: calc(100% + 4px);
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: #a5b4fc;
-  background: rgba(15, 23, 42, 0.85);
-  padding: 2px 8px;
-  border-radius: 10px;
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.image-resizer-wrapper.is-floating:hover::after,
-.image-resizer-wrapper.is-floating.active::after {
-  opacity: 1;
-}
-
-/* مقبض التدوير الاحترافي (Rotation Handle) */
-.resizer-rotate-handle {
-  position: absolute;
-  top: -26px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 14px;
-  height: 14px;
+  top: -16px;
+  right: -16px;
+  width: 24px;
+  height: 24px;
   background: #ffffff;
-  border: 2px solid #6366f1;
+  border: 1.5px solid #6366f1;
   border-radius: 50%;
-  cursor: grab;
-  z-index: 120;
+  color: #6366f1;
   display: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-  transition: transform 0.15s, background-color 0.15s;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  z-index: 150;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s, background 0.15s, color 0.15s;
+  user-select: none;
 }
 
-.resizer-rotate-handle:hover {
-  transform: translateX(-50%) scale(1.25);
+[data-theme="dark"] .resizer-corner-rotate-handle {
+  background: #1e293b;
+  border-color: #818cf8;
+  color: #a5b4fc;
+}
+
+.resizer-corner-rotate-handle:hover {
+  transform: scale(1.25);
   background: #6366f1;
+  color: #ffffff;
 }
 
-.resizer-rotate-handle::before {
-  content: '';
-  position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 1.5px;
-  height: 14px;
-  background: #6366f1;
+.resizer-corner-rotate-handle:active {
+  cursor: grabbing;
 }
 
-.image-resizer-wrapper.active .resizer-rotate-handle {
-  display: block !important;
+.image-resizer-wrapper.active .resizer-corner-rotate-handle {
+  display: flex !important;
 }
 
 /* زر التحريك الحر النشط وزر التدوير */

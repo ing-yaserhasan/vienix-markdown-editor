@@ -6723,9 +6723,11 @@ function exportDocument(format) {
         `;
       }
 
-      // Handles (يشمل مقبض التدوير الدائري الاحترافي)
+      // Handles (يشمل مقبض التدوير بجانب الزاوية لتدوير يدوي حر)
       const handlesHtml = `
-        <div class="resizer-rotate-handle" title="اسحب لتدوير الإيموجي بأي زاوية"></div>
+        <div class="resizer-corner-rotate-handle" title="مقبض التدوير اليدوي: اسحب للتدوير والالتفاف الحر بأي زاوية">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><polyline points="21 3 21 8 16 8"></polyline></svg>
+        </div>
         <div class="resizer-handle handle-nw" data-dir="nw" title="اسحب للتكبير والتصغير"></div>
         <div class="resizer-handle handle-ne" data-dir="ne" title="اسحب للتكبير والتصغير"></div>
         <div class="resizer-handle handle-sw" data-dir="sw" title="اسحب للتكبير والتصغير"></div>
@@ -6911,36 +6913,53 @@ function exportDocument(format) {
         });
       }
 
-      // 3. مقبض التدوير اليدوي الدائري (Rotate Handle Dragging)
-      const rotateHandle = wrapper.querySelector('.resizer-rotate-handle');
-      if (rotateHandle) {
-        rotateHandle.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-
+      // 3. مقبض التدوير اليدوي بجانب الزاوية (Corner Rotate Handle)
+      const cornerRotateHandle = wrapper.querySelector('.resizer-corner-rotate-handle');
+      if (cornerRotateHandle) {
+        const startRotateDrag = (startX, startY) => {
           const rect = wrapper.getBoundingClientRect();
           const centerX = rect.left + rect.width / 2;
           const centerY = rect.top + rect.height / 2;
 
+          const startMouseAngle = Math.atan2(startY - centerY, startX - centerX) * (180 / Math.PI);
+          const initialRotation = currentRotation;
+
           const onRotateMove = (moveEvt) => {
-            const dx = moveEvt.clientX - centerX;
-            const dy = moveEvt.clientY - centerY;
-            let deg = Math.round(Math.atan2(dy, dx) * (180 / Math.PI)) + 90;
-            // تثبيت الزوايا القريبة من 0، 90، 180، 270 (Snap to 90s)
-            [0, 90, 180, 270, 360].forEach(snap => {
-              if (Math.abs(deg - snap) < 5) deg = snap % 360;
-            });
-            applyRotation(deg);
+            const currentX = moveEvt.clientX || (moveEvt.touches && moveEvt.touches[0].clientX);
+            const currentY = moveEvt.clientY || (moveEvt.touches && moveEvt.touches[0].clientY);
+            const currentMouseAngle = Math.atan2(currentY - centerY, currentX - centerX) * (180 / Math.PI);
+            const angleDiff = currentMouseAngle - startMouseAngle;
+            let newDeg = Math.round(initialRotation + angleDiff);
+            newDeg = ((newDeg % 360) + 360) % 360;
+            applyRotation(newDeg);
           };
 
           const onRotateEnd = () => {
             document.removeEventListener('mousemove', onRotateMove);
             document.removeEventListener('mouseup', onRotateEnd);
+            document.removeEventListener('touchmove', onRotateMove);
+            document.removeEventListener('touchend', onRotateEnd);
           };
 
           document.addEventListener('mousemove', onRotateMove);
           document.addEventListener('mouseup', onRotateEnd);
+          document.addEventListener('touchmove', onRotateMove, { passive: false });
+          document.addEventListener('touchend', onRotateEnd);
+        };
+
+        cornerRotateHandle.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          startRotateDrag(e.clientX, e.clientY);
         });
+
+        cornerRotateHandle.addEventListener('touchstart', (e) => {
+          if (e.touches && e.touches.length === 1) {
+            e.preventDefault();
+            e.stopPropagation();
+            startRotateDrag(e.touches[0].clientX, e.touches[0].clientY);
+          }
+        }, { passive: false });
       }
 
       // Handles Dragging
