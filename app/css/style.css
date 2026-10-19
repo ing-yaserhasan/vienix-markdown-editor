@@ -6731,7 +6731,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 .wtb-body {
-  min-height: 34px;
+  min-height: 24px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -6743,7 +6743,7 @@ body.is-resizing-workspace .workspace-resizer {
   gap: 6px;
   font-size: 0.78rem;
   color: var(--text-muted, #64748b);
-  padding: 4px 0;
+  padding: 2px 0;
 }
 
 .wtb-spinner {
@@ -6765,17 +6765,9 @@ body.is-resizing-workspace .workspace-resizer {
   font-weight: 700;
   color: var(--text-primary, #0f172a);
   line-height: 1.35;
-  margin-bottom: 3px;
+  margin: 0;
 }
 
 [data-theme="dark"] .wtb-arabic {
   color: #f8fafc;
-}
-
-.wtb-meta {
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--accent-color, #6366f1);
-  display: inline-block;
-  opacity: 0.85;
 }

@@ -9124,7 +9124,6 @@ function exportDocument(format) {
         </div>
         <div class="wtb-content" id="wtb-content" style="display:none;">
           <div class="wtb-arabic" id="wtb-arabic-text"></div>
-          <div class="wtb-meta" id="wtb-meta-tag"></div>
         </div>
       </div>
     `;
@@ -9188,17 +9187,12 @@ function exportDocument(format) {
       const loadingEl = bubble.querySelector('#wtb-loading');
       const contentEl = bubble.querySelector('#wtb-content');
       const arabicEl = bubble.querySelector('#wtb-arabic-text');
-      const metaEl = bubble.querySelector('#wtb-meta-tag');
 
       if (loadingEl) loadingEl.style.display = 'none';
 
       if (res && res.text) {
         if (contentEl) contentEl.style.display = 'block';
         if (arabicEl) arabicEl.textContent = res.text;
-        if (metaEl) {
-          const badgeText = res.source === 'cache' ? '⚡ كاش فوري' : (res.source === 'device' ? '🧠 ذكاء الجهاز (محلي)' : '🌐 ترجمة ذكية');
-          metaEl.textContent = badgeText;
-        }
       } else {
         if (contentEl) contentEl.style.display = 'block';
         if (arabicEl) {
@@ -9217,7 +9211,39 @@ function exportDocument(format) {
       }
     });
   }
+
   window.showWordTranslationBubble = showWordTranslationBubble;
+
+  // Auto-dismiss translation bubble on outside tap / click, scroll, or Escape
+  document.addEventListener('pointerdown', function (e) {
+    if (!activeTransBubble) return;
+    if (e.target.closest('#word-trans-bubble') || e.target.closest('.pronunciation-word')) {
+      return;
+    }
+    closeWordTranslationBubble();
+  }, true);
+
+  document.addEventListener('touchstart', function (e) {
+    if (!activeTransBubble) return;
+    if (e.target.closest('#word-trans-bubble') || e.target.closest('.pronunciation-word')) {
+      return;
+    }
+    closeWordTranslationBubble();
+  }, { passive: true, capture: true });
+
+  window.addEventListener('scroll', function () {
+    if (activeTransBubble) closeWordTranslationBubble();
+  }, { passive: true, capture: true });
+
+  document.addEventListener('scroll', function () {
+    if (activeTransBubble) closeWordTranslationBubble();
+  }, { passive: true, capture: true });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && activeTransBubble) {
+      closeWordTranslationBubble();
+    }
+  });
 
   window.speakWord = function (word, wordElement, lang) {
     if (!word) return;
