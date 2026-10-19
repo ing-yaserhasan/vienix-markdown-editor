@@ -6567,3 +6567,215 @@ body.is-resizing-workspace .workspace-resizer {
   }
 }
 
+
+
+/* =========================================================
+   فقاعة الترجمة الفورية الهجينة للكلمات (Word Translation Bubble)
+   ========================================================= */
+.word-trans-bubble {
+  position: fixed;
+  z-index: 100000;
+  width: 220px;
+  max-width: calc(100vw - 24px);
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 9px 12px;
+  font-family: 'Tajawal', sans-serif;
+  direction: rtl;
+  user-select: none;
+  animation: wtbFadeScale 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+[data-theme="dark"] .word-trans-bubble {
+  background: rgba(30, 41, 59, 0.98);
+  border-color: rgba(99, 102, 241, 0.35);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+@keyframes wtbFadeScale {
+  from { opacity: 0; transform: translateY(-4px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.word-trans-bubble .wtb-arrow {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--bg-surface, #ffffff);
+  transform: rotate(45deg);
+  z-index: 2;
+}
+
+[data-theme="dark"] .word-trans-bubble .wtb-arrow {
+  background: rgba(30, 41, 59, 0.98);
+}
+
+.word-trans-bubble.arrow-bottom .wtb-arrow {
+  bottom: -6px;
+  border-right: 1px solid var(--border-color, #e2e8f0);
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  border-top: none;
+  border-left: none;
+}
+
+[data-theme="dark"] .word-trans-bubble.arrow-bottom .wtb-arrow {
+  border-color: rgba(99, 102, 241, 0.35);
+}
+
+.word-trans-bubble.arrow-top .wtb-arrow {
+  top: -6px;
+  border-left: 1px solid var(--border-color, #e2e8f0);
+  border-top: 1px solid var(--border-color, #e2e8f0);
+  border-bottom: none;
+  border-right: none;
+}
+
+[data-theme="dark"] .word-trans-bubble.arrow-top .wtb-arrow {
+  border-color: rgba(99, 102, 241, 0.35);
+}
+
+.wtb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  gap: 8px;
+}
+
+[data-theme="dark"] .wtb-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.wtb-term-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.wtb-flag {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.wtb-word {
+  font-family: 'Fira Code', monospace;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--accent-color, #6366f1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wtb-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wtb-slow-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  background: var(--bg-hover, #f1f5f9);
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary, #475569);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.wtb-slow-btn:hover,
+.wtb-slow-btn.playing {
+  background: var(--accent-light, #e0e7ff);
+  color: var(--accent-color, #6366f1);
+  border-color: var(--accent-color, #6366f1);
+}
+
+[data-theme="dark"] .wtb-slow-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .wtb-slow-btn:hover,
+[data-theme="dark"] .wtb-slow-btn.playing {
+  background: rgba(99, 102, 241, 0.25);
+  color: #a5b4fc;
+}
+
+.wtb-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 0.85rem;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+  border-radius: 4px;
+}
+
+.wtb-close-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.wtb-body {
+  min-height: 34px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.wtb-loading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text-muted, #64748b);
+  padding: 4px 0;
+}
+
+.wtb-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border-color, #cbd5e1);
+  border-top-color: var(--accent-color, #6366f1);
+  border-radius: 50%;
+  animation: wtbSpin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes wtbSpin {
+  to { transform: rotate(360deg); }
+}
+
+.wtb-arabic {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+  line-height: 1.35;
+  margin-bottom: 3px;
+}
+
+[data-theme="dark"] .wtb-arabic {
+  color: #f8fafc;
+}
+
+.wtb-meta {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--accent-color, #6366f1);
+  display: inline-block;
+  opacity: 0.85;
+}

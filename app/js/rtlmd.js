@@ -56,6 +56,7 @@
     quickLang1: 'de-AT',        // Quick language shortcut 1 in context menu
     quickLang2: 'en-US',        // Quick language shortcut 2 in context menu
     syncWordHighlight: false,   // Synchronized word-by-word highlight during phrase speech
+    wordTranslationBubble: true, // Show translation bubble on word click (Hybrid 1+3)
     voiceName: '',
     // API
     googleTtsKey: '',
@@ -8599,6 +8600,9 @@ function exportDocument(format) {
     const keepSpeaking = document.getElementById('s-keep-speaking-on-click');
     if (keepSpeaking) keepSpeaking.checked = !!s.keepSpeakingOnClick;
 
+    const wordBubble = document.getElementById('s-word-translation-bubble');
+    if (wordBubble) wordBubble.checked = s.wordTranslationBubble !== false;
+
     const ql1 = document.getElementById('s-quick-lang-1');
     if (ql1) ql1.value = s.quickLang1 || 'de-AT';
     const ql2 = document.getElementById('s-quick-lang-2');
@@ -8742,7 +8746,7 @@ function exportDocument(format) {
 
       const utterance = new SpeechSynthesisUtterance(cleanSpeech);
       utterance.lang = lang;
-      utterance.rate = Math.max(0.5, Math.min(2.0, parseFloat(vienixSettings.speechRate) || 0.8));
+      utterance.rate = Math.max(0.5, Math.min(2.0, parseFloat(callbacks.rateOverride || vienixSettings.speechRate) || 0.8));
       utterance.pitch = Math.max(0.5, Math.min(1.5, parseFloat(vienixSettings.speechPitch) || 1.0));
       utterance.volume = Math.max(0, Math.min(1.0, parseFloat(vienixSettings.speechVolume) || 1.0));
 
@@ -8944,14 +8948,291 @@ function exportDocument(format) {
     });
   };
 
+  
+  // ==========================================================================
+  // WORD TRANSLATION BUBBLE (فقاعة الترجمة الفورية الهجينة 1 + 3 بدون API)
+  // ==========================================================================
+  let activeTransBubble = null;
+  let activeTransAbortController = null;
+
+  function closeWordTranslationBubble() {
+    if (activeTransAbortController) {
+      try { activeTransAbortController.abort(); } catch (_) {}
+      activeTransAbortController = null;
+    }
+    if (activeTransBubble && activeTransBubble.parentNode) {
+      activeTransBubble.parentNode.removeChild(activeTransBubble);
+    }
+    activeTransBubble = null;
+  }
+  window.closeWordTranslationBubble = closeWordTranslationBubble;
+
+  // 1. Chrome On-Device AI Translation (3)
+  async function translateOnDevice(word, sourceLang) {
+    try {
+      const src = sourceLang ? sourceLang.split('-')[0].toLowerCase() : 'en';
+      if (typeof window !== 'undefined' && window.translation && typeof window.translation.createTranslator === 'function') {
+        const can = await window.translation.canTranslate({ sourceLanguage: src, targetLanguage: 'ar' });
+        if (can === 'readily' || can === 'after-download') {
+          const translator = await window.translation.createTranslator({ sourceLanguage: src, targetLanguage: 'ar' });
+          const res = await translator.translate(word);
+          if (res && res.trim() && res.trim().toLowerCase() !== word.toLowerCase()) {
+            return { text: res.trim(), source: 'device' };
+          }
+        }
+      }
+      if (typeof window !== 'undefined' && window.ai && window.ai.translator) {
+        const can = await window.ai.translator.capabilities();
+        if (can && can.available !== 'no') {
+          const tr = await window.ai.translator.create({ sourceLanguage: src, targetLanguage: 'ar' });
+          const res = await tr.translate(word);
+          if (res && res.trim()) {
+            return { text: res.trim(), source: 'device' };
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // 2. Free Public Translation Endpoint (1 - No API Key: Google GTX + MyMemory)
+  async function translateViaFreeService(word, sourceLang, signal) {
+    const src = sourceLang ? sourceLang.split('-')[0].toLowerCase() : 'auto';
+
+    // A. Google GTX Free Endpoint (High quality, no key)
+    try {
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${src}&tl=ar&dt=t&q=${encodeURIComponent(word)}`;
+      const res = await fetch(url, { signal });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data[0] && data[0][0] && data[0][0][0]) {
+          const txt = data[0][0][0].trim();
+          if (txt && /[\u0600-\u06FF]/.test(txt)) {
+            return { text: txt, source: 'cloud' };
+          }
+        }
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
+    }
+
+    // B. MyMemory Open Translation Fallback
+    try {
+      const myMemoryPair = src === 'auto' ? 'en|ar' : `${src}|ar`;
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=${myMemoryPair}`;
+      const res = await fetch(url, { signal });
+      if (res.ok) {
+        const data = await res.json();
+        const arabicRegex = /[\u0600-\u06FF]/;
+        let candidates = [];
+        if (data.responseData && data.responseData.translatedText) {
+          candidates.push(data.responseData.translatedText);
+        }
+        if (Array.isArray(data.matches)) {
+          data.matches.sort((a, b) => (b.quality || 0) - (a.quality || 0));
+          data.matches.forEach(m => { if (m.translation) candidates.push(m.translation); });
+        }
+        for (let c of candidates) {
+          let clean = c
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&amp;/g, '&')
+            .replace(/&#\d+;/g, '')
+            .trim();
+          if (clean && arabicRegex.test(clean) && clean.toLowerCase() !== word.toLowerCase()) {
+            return { text: clean, source: 'cloud' };
+          }
+        }
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
+    }
+
+    return null;
+  }
+
+  // 3. Combined Hybrid Waterfall Translation
+  async function fetchWordTranslation(word, sourceLang, signal) {
+    const cleanWord = word.trim();
+    if (!cleanWord) return null;
+    const src = sourceLang ? sourceLang.split('-')[0].toLowerCase() : 'auto';
+    const cacheKey = `vienix_trans_${src}_${cleanWord.toLowerCase()}`;
+
+    // Step 1: Check localStorage Cache (0ms, 100% offline)
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        return { text: cached, source: 'cache' };
+      }
+    } catch (_) {}
+
+    // Step 2: Chrome On-Device Local AI
+    const deviceRes = await translateOnDevice(cleanWord, src);
+    if (deviceRes && deviceRes.text) {
+      try { localStorage.setItem(cacheKey, deviceRes.text); } catch (_) {}
+      return deviceRes;
+    }
+
+    // Step 3: Free Public Cloud Service (No API Key)
+    const cloudRes = await translateViaFreeService(cleanWord, src, signal);
+    if (cloudRes && cloudRes.text) {
+      try { localStorage.setItem(cacheKey, cloudRes.text); } catch (_) {}
+      return cloudRes;
+    }
+
+    return null;
+  }
+
+  // 4. Show Floating Word Translation Bubble
+  function showWordTranslationBubble(wordElement, word, langCode) {
+    if (vienixSettings.wordTranslationBubble === false) return;
+    closeWordTranslationBubble();
+
+    const rect = wordElement.getBoundingClientRect();
+    const bubble = document.createElement('div');
+    bubble.className = 'word-trans-bubble';
+    bubble.id = 'word-trans-bubble';
+    bubble.setAttribute('dir', 'rtl');
+
+    const langFlagMap = {
+      de: '🇩🇪', en: '🇺🇸', fr: '🇫🇷', es: '🇪🇸', it: '🇮🇹',
+      tr: '🇹🇷', ru: '🇷🇺', ja: '🇯🇵', zh: '🇨🇳', ko: '🇰🇷',
+      pt: '🇧🇷', nl: '🇳🇱', sv: '🇸🇪', pl: '🇵🇱'
+    };
+    const prefix = (langCode || '').split('-')[0].toLowerCase();
+    const flag = langFlagMap[prefix] || '🌐';
+
+    bubble.innerHTML = `
+      <div class="wtb-arrow"></div>
+      <div class="wtb-header">
+        <div class="wtb-term-row" dir="ltr">
+          <span class="wtb-flag">${flag}</span>
+          <span class="wtb-word">${escapeHtml(word)}</span>
+        </div>
+        <div class="wtb-actions" dir="ltr">
+          <button type="button" class="wtb-slow-btn" id="wtb-btn-slow" title="استمع ببطء (0.6×)">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+            <span>بطيء</span>
+          </button>
+          <button type="button" class="wtb-close-btn" id="wtb-btn-close" aria-label="إغلاق">✕</button>
+        </div>
+      </div>
+      <div class="wtb-body">
+        <div class="wtb-loading" id="wtb-loading">
+          <span class="wtb-spinner"></span>
+          <span>جارٍ استحضار المعنى...</span>
+        </div>
+        <div class="wtb-content" id="wtb-content" style="display:none;">
+          <div class="wtb-arabic" id="wtb-arabic-text"></div>
+          <div class="wtb-meta" id="wtb-meta-tag"></div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(bubble);
+    activeTransBubble = bubble;
+
+    // Slow speech button
+    const slowBtn = bubble.querySelector('#wtb-btn-slow');
+    if (slowBtn) {
+      slowBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        speakText(word, langCode, { rateOverride: 0.6 });
+        slowBtn.classList.add('playing');
+        setTimeout(() => slowBtn.classList.remove('playing'), 1200);
+      });
+    }
+
+    // Close button
+    const closeBtn = bubble.querySelector('#wtb-btn-close');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeWordTranslationBubble();
+      });
+    }
+
+    // Measure & calculate coordinates
+    const bubbleRect = bubble.getBoundingClientRect();
+    const margin = 10;
+    let top = rect.top - bubbleRect.height - 10;
+
+    if (top < margin) {
+      top = rect.bottom + 10;
+      bubble.classList.add('arrow-top');
+    } else {
+      bubble.classList.add('arrow-bottom');
+    }
+
+    let left = rect.left + (rect.width / 2) - (bubbleRect.width / 2);
+    if (left < margin) left = margin;
+    if (left + bubbleRect.width > window.innerWidth - margin) {
+      left = window.innerWidth - margin - bubbleRect.width;
+    }
+
+    bubble.style.top = `${top}px`;
+    bubble.style.left = `${left}px`;
+
+    const arrow = bubble.querySelector('.wtb-arrow');
+    if (arrow) {
+      const arrowLeft = rect.left + (rect.width / 2) - left;
+      arrow.style.left = `${Math.max(14, Math.min(bubbleRect.width - 14, arrowLeft))}px`;
+    }
+
+    // Fetch Translation
+    const abortController = new AbortController();
+    activeTransAbortController = abortController;
+
+    fetchWordTranslation(word, langCode, abortController.signal).then(res => {
+      if (!activeTransBubble || activeTransBubble !== bubble) return;
+      const loadingEl = bubble.querySelector('#wtb-loading');
+      const contentEl = bubble.querySelector('#wtb-content');
+      const arabicEl = bubble.querySelector('#wtb-arabic-text');
+      const metaEl = bubble.querySelector('#wtb-meta-tag');
+
+      if (loadingEl) loadingEl.style.display = 'none';
+
+      if (res && res.text) {
+        if (contentEl) contentEl.style.display = 'block';
+        if (arabicEl) arabicEl.textContent = res.text;
+        if (metaEl) {
+          const badgeText = res.source === 'cache' ? '⚡ كاش فوري' : (res.source === 'device' ? '🧠 ذكاء الجهاز (محلي)' : '🌐 ترجمة ذكية');
+          metaEl.textContent = badgeText;
+        }
+      } else {
+        if (contentEl) contentEl.style.display = 'block';
+        if (arabicEl) {
+          arabicEl.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">تعذر جلب الترجمة الفورية حالياً.</span>';
+        }
+      }
+    }).catch(err => {
+      if (err && err.name === 'AbortError') return;
+      const loadingEl = bubble.querySelector('#wtb-loading');
+      const contentEl = bubble.querySelector('#wtb-content');
+      const arabicEl = bubble.querySelector('#wtb-arabic-text');
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (contentEl) contentEl.style.display = 'block';
+      if (arabicEl) {
+        arabicEl.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">تعذر الاتصال بخدمة الترجمة.</span>';
+      }
+    });
+  }
+  window.showWordTranslationBubble = showWordTranslationBubble;
+
   window.speakWord = function (word, wordElement, lang) {
     if (!word) return;
     if (wordElement && wordElement.classList.contains('speaking')) {
       stopAllPronunciationSpeech();
+      closeWordTranslationBubble();
       showToast('تم إيقاف النطق ⏹️', 'info');
       return;
     }
     const resolvedLang = lang || (vienixSettings.targetLanguage !== 'auto' ? vienixSettings.targetLanguage : detectLanguage(word));
+
+    // Show instant translation bubble (Hybrid 1+3)
+    if (wordElement && vienixSettings.wordTranslationBubble !== false) {
+      showWordTranslationBubble(wordElement, word, resolvedLang);
+    }
     speakText(word, resolvedLang, {
       onStart: () => {
         if (wordElement) wordElement.classList.add('speaking');
