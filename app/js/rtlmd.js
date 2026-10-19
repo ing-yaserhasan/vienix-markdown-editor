@@ -55,6 +55,7 @@
     keepSpeakingOnClick: false, // Default false: clicking preview stops speech automatically
     quickLang1: 'de-AT',        // Quick language shortcut 1 in context menu
     quickLang2: 'en-US',        // Quick language shortcut 2 in context menu
+    syncWordHighlight: false,   // Synchronized word-by-word highlight during phrase speech
     voiceName: '',
     // API
     googleTtsKey: '',
@@ -62,6 +63,7 @@
   };
 
   var vienixSettings = {};
+  window.vienixSettings = vienixSettings;
   window._activeUtterances = []; // Prevent Chromium Garbage Collection from dropping speech mid-sentence
 
   function loadSettings() {
@@ -8570,6 +8572,9 @@ function exportDocument(format) {
     const ql2 = document.getElementById('s-quick-lang-2');
     if (ql2) ql2.value = s.quickLang2 || 'en-US';
 
+    const syncWords = document.getElementById('s-sync-word-highlight');
+    if (syncWords) syncWords.checked = !!s.syncWordHighlight;
+
     // API keys
     const googleKey = document.getElementById('s-google-tts-key');
     if (googleKey) googleKey.value = s.googleTtsKey || '';
@@ -8696,6 +8701,11 @@ function exportDocument(format) {
           if (callbacks.onStart) callbacks.onStart();
         };
 
+        utterance.onboundary = (event) => {
+          if (event.name === 'word' && callbacks.onWordBoundary) {
+            callbacks.onWordBoundary(event.charIndex, event.charLength);
+          }
+        };
         const cleanup = () => {
           window._isPronunciationSpeaking = false;
           const idx = window._activeUtterances.indexOf(utterance);
@@ -8740,6 +8750,10 @@ function exportDocument(format) {
       wasSpeaking = true;
       speakingEls.forEach(el => el.classList.remove('speaking'));
     }
+    document.querySelectorAll('.pronunciation-word.word-sync-active').forEach(w => {
+      wasSpeaking = true;
+      w.classList.remove('word-sync-active');
+    });
     return wasSpeaking;
   }
   window.stopAllPronunciationSpeech = stopAllPronunciationSpeech;
@@ -8752,14 +8766,110 @@ function exportDocument(format) {
       return;
     }
     const resolvedLang = lang || (vienixSettings.targetLanguage !== 'auto' ? vienixSettings.targetLanguage : detectLanguage(text));
+    const phraseWrapper = btnElement ? btnElement.closest('.pronunciation-phrase') : null;
+    const wordSpans = phraseWrapper ? Array.from(phraseWrapper.querySelectorAll('.pronunciation-word')) : [];
+
+    let wordOffsets = [];
+    const cleanSpeech = text.replace(/[*_#`~[\]()]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (vienixSettings.syncWordHighlight && wordSpans.length > 0) {
+      let searchPos = 0;
+      wordOffsets = wordSpans.map(span => {
+        const w = (span.getAttribute('data-word') || span.textContent).trim();
+        const idx = cleanSpeech.toLowerCase().indexOf(w.toLowerCase(), searchPos);
+        if (idx !== -1) {
+          searchPos = idx + w.length;
+          return { span, start: idx, end: idx + w.length };
+        }
+        return { span, start: -1, end: -1 };
+      });
+    }
+
+    let wordSyncTimer = null;
+    let hasNativeWordBoundaries = false;
+
+    const clearWordSync = () => {
+      if (wordSyncTimer) {
+        clearTimeout(wordSyncTimer);
+        wordSyncTimer = null;
+      }
+      wordSpans.forEach(w => w.classList.remove('word-sync-active'));
+    };
+
+    const activateWordAt = (index) => {
+      if (index < 0 || index >= wordSpans.length) return;
+      wordSpans.forEach((w, i) => {
+        if (i === index) w.classList.add('word-sync-active');
+        else w.classList.remove('word-sync-active');
+      });
+    };
+
+    const runTimedFallbackSync = () => {
+      if (wordSpans.length === 0 || !vienixSettings.syncWordHighlight) return;
+      const rate = Math.max(0.5, Math.min(2.0, parseFloat(vienixSettings.speechRate) || 0.8));
+      let currentWordIdx = 0;
+      activateWordAt(0);
+
+      const stepNext = () => {
+        if (hasNativeWordBoundaries) return;
+        if (currentWordIdx >= wordSpans.length - 1) return;
+        const wordText = wordSpans[currentWordIdx].textContent.trim();
+        const duration = Math.max(220, Math.round((wordText.length * 68 + 120) / rate));
+        wordSyncTimer = setTimeout(() => {
+          if (hasNativeWordBoundaries) return;
+          currentWordIdx++;
+          activateWordAt(currentWordIdx);
+          stepNext();
+        }, duration);
+      };
+      stepNext();
+    };
+
     speakText(text, resolvedLang, {
       onStart: () => {
+        clearWordSync();
         if (btnElement) btnElement.classList.add('speaking');
+        if (vienixSettings.syncWordHighlight && wordSpans.length > 0) {
+          // If no native boundary events arrive within 70ms, start smooth timeline sync
+          wordSyncTimer = setTimeout(() => {
+            if (!hasNativeWordBoundaries) {
+              runTimedFallbackSync();
+            }
+          }, 70);
+        }
+      },
+      onWordBoundary: (charIndex, charLength) => {
+        if (!vienixSettings.syncWordHighlight || wordOffsets.length === 0) return;
+        hasNativeWordBoundaries = true;
+        if (wordSyncTimer) {
+          clearTimeout(wordSyncTimer);
+          wordSyncTimer = null;
+        }
+        let match = wordOffsets.find(item => item.start !== -1 && charIndex >= item.start && charIndex < item.end);
+        if (!match) {
+          let minDiff = Infinity;
+          wordOffsets.forEach(item => {
+            if (item.start !== -1) {
+              const diff = Math.abs(item.start - charIndex);
+              if (diff < minDiff) {
+                minDiff = diff;
+                match = item;
+              }
+            }
+          });
+        }
+        if (match && match.span) {
+          wordSpans.forEach(w => {
+            if (w !== match.span) w.classList.remove('word-sync-active');
+          });
+          match.span.classList.add('word-sync-active');
+        }
       },
       onEnd: () => {
+        clearWordSync();
         if (btnElement) btnElement.classList.remove('speaking');
       },
       onError: () => {
+        clearWordSync();
         if (btnElement) btnElement.classList.remove('speaking');
       }
     });

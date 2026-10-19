@@ -5921,6 +5921,20 @@ body.is-resizing-workspace .workspace-resizer {
   100% { transform: scale(1.05); box-shadow: 0 0 0 4px rgba(99, 102, 241, 0); }
 }
 
+/* Synchronized word highlighting in parallel with speech */
+.pronunciation-word.word-sync-active {
+  background: rgba(99, 102, 241, 0.12) !important;
+  color: #4f46e5 !important;
+  text-decoration-color: #6366f1 !important;
+  border-radius: 4px;
+  transition: background 0.08s ease, color 0.08s ease;
+}
+[data-theme="dark"] .pronunciation-word.word-sync-active {
+  background: rgba(99, 102, 241, 0.22) !important;
+  color: #c7d2fe !important;
+  text-decoration-color: #6366f1 !important;
+}
+
 /* No underline variant */
 .pronunciation-word.no-underline {
   text-decoration: none;
