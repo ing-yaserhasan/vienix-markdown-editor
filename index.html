@@ -1574,113 +1574,100 @@
             <!-- Sub-settings (hidden when disabled) -->
             <div class="settings-sub-group" id="pronunciation-sub-settings" style="display:none;">
 
+              <!-- Target Learning Language -->
               <div class="settings-group">
-                <label class="settings-label">محرك النطق</label>
-                <select class="settings-select" id="s-pronunciation-engine" onchange="applySetting('pronunciationEngine', this.value); toggleApiHint(this.value)">
-                  <option value="native" selected>🌐 مدمج (Web Speech API — مجاني بدون إنترنت)</option>
-                  <option value="google">☁️ Google Cloud TTS (يحتاج مفتاح API)</option>
-                  <option value="groq">⚡ Groq API (يحتاج مفتاح API)</option>
+                <label class="settings-label">🎯 لغة التدرب والتعلم المستهدفة</label>
+                <select class="settings-select" id="s-target-lang" onchange="applySetting('targetLanguage', this.value); updateTargetLangVoiceHint(this.value)">
+                  <option value="de-AT" selected>🇦🇹 الألمانية — النمسا (Österreichisch)</option>
+                  <option value="de-DE">🇩🇪 الألمانية — ألمانيا (Hochdeutsch)</option>
+                  <option value="de-CH">🇨🇭 الألمانية — سويسرا (Schweizerdeutsch)</option>
+                  <option value="en-US">🇺🇸 الإنجليزية — أمريكا (US)</option>
+                  <option value="en-GB">🇬🇧 الإنجليزية — بريطانيا (UK)</option>
+                  <option value="fr-FR">🇫🇷 الفرنسية (Français)</option>
+                  <option value="es-ES">🇪🇸 الإسبانية (Español)</option>
+                  <option value="it-IT">🇮🇹 الإيطالية (Italiano)</option>
+                  <option value="tr-TR">🇹🇷 التركية (Türkçe)</option>
+                  <option value="ru-RU">🇷🇺 الروسية (Русский)</option>
+                  <option value="ja-JP">🇯🇵 اليابانية (日本語)</option>
+                  <option value="zh-CN">🇨🇳 الصينية (中文)</option>
+                  <option value="ko-KR">🇰🇷 الكورية (한국어)</option>
+                  <option value="pt-BR">🇧🇷 البرتغالية (Português)</option>
+                  <option value="nl-NL">🇳🇱 الهولندية (Nederlands)</option>
+                  <option value="sv-SE">🇸🇪 السويدية (Svenska)</option>
+                  <option value="pl-PL">🇵🇱 البولندية (Polski)</option>
+                  <option value="auto">🤖 كشف تلقائي ذكي لجميع اللغات</option>
                 </select>
-                <p class="settings-hint" id="s-engine-hint">محرك المتصفح المدمج — مجاني 100% ويعمل بدون إنترنت.</p>
+                <p class="settings-hint" id="s-target-lang-hint">تحديد لغة التعلم يضمن نطق الكلمات اللاتينية بلكنة أصلية وصوت مطابق لنظام التشغيل.</p>
               </div>
 
+              <!-- Speed & Learning Presets -->
               <div class="settings-group">
-                <label class="settings-label">سرعة النطق</label>
+                <div class="settings-label-row" style="display:flex; justify-content:space-between; align-items:center;">
+                  <label class="settings-label" style="margin:0">سرعة النطق الصوتي</label>
+                  <span class="settings-slider-value" id="s-speech-rate-val">0.8×</span>
+                </div>
                 <div class="settings-slider-row">
                   <span class="settings-slider-label-start">0.5×</span>
-                  <input type="range" class="settings-slider" id="s-speech-rate" min="0.5" max="2.0" value="1.0" step="0.1" oninput="applySetting('speechRate', this.value); document.getElementById('s-speech-rate-val').textContent = this.value + '×'">
+                  <input type="range" class="settings-slider" id="s-speech-rate" min="0.5" max="2.0" value="0.8" step="0.05" oninput="applySetting('speechRate', this.value); document.getElementById('s-speech-rate-val').textContent = this.value + '×'">
                   <span class="settings-slider-label-end">2.0×</span>
-                  <span class="settings-slider-value" id="s-speech-rate-val">1.0×</span>
+                </div>
+                <div class="settings-speed-presets">
+                  <button type="button" class="settings-preset-btn" onclick="setSpeedPreset(0.75)">🐢 وضع التدرب (0.75×)</button>
+                  <button type="button" class="settings-preset-btn" onclick="setSpeedPreset(0.85)">🎧 متوسط (0.85×)</button>
+                  <button type="button" class="settings-preset-btn" onclick="setSpeedPreset(1.0)">⚡ سرعة طبيعية (1.0×)</button>
                 </div>
               </div>
 
+              <!-- Interaction Mode in Preview -->
               <div class="settings-group">
-                <label class="settings-label">حدة الصوت (Pitch)</label>
+                <label class="settings-label">طريقة التفاعل في المعاينة (Preview)</label>
+                <div class="settings-radio-group">
+                  <label class="settings-radio-pill"><input type="radio" name="s-interact-mode" value="mixed" checked onchange="applySetting('interactionMode', 'mixed')"><span>🔊+👆 مختلط (سبيكر للجملة + نقر للكلمة)</span></label>
+                  <label class="settings-radio-pill"><input type="radio" name="s-interact-mode" value="click" onchange="applySetting('interactionMode', 'click')"><span>👆 نقر على الكلمات فقط</span></label>
+                  <label class="settings-radio-pill"><input type="radio" name="s-interact-mode" value="icon" onchange="applySetting('interactionMode', 'icon')"><span>🔊 أيقونة سبيكر فقط</span></label>
+                </div>
+              </div>
+
+              <!-- System Voice Selection & Live Test -->
+              <div class="settings-group">
+                <label class="settings-label">صوت المتحدث في نظامك (Voice Engine)</label>
+                <div class="settings-voice-row">
+                  <select class="settings-select" id="s-voice-select" onchange="applySetting('voiceName', this.value)">
+                    <option value="">تحديد الصوت تلقائياً حسب اللغة (موصى به)</option>
+                    <!-- populated dynamically from speechSynthesis.getVoices() -->
+                  </select>
+                  <button type="button" class="settings-mini-btn" id="s-btn-test-pron" onclick="testPronunciation()" title="اختبار نطق جملة تجريبية">🔊 تجربة الصوت</button>
+                </div>
+                <p class="settings-hint" id="s-test-status" style="display:none; color:#6366f1; font-weight:600; margin-top:4px;"></p>
+              </div>
+
+              <!-- Pitch and Volume (Advanced) -->
+              <div class="settings-group">
+                <label class="settings-label">مستوى الصوت والحدة (اختياري)</label>
+                <div class="settings-slider-row" style="margin-bottom:8px;">
+                  <span style="font-size:0.8rem; min-width:65px;">مستوى الصوت:</span>
+                  <input type="range" class="settings-slider" id="s-speech-volume" min="0" max="1" value="1" step="0.05" oninput="applySetting('speechVolume', this.value); document.getElementById('s-speech-volume-val').textContent = Math.round(this.value*100) + '%'">
+                  <span class="settings-slider-value" id="s-speech-volume-val">100%</span>
+                </div>
                 <div class="settings-slider-row">
-                  <span class="settings-slider-label-start">0.5</span>
-                  <input type="range" class="settings-slider" id="s-speech-pitch" min="0.5" max="2.0" value="1.0" step="0.1" oninput="applySetting('speechPitch', this.value); document.getElementById('s-speech-pitch-val').textContent = this.value">
-                  <span class="settings-slider-label-end">2.0</span>
+                  <span style="font-size:0.8rem; min-width:65px;">حدة النبرة:</span>
+                  <input type="range" class="settings-slider" id="s-speech-pitch" min="0.5" max="1.5" value="1.0" step="0.1" oninput="applySetting('speechPitch', this.value); document.getElementById('s-speech-pitch-val').textContent = this.value">
                   <span class="settings-slider-value" id="s-speech-pitch-val">1.0</span>
                 </div>
               </div>
 
-              <div class="settings-group">
-                <label class="settings-label">مستوى الصوت</label>
-                <div class="settings-slider-row">
-                  <span class="settings-slider-label-start">🔇</span>
-                  <input type="range" class="settings-slider" id="s-speech-volume" min="0" max="1" value="1" step="0.1" oninput="applySetting('speechVolume', this.value); document.getElementById('s-speech-volume-val').textContent = Math.round(this.value*100) + '%'">
-                  <span class="settings-slider-label-end">🔊</span>
-                  <span class="settings-slider-value" id="s-speech-volume-val">100%</span>
-                </div>
-              </div>
-
-              <div class="settings-group">
-                <label class="settings-label">وضع التفاعل في المعاينة</label>
-                <div class="settings-radio-group">
-                  <label class="settings-radio-pill"><input type="radio" name="s-interact-mode" value="icon" onchange="applySetting('interactionMode', 'icon')"><span>🔊 أيقونة فقط</span></label>
-                  <label class="settings-radio-pill"><input type="radio" name="s-interact-mode" value="click" onchange="applySetting('interactionMode', 'click')"><span>👆 نقر فقط</span></label>
-                  <label class="settings-radio-pill"><input type="radio" name="s-interact-mode" value="mixed" checked onchange="applySetting('interactionMode', 'mixed')"><span>🔊+👆 مختلط</span></label>
-                </div>
-              </div>
-
-              <div class="settings-group">
-                <label class="settings-label">كشف اللغة</label>
-                <div class="settings-radio-group">
-                  <label class="settings-radio-pill"><input type="radio" name="s-lang-detect" value="auto" checked onchange="applySetting('langDetection', 'auto'); toggleManualLang(false)"><span>🤖 تلقائي</span></label>
-                  <label class="settings-radio-pill"><input type="radio" name="s-lang-detect" value="manual" onchange="applySetting('langDetection', 'manual'); toggleManualLang(true)"><span>🧑 يدوي</span></label>
-                </div>
-              </div>
-
-              <!-- Manual Language Selection (hidden by default) -->
-              <div class="settings-group" id="s-manual-lang-group" style="display:none;">
-                <label class="settings-label">اللغة الافتراضية</label>
-                <select class="settings-select" id="s-default-lang" onchange="applySetting('defaultLang', this.value); updateDialectOptions(this.value)">
-                  <option value="de">🇩🇪 الألمانية (Deutsch)</option>
-                  <option value="en" selected>🇬🇧 الإنجليزية (English)</option>
-                  <option value="fr">🇫🇷 الفرنسية (Français)</option>
-                  <option value="es">🇪🇸 الإسبانية (Español)</option>
-                  <option value="it">🇮🇹 الإيطالية (Italiano)</option>
-                  <option value="pt">🇵🇹 البرتغالية (Português)</option>
-                  <option value="tr">🇹🇷 التركية (Türkçe)</option>
-                  <option value="ru">🇷🇺 الروسية (Русский)</option>
-                  <option value="ja">🇯🇵 اليابانية (日本語)</option>
-                  <option value="ko">🇰🇷 الكورية (한국어)</option>
-                  <option value="zh">🇨🇳 الصينية (中文)</option>
-                  <option value="nl">🇳🇱 الهولندية (Nederlands)</option>
-                  <option value="sv">🇸🇪 السويدية (Svenska)</option>
-                  <option value="pl">🇵🇱 البولندية (Polski)</option>
-                  <option value="ar">🇸🇦 العربية (Arabic)</option>
-                </select>
-              </div>
-
-              <div class="settings-group" id="s-dialect-group" style="display:none;">
-                <label class="settings-label">اللهجة المفضلة</label>
-                <select class="settings-select" id="s-dialect" onchange="applySetting('dialect', this.value)">
-                  <!-- populated dynamically -->
-                </select>
-              </div>
-
-              <div class="settings-group">
-                <label class="settings-label">صوت المتحدث</label>
-                <div class="settings-voice-row">
-                  <select class="settings-select" id="s-voice-select" onchange="applySetting('voiceName', this.value)">
-                    <option value="">الصوت الافتراضي للمتصفح</option>
-                    <!-- populated dynamically from speechSynthesis.getVoices() -->
-                  </select>
-                  <button class="settings-mini-btn" onclick="testPronunciation()" title="اختبار النطق">🔊 اختبار</button>
-                </div>
-              </div>
-
+              <!-- Dotted underline toggle -->
               <div class="settings-group">
                 <label class="settings-label">إظهار خط النقاط تحت الكلمات الأجنبية</label>
                 <div class="settings-toggle-row">
-                  <span class="settings-toggle-desc">خط منقط بنفسجي خفيف تحت الكلمات القابلة للنطق</span>
+                  <span class="settings-toggle-desc">خط منقط بنفسجي أنيق تحت الكلمات للدلالة على قابليتها للنطق</span>
                   <label class="settings-toggle">
                     <input type="checkbox" id="s-dotted-underline" checked onchange="applySetting('dottedUnderline', this.checked)">
                     <span class="settings-toggle-slider"></span>
                   </label>
                 </div>
               </div>
+
             </div>
           </div>
 

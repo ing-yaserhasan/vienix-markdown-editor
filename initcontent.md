@@ -69,4 +69,19 @@ function exportDocument(format) {
 }
 ```
 
-> 💡 **نصيحة**: يمكنك استخدام شريط الأدوات في الأعلى لتنسيق النصوص وإدراج قوالب المخططات الجاهزة بسرعة وسهولة.
+---
+
+## 🔊 مساعد التدرب على نطق اللغات (Pronunciation Assistant)
+
+يمكنك التدرب على نطق الكلمات والعبارات الأجنبية مباشرة من قسم المعاينة الحية. انقر على أي كلمة مفردة لسماع نطقها، أو انقر على أيقونة 🔊 لسماع العبارة كاملة:
+
+- **الألمانية والنمساوية (Deutsch / Österreichisch 🇦🇹):**
+  - Servus! Willkommen in Wien.
+  - Das Wetter ist heute wunderschön und angenehm.
+  - Guten Morgen allerseits! Wie geht es Ihnen?
+
+- **اللغة الإنجليزية (English 🇬🇧 / 🇺🇸):**
+  - Practice makes perfect when learning languages.
+  - Clear pronunciation and natural speech synthesis.
+
+> 💡 **تلميح**: يمكنك تخصيص لغة التعلم المستهدفة (مثلاً الألمانية النمساوية de-AT)، وتعديل سرعة النطق إلى وضع التدرب (0.75×) لسماع مخارج الحروف بدقة، أو اختيار صوت المتحدث من نافذة **الإعدادات ⚙️**.

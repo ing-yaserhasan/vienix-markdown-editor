@@ -5873,29 +5873,52 @@ body.is-resizing-workspace .workspace-resizer {
    PRONUNCIATION ASSISTANT — مساعد النطق في المعاينة
    ========================================================================== */
 
+/* Isolated phrase wrapper with strict LTR direction */
+.pronunciation-phrase {
+  display: inline-block;
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+  text-align: left;
+  margin: 0 2px;
+  vertical-align: middle;
+}
+
 /* Pronunciation-enabled words (dotted underline) */
 .pronunciation-word {
+  display: inline;
   text-decoration: underline dotted;
-  text-decoration-color: rgba(99, 102, 241, 0.35);
+  text-decoration-color: rgba(99, 102, 241, 0.45);
   text-underline-offset: 3px;
-  text-decoration-thickness: 2px;
+  text-decoration-thickness: 1.5px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  border-radius: 3px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 4px;
+  padding: 0 1px;
   position: relative;
 }
 .pronunciation-word:hover {
-  text-decoration-color: rgba(99, 102, 241, 0.85);
-  background: rgba(99, 102, 241, 0.07);
+  text-decoration-color: #6366f1;
+  background: rgba(99, 102, 241, 0.12);
+  color: #4f46e5;
+}
+[data-theme="dark"] .pronunciation-word:hover {
+  color: #c7d2fe;
+  background: rgba(99, 102, 241, 0.22);
 }
 .pronunciation-word.speaking {
-  background: rgba(99, 102, 241, 0.12);
-  text-decoration-color: #6366f1;
-  animation: pronunciationPulse 0.6s ease;
+  background: rgba(99, 102, 241, 0.25) !important;
+  color: #4338ca !important;
+  text-decoration-color: #6366f1 !important;
+  animation: wordPulse 0.7s infinite alternate;
 }
-@keyframes pronunciationPulse {
-  0%, 100% { box-shadow: none; }
-  50% { box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15); }
+[data-theme="dark"] .pronunciation-word.speaking {
+  background: rgba(99, 102, 241, 0.4) !important;
+  color: #e0e7ff !important;
+}
+
+@keyframes wordPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+  100% { transform: scale(1.05); box-shadow: 0 0 0 4px rgba(99, 102, 241, 0); }
 }
 
 /* No underline variant */
@@ -5908,43 +5931,84 @@ body.is-resizing-workspace .workspace-resizer {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  border: none;
-  background: rgba(99, 102, 241, 0.1);
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  background: rgba(99, 102, 241, 0.08);
   color: #6366f1;
   border-radius: 50%;
   cursor: pointer;
-  margin: 0 4px;
+  margin: 0 3px;
   padding: 0;
   vertical-align: middle;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   flex-shrink: 0;
+  user-select: none;
+}
+[data-theme="dark"] .pronunciation-speaker-btn {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.3);
+  color: #a5b4fc;
 }
 .pronunciation-speaker-btn:hover {
-  background: rgba(99, 102, 241, 0.2);
-  transform: scale(1.15);
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #ffffff;
+  transform: scale(1.18);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
 }
 .pronunciation-speaker-btn.speaking {
-  background: #6366f1;
-  color: #fff;
-  animation: speakerBounce 0.4s ease;
+  background: #6366f1 !important;
+  color: #ffffff !important;
+  border-color: #6366f1 !important;
+  animation: speakerPulse 0.5s infinite alternate;
 }
-@keyframes speakerBounce {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.25); }
+@keyframes speakerPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.5); }
+  100% { transform: scale(1.22); box-shadow: 0 0 0 6px rgba(99, 102, 241, 0); }
 }
 .pronunciation-speaker-btn svg {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
 }
 
-/* Pronunciation sentence block wrapper */
-.pronunciation-block {
-  position: relative;
+/* Quick speed presets */
+.settings-speed-presets {
   display: flex;
-  align-items: flex-start;
-  gap: 4px;
+  gap: 8px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+.settings-preset-btn {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, rgba(0,0,0,0.1));
+  background: rgba(99, 102, 241, 0.06);
+  color: var(--text-primary, #1e293b);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+[data-theme="dark"] .settings-preset-btn {
+  background: rgba(99, 102, 241, 0.12);
+  color: #e2e8f0;
+  border-color: rgba(255,255,255,0.1);
+}
+.settings-preset-btn:hover {
+  background: #6366f1;
+  color: #fff;
+  border-color: #6366f1;
+}
+
+/* Hide speaker buttons when printing/exporting */
+@media print {
+  .pronunciation-speaker-btn {
+    display: none !important;
+  }
+  .pronunciation-word {
+    text-decoration: none !important;
+  }
 }
 
 /* Mobile Responsive */
