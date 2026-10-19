@@ -8790,6 +8790,198 @@ function exportDocument(format) {
   // PRONUNCIATION — Preview Processing (Post-render hook)
   // ==========================================================================
 
+  
+  // ==========================================================================
+  // PRONUNCIATION SPEAKER CONTEXT MENU (قائمة خيارات زر الماوس الأيمن)
+  // ==========================================================================
+
+  let activePronContextMenu = null;
+
+  function closePronunciationContextMenu() {
+    if (activePronContextMenu && activePronContextMenu.parentNode) {
+      activePronContextMenu.parentNode.removeChild(activePronContextMenu);
+    }
+    activePronContextMenu = null;
+  }
+
+  function openPronunciationContextMenu(event, text, detectedLang, triggerElement) {
+    closePronunciationContextMenu();
+
+    const menu = document.createElement('div');
+    menu.className = 'pronunciation-context-menu';
+    menu.id = 'active-pronunciation-context-menu';
+
+    const cleanSnippet = text.length > 28 ? text.substring(0, 26) + '...' : text;
+    const currentRate = parseFloat(vienixSettings.speechRate) || 0.8;
+    const currentLang = detectedLang || vienixSettings.targetLanguage || 'de-AT';
+    const isPaused = typeof speechSynthesis !== 'undefined' && speechSynthesis.paused;
+
+    const langBadge = currentLang.startsWith('de-AT') ? '🇦🇹 Österreichisch (النمسا)' :
+                      currentLang.startsWith('de') ? '🇩🇪 Deutsch (ألماني)' :
+                      currentLang.startsWith('en') ? '🇬🇧 English (إنجليزي)' :
+                      currentLang.startsWith('fr') ? '🇫🇷 Français (فرنسي)' : currentLang;
+
+    menu.innerHTML = `
+      <div class="pcm-header">
+        <span class="pcm-phrase-preview" title="${text}">${cleanSnippet}</span>
+        <span class="pcm-badge">🔊 ${langBadge}</span>
+      </div>
+
+      <div class="pcm-section-label">التحكم في النطق</div>
+      <button type="button" class="pcm-item" id="pcm-play">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        <span>تشغيل / إعادة نطق</span>
+      </button>
+
+      <button type="button" class="pcm-item" id="pcm-pause-resume">
+        ${isPaused
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg><span>استئناف النطق (Resume)</span>'
+          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg><span>إيقاف مؤقت (Pause)</span>'
+        }
+      </button>
+
+      <button type="button" class="pcm-item danger" id="pcm-stop">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>
+        <span>إيقاف تام (Stop)</span>
+      </button>
+
+      <div class="pcm-divider"></div>
+
+      <div class="pcm-section-label">سرعة التدرب الصوتية</div>
+      <div class="pcm-speed-grid">
+        <button type="button" class="pcm-speed-btn ${Math.abs(currentRate - 0.75) < 0.03 ? 'active' : ''}" data-speed="0.75" title="وضع التدرب البطيء لسماع المخارج بدقة">0.75×</button>
+        <button type="button" class="pcm-speed-btn ${Math.abs(currentRate - 0.85) < 0.03 ? 'active' : ''}" data-speed="0.85" title="سرعة متوسطة واضحة">0.85×</button>
+        <button type="button" class="pcm-speed-btn ${Math.abs(currentRate - 1.0) < 0.03 ? 'active' : ''}" data-speed="1.0" title="السرعة الطبيعية">1.0×</button>
+        <button type="button" class="pcm-speed-btn ${Math.abs(currentRate - 1.25) < 0.03 ? 'active' : ''}" data-speed="1.25" title="سرعة سريعة">1.25×</button>
+      </div>
+
+      <div class="pcm-divider"></div>
+
+      <button type="button" class="pcm-item" id="pcm-copy">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        <span>نسخ العبارة</span>
+      </button>
+
+      <button type="button" class="pcm-item" id="pcm-settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <span>إعدادات النطق المتقدمة ⚙️</span>
+      </button>
+    `;
+
+    document.body.appendChild(menu);
+    activePronContextMenu = menu;
+
+    // Positioning: Bottom sheet on mobile / touch, cursor-anchored on desktop
+    const isMobile = window.innerWidth <= 640;
+    if (isMobile) {
+      menu.classList.add('pcm-mobile-sheet');
+      menu.style.left = '50%';
+      menu.style.transform = 'translateX(-50%)';
+      menu.style.bottom = '16px';
+      menu.style.top = 'auto';
+      menu.style.width = 'calc(100vw - 32px)';
+      menu.style.maxWidth = '360px';
+    } else {
+      const menuWidth = 270;
+      const menuHeight = menu.offsetHeight || 310;
+      let posX = (event && event.clientX) ? event.clientX : 100;
+      let posY = (event && event.clientY) ? event.clientY : 100;
+
+      if (posX + menuWidth > window.innerWidth - 10) {
+        posX = window.innerWidth - menuWidth - 10;
+      }
+      if (posY + menuHeight > window.innerHeight - 10) {
+        posY = window.innerHeight - menuHeight - 10;
+      }
+      if (posX < 10) posX = 10;
+      if (posY < 10) posY = 10;
+
+      menu.style.left = posX + 'px';
+      menu.style.top = posY + 'px';
+    }
+
+    // 1. Play
+    menu.querySelector('#pcm-play').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      closePronunciationContextMenu();
+      speakPronunciation(text, triggerElement, currentLang);
+    });
+
+    // 2. Pause / Resume
+    menu.querySelector('#pcm-pause-resume').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      if (typeof speechSynthesis !== 'undefined') {
+        if (speechSynthesis.paused) {
+          speechSynthesis.resume();
+          showToast('تم استئناف النطق ▶️', 'info');
+        } else if (speechSynthesis.speaking) {
+          speechSynthesis.pause();
+          showToast('تم إيقاف النطق مؤقتاً ⏸️', 'info');
+        } else {
+          speakPronunciation(text, triggerElement, currentLang);
+        }
+      }
+      closePronunciationContextMenu();
+    });
+
+    // 3. Stop
+    menu.querySelector('#pcm-stop').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      if (typeof speechSynthesis !== 'undefined') {
+        speechSynthesis.cancel();
+        if (triggerElement) triggerElement.classList.remove('speaking');
+        showToast('تم إيقاف النطق ⏹️', 'info');
+      }
+      closePronunciationContextMenu();
+    });
+
+    // 4. Speed pills
+    menu.querySelectorAll('.pcm-speed-btn').forEach(btn => {
+      btn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const speed = btn.getAttribute('data-speed');
+        window.setSpeedPreset(speed);
+        showToast(`تم ضبط سرعة النطق على ${speed}×`, 'info');
+        closePronunciationContextMenu();
+        speakPronunciation(text, triggerElement, currentLang);
+      });
+    });
+
+    // 5. Copy
+    menu.querySelector('#pcm-copy').addEventListener('click', async (ev) => {
+      ev.stopPropagation();
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast('تم نسخ العبارة للحافظة 📋', 'success');
+      } catch (e) {
+        showToast('تعذر النسخ تلقائياً', 'warning');
+      }
+      closePronunciationContextMenu();
+    });
+
+    // 6. Settings
+    menu.querySelector('#pcm-settings').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      closePronunciationContextMenu();
+      window.openSettingsModal();
+      window.switchSettingsTab('pronunciation');
+    });
+  }
+
+  // Dismiss context menu on click outside or Escape
+  document.addEventListener('pointerdown', (e) => {
+    if (activePronContextMenu && !activePronContextMenu.contains(e.target)) {
+      if (e.target.closest('.pronunciation-speaker-btn') || e.target.closest('.pronunciation-word')) {
+        return;
+      }
+      closePronunciationContextMenu();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closePronunciationContextMenu();
+  });
+
   function processPronunciationInPreview() {
     if (!vienixSettings.pronunciationEnabled) return;
     if (!previewContent) return;
@@ -8875,7 +9067,7 @@ function exportDocument(format) {
               wordSpan.setAttribute('data-lang', detectedLang);
               wordSpan.title = `انقر لنطق: ${tok}`;
 
-              if (mode === 'click' || mode === 'mixed') {
+                            if (mode === 'click' || mode === 'mixed') {
                 wordSpan.addEventListener('click', function (e) {
                   e.stopPropagation();
                   e.preventDefault();
@@ -8883,6 +9075,7 @@ function exportDocument(format) {
                 });
               }
 
+              // Word has NO context menu and NO long-press — single tap/click speaks the word directly!
               phraseWrapper.appendChild(wordSpan);
             } else {
               phraseWrapper.appendChild(document.createTextNode(tok));
@@ -8894,14 +9087,79 @@ function exportDocument(format) {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'pronunciation-speaker-btn';
-            btn.title = `🔊 استمع للعبارة كاملة: ${part.content}`;
+            btn.title = `🔊 استمع للعبارة كاملة: ${part.content} (نقر مطول أو زر يمين للخيارات)`;
             btn.setAttribute('aria-label', `Listen to ${part.content}`);
             btn.innerHTML = speakerSvg;
+
+            // Long-press detection on touch screens (Mobile/Tablet)
+            let longPressTimer = null;
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let hasTriggeredLongPress = false;
+
+            btn.addEventListener('touchstart', function (e) {
+              hasTriggeredLongPress = false;
+              if (e.touches && e.touches.length === 1) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                longPressTimer = setTimeout(() => {
+                  hasTriggeredLongPress = true;
+                  if (navigator.vibrate) {
+                    try { navigator.vibrate(40); } catch (_) {}
+                  }
+                  openPronunciationContextMenu(
+                    { clientX: touchStartX, clientY: touchStartY },
+                    part.content,
+                    detectedLang,
+                    btn
+                  );
+                }, 450); // 450ms long-press hold
+              }
+            }, { passive: true });
+
+            btn.addEventListener('touchmove', function (e) {
+              if (longPressTimer && e.touches && e.touches.length === 1) {
+                const diffX = Math.abs(e.touches[0].clientX - touchStartX);
+                const diffY = Math.abs(e.touches[0].clientY - touchStartY);
+                if (diffX > 10 || diffY > 10) {
+                  clearTimeout(longPressTimer);
+                  longPressTimer = null;
+                }
+              }
+            }, { passive: true });
+
+            btn.addEventListener('touchend', function () {
+              if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+              }
+            });
+
+            btn.addEventListener('touchcancel', function () {
+              if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+              }
+            });
+
+            // Regular click/tap on speaker icon
             btn.addEventListener('click', function (e) {
               e.stopPropagation();
               e.preventDefault();
+              if (hasTriggeredLongPress) {
+                hasTriggeredLongPress = false;
+                return; // Suppress regular click if long-press just opened the menu
+              }
               speakPronunciation(part.content, this, detectedLang);
             });
+
+            // Right-click context menu on desktop
+            btn.addEventListener('contextmenu', function (e) {
+              e.stopPropagation();
+              e.preventDefault();
+              openPronunciationContextMenu(e, part.content, detectedLang, this);
+            });
+
             phraseWrapper.appendChild(btn);
           }
 
