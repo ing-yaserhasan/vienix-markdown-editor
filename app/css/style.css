@@ -152,15 +152,22 @@ html, body {
 .brand-titles {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .brand-title {
+  direction: ltr;
   font-size: 1.15rem;
   font-weight: 700;
   color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .badge-tag {
@@ -589,6 +596,94 @@ body.is-resizing-workspace .workspace-resizer {
   background: var(--border-light);
   color: var(--text-secondary);
 }
+
+/* ترويسة نافذة المعاينة مع أزرار التحكم للموبايل */
+.preview-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.preview-header-btn {
+  display: none; /* مخفي على الكمبيوتر افتراضياً */
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 7px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.16s ease;
+  line-height: 1.25;
+  user-select: none;
+}
+
+.preview-header-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.preview-header-btn.active {
+  background: #6366f1;
+  color: #ffffff !important;
+  border-color: #6366f1;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+}
+
+.preview-header-btn.active svg {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .preview-header-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+[data-theme="dark"] .preview-header-btn.active {
+  background: #6366f1;
+  color: #ffffff !important;
+}
+
+/* كونتينر الأدوات العائم في شاشة العرض المعاينة عند تفعيل Edit */
+.preview-floating-dock {
+  position: absolute !important;
+  bottom: 24px !important;
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+  z-index: 50 !important;
+  margin: 0 !important;
+  animation: previewDockSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.preview-floating-dock .editor-floating-actions {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 6px 12px !important;
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 30px !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  backdrop-filter: blur(12px);
+}
+
+[data-theme="dark"] .preview-floating-dock .editor-floating-actions {
+  background: rgba(30, 41, 59, 0.95) !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.06) !important;
+}
+
+@keyframes previewDockSlideIn {
+  from { opacity: 0; transform: translate(-50%, 14px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
 
 /* Editor Input Area */
 .editor-wrapper {
@@ -1718,6 +1813,15 @@ body.is-resizing-workspace .workspace-resizer {
 
 /* Tablet & Mobile Screens (<= 768px) */
 @media (max-width: 768px) {
+
+  /* ترويسة المعاينة على الموبايل: إظهار زري المستكشف و Edit وإخفاء شارة ميرميد */
+  .panel-header #preview-mode-badge {
+    display: none !important;
+  }
+  .preview-header-btn {
+    display: inline-flex !important;
+  }
+
   html, body, .app-wrapper {
     max-width: 100vw;
     overflow-x: hidden;
@@ -2014,6 +2118,14 @@ body.is-resizing-workspace .workspace-resizer {
 
 /* Small Smartphone Screens (<= 480px) */
 @media (max-width: 480px) {
+
+  .brand-suffix {
+    display: none !important;
+  }
+  .header-actions .btn-outline-classic {
+    display: none !important;
+  }
+
   .app-header {
     padding: 6px 8px;
     gap: 6px;
@@ -5875,7 +5987,7 @@ body.is-resizing-workspace .workspace-resizer {
 
 /* Isolated phrase wrapper with strict LTR direction */
 .pronunciation-phrase {
-  display: inline-block;
+  display: inline;
   direction: ltr !important;
   unicode-bidi: isolate !important;
   text-align: left;
@@ -6340,4 +6452,18 @@ body.is-resizing-workspace .workspace-resizer {
 @keyframes pcmSheetSlideUp {
   from { opacity: 0; transform: translate(-50%, 25px); }
   to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+
+/* إخفاء كونتينر أدوات المعاينة على الكمبيوتر (مخصص لوضع الموبايل فقط) */
+@media (min-width: 769px) {
+  .preview-floating-dock {
+    display: none !important;
+  }
+  .preview-header-btn {
+    display: none !important;
+  }
+  .panel-header #preview-mode-badge {
+    display: inline-block !important;
+  }
 }

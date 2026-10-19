@@ -7770,12 +7770,21 @@ function exportDocument(format) {
   window.toggleWysiwygPreviewMode = function () {
     isWysiwygActive = !isWysiwygActive;
     const btn = document.getElementById('btn-toggle-wysiwyg');
+    const previewHeaderBtn = document.getElementById('btn-preview-header-edit');
+    const previewDock = document.getElementById('preview-floating-dock-wrapper');
 
     if (isWysiwygActive) {
       // تفعيل وضع التحرير المباشر
       if (btn) {
         btn.classList.add('active');
         btn.title = 'إلغاء وضع التحرير المباشر وحفظ التغييرات (Edit Preview: ON)';
+      }
+      if (previewHeaderBtn) {
+        previewHeaderBtn.classList.add('active');
+        previewHeaderBtn.title = 'إلغاء وضع التحرير المباشر (Edit Preview: ON)';
+      }
+      if (previewDock) {
+        previewDock.style.display = 'flex';
       }
       previewContent.setAttribute('contenteditable', 'true');
       previewContent.classList.add('preview-editable');
@@ -7795,6 +7804,13 @@ function exportDocument(format) {
       if (btn) {
         btn.classList.remove('active');
         btn.title = 'تبديل وضع تحرير المعاينة المباشر (Edit Preview: OFF)';
+      }
+      if (previewHeaderBtn) {
+        previewHeaderBtn.classList.remove('active');
+        previewHeaderBtn.title = 'تعديل من واجهة العرض (Edit Preview)';
+      }
+      if (previewDock) {
+        previewDock.style.display = 'none';
       }
       previewContent.removeAttribute('contenteditable');
       previewContent.classList.remove('preview-editable');
@@ -9578,6 +9594,7 @@ function exportDocument(format) {
 
   function initDrag() {
     makeDraggable('floating-dock-wrapper',         'vienix_dock_pos');
+    makeDraggable('preview-floating-dock-wrapper', 'vienix_preview_dock_pos');
     makeDraggable('classic-floating-dock-wrapper', 'vienix_classic_dock_pos');
   }
 
