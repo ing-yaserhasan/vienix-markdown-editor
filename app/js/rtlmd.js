@@ -6673,6 +6673,7 @@ function exportDocument(format) {
           <button type="button" class="resizer-btn" data-preset="50%" title="50% من عرض السطر">50%</button>
           <button type="button" class="resizer-btn" data-preset="100%" title="100% عرض كامل">100%</button>
           <span class="resizer-divider"></span>
+          <!-- محاذاة -->
           <button type="button" class="resizer-btn active" data-align="inline" title="محاذاة مع النص (Inline)">
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="14" y2="12"></line><line x1="4" y1="18" x2="20" y2="18"></line></svg>
           </button>
@@ -6684,6 +6685,19 @@ function exportDocument(format) {
           </button>
           <button type="button" class="resizer-btn" data-align="left" title="محاذاة لليسار">
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="15" y1="12" x2="3" y2="12"></line><line x1="19" y1="18" x2="3" y2="18"></line></svg>
+          </button>
+          <span class="resizer-divider"></span>
+          <!-- ميزة التحريك الحر فوق العناصر (Free Floating Move) -->
+          <button type="button" class="resizer-btn btn-float-toggle" data-action="toggle-float" title="تحريك حر فوق العناصر (انقر ثم اسحب الإيموجي بالماوس في أي مكان فوق النص)">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
+            <span>حر</span>
+          </button>
+          <!-- ميزات التدوير (Rotation) -->
+          <button type="button" class="resizer-btn btn-rotate-ccw" data-action="rotate-ccw" title="تدوير 90° عكس عقارب الساعة">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+          </button>
+          <button type="button" class="resizer-btn btn-rotate-cw" data-action="rotate-cw" title="تدوير 90° مع عقارب الساعة">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><polyline points="21 3 21 8 16 8"></polyline></svg>
           </button>
           <span class="resizer-divider"></span>
           <span class="resizer-size-badge"></span>
@@ -6709,8 +6723,9 @@ function exportDocument(format) {
         `;
       }
 
-      // Handles
+      // Handles (يشمل مقبض التدوير الدائري الاحترافي)
       const handlesHtml = `
+        <div class="resizer-rotate-handle" title="اسحب لتدوير الإيموجي بأي زاوية"></div>
         <div class="resizer-handle handle-nw" data-dir="nw" title="اسحب للتكبير والتصغير"></div>
         <div class="resizer-handle handle-ne" data-dir="ne" title="اسحب للتكبير والتصغير"></div>
         <div class="resizer-handle handle-sw" data-dir="sw" title="اسحب للتكبير والتصغير"></div>
@@ -6726,11 +6741,47 @@ function exportDocument(format) {
       wrapper.insertAdjacentHTML('beforeend', handlesHtml);
 
       const sizeBadge = toolbar.querySelector('.resizer-size-badge');
+      let currentRotation = parseInt(wrapper.getAttribute('data-rotation') || '0', 10);
+
+      // دالة التموضع الذكي لشريط الأدوات لمنع خروجه أو اقتطاعه عند الخط الفاصل بين المحرر والمعاينة
+      const clampToolbar = () => {
+        if (!wrapper.classList.contains('active')) return;
+        const previewContainer = document.getElementById('preview-output') || document.getElementById('panel-preview') || document.body;
+        const containerRect = previewContainer.getBoundingClientRect();
+
+        // إعادة التعيين للحساب بدقة
+        toolbar.style.left = '50%';
+        toolbar.style.transform = 'translateX(-50%)';
+
+        const tbRect = toolbar.getBoundingClientRect();
+        const minPadding = 10;
+
+        // فحص الطرف الأيسر (عند الخط الفاصل ومقبض تقسيم مساحات العمل)
+        if (tbRect.left < containerRect.left + minPadding) {
+          const shiftX = Math.round((containerRect.left + minPadding) - tbRect.left);
+          toolbar.style.transform = `translateX(calc(-50% + ${shiftX}px))`;
+        } else if (tbRect.right > containerRect.right - minPadding) {
+          const shiftX = Math.round(tbRect.right - (containerRect.right - minPadding));
+          toolbar.style.transform = `translateX(calc(-50% - ${shiftX}px))`;
+        }
+
+        // فحص الطرف العلوي (إذا كان الإيموجي في أعلى الصفحة، تظهر الفقاعة بالأسفل لتظل مرئية بالكامل)
+        if (tbRect.top < containerRect.top + 10) {
+          toolbar.style.bottom = 'auto';
+          toolbar.style.top = 'calc(100% + 12px)';
+        } else {
+          toolbar.style.bottom = 'calc(100% + 12px)';
+          toolbar.style.top = 'auto';
+        }
+      };
+
       const updateBadge = () => {
         const currentW = Math.round(wrapper.getBoundingClientRect().width);
         const parentW = wrapper.parentElement ? wrapper.parentElement.clientWidth : 800;
         const pct = Math.round((currentW / (parentW || 1)) * 100);
-        sizeBadge.textContent = `${currentW}px (${pct}%)`;
+        const rotStr = currentRotation !== 0 ? ` • ${currentRotation}°` : '';
+        sizeBadge.textContent = `${currentW}px (${pct}%)${rotStr}`;
+        setTimeout(clampToolbar, 10);
       };
 
       setTimeout(updateBadge, 50);
@@ -6781,6 +6832,116 @@ function exportDocument(format) {
         wrapper.classList.add('active');
         updateBadge();
       });
+
+      // 1. ميزة التحريك الحر فوق العناصر (Free Float Dragging)
+      let isFloatingMode = false;
+      let floatOffsetX = 0;
+      let floatOffsetY = 0;
+
+      const floatBtn = toolbar.querySelector('.btn-float-toggle');
+      if (floatBtn) {
+        floatBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          isFloatingMode = !isFloatingMode;
+          wrapper.classList.toggle('is-floating', isFloatingMode);
+          floatBtn.classList.toggle('active-tool', isFloatingMode);
+          if (isFloatingMode) {
+            showToast('تم تفعيل التحريك الحر ✥ — اسحب الإيموجي بالماوس في أي مكان فوق العناصر', 'info', 2500);
+          } else {
+            wrapper.style.left = '0px';
+            wrapper.style.top = '0px';
+            floatOffsetX = 0;
+            floatOffsetY = 0;
+            showToast('تم إرجاع الإيموجي للمحاذاة المنسابة مع النص ✓', 'info', 2000);
+          }
+          updateBadge();
+        });
+      }
+
+      // سحب الإيموجي بالماوس عندما يكون التحريك الحر مفعلاً
+      wrapper.addEventListener('mousedown', (e) => {
+        if (!isFloatingMode) return;
+        if (e.target.closest('.image-resizer-toolbar, .resizer-handle, .resizer-rotate-handle')) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        const startMouseX = e.clientX;
+        const startMouseY = e.clientY;
+        const initialLeft = floatOffsetX;
+        const initialTop = floatOffsetY;
+
+        const onDragMove = (moveEvt) => {
+          floatOffsetX = initialLeft + (moveEvt.clientX - startMouseX);
+          floatOffsetY = initialTop + (moveEvt.clientY - startMouseY);
+          wrapper.style.left = `${floatOffsetX}px`;
+          wrapper.style.top = `${floatOffsetY}px`;
+          clampToolbar();
+        };
+
+        const onDragEnd = () => {
+          document.removeEventListener('mousemove', onDragMove);
+          document.removeEventListener('mouseup', onDragEnd);
+        };
+
+        document.addEventListener('mousemove', onDragMove);
+        document.addEventListener('mouseup', onDragEnd);
+      });
+
+      // 2. ميزات التدوير بأزرار الزوايا (Rotate Buttons)
+      const applyRotation = (deg) => {
+        currentRotation = ((deg % 360) + 360) % 360;
+        img.style.transform = `rotate(${currentRotation}deg)`;
+        wrapper.setAttribute('data-rotation', currentRotation);
+        updateBadge();
+      };
+
+      const btnCcw = toolbar.querySelector('.btn-rotate-ccw');
+      if (btnCcw) {
+        btnCcw.addEventListener('click', (e) => {
+          e.stopPropagation();
+          applyRotation(currentRotation - 90);
+        });
+      }
+
+      const btnCw = toolbar.querySelector('.btn-rotate-cw');
+      if (btnCw) {
+        btnCw.addEventListener('click', (e) => {
+          e.stopPropagation();
+          applyRotation(currentRotation + 90);
+        });
+      }
+
+      // 3. مقبض التدوير اليدوي الدائري (Rotate Handle Dragging)
+      const rotateHandle = wrapper.querySelector('.resizer-rotate-handle');
+      if (rotateHandle) {
+        rotateHandle.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const rect = wrapper.getBoundingClientRect();
+          const centerX = rect.left + rect.width / 2;
+          const centerY = rect.top + rect.height / 2;
+
+          const onRotateMove = (moveEvt) => {
+            const dx = moveEvt.clientX - centerX;
+            const dy = moveEvt.clientY - centerY;
+            let deg = Math.round(Math.atan2(dy, dx) * (180 / Math.PI)) + 90;
+            // تثبيت الزوايا القريبة من 0، 90، 180، 270 (Snap to 90s)
+            [0, 90, 180, 270, 360].forEach(snap => {
+              if (Math.abs(deg - snap) < 5) deg = snap % 360;
+            });
+            applyRotation(deg);
+          };
+
+          const onRotateEnd = () => {
+            document.removeEventListener('mousemove', onRotateMove);
+            document.removeEventListener('mouseup', onRotateEnd);
+          };
+
+          document.addEventListener('mousemove', onRotateMove);
+          document.addEventListener('mouseup', onRotateEnd);
+        });
+      }
 
       // Handles Dragging
       const handles = wrapper.querySelectorAll('.resizer-handle');
@@ -7600,9 +7761,6 @@ function exportDocument(format) {
     }
     if (typeof window.closeWysiwygColorPopover === 'function') {
       window.closeWysiwygColorPopover();
-    }
-    if (typeof window.closeEmojiPicker === 'function') {
-      window.closeEmojiPicker();
     }
   }
 

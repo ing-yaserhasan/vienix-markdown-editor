@@ -6945,3 +6945,119 @@ body.is-resizing-workspace .workspace-resizer {
   border-color: rgba(16, 185, 129, 0.5) !important;
   color: #4ade80 !important;
 }
+
+
+/* =========================================================
+   ترقيات حاوية التحجيم للإيموجي والصور: تحريك حر، تدوير، ومنع اقتطاع الفقاعة
+   ========================================================= */
+
+.image-resizer-wrapper {
+  overflow: visible !important;
+}
+
+/* شريط الأدوات المصغر فوق الصورة - محسّن ليظل دائماً داخل الإطار المرئي */
+.image-resizer-toolbar {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 30px;
+  padding: 5px 12px;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  z-index: 1000 !important;
+  white-space: nowrap;
+  pointer-events: auto;
+  max-width: 95vw;
+}
+
+.image-resizer-wrapper:hover .image-resizer-toolbar,
+.image-resizer-wrapper.active .image-resizer-toolbar {
+  display: flex !important;
+}
+
+/* وضع التحريك الحر فوق العناصر (Free Floating Mode) */
+.image-resizer-wrapper.is-floating {
+  position: relative !important;
+  z-index: 60 !important;
+  display: inline-block !important;
+  cursor: grab !important;
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.25) !important;
+}
+
+.image-resizer-wrapper.is-floating:active {
+  cursor: grabbing !important;
+}
+
+.image-resizer-wrapper.is-floating::after {
+  content: '✥ وضع التحريك الحر مفعّل — اسحب وحرّك بحرية فوق أي عنصر';
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #a5b4fc;
+  background: rgba(15, 23, 42, 0.85);
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.image-resizer-wrapper.is-floating:hover::after,
+.image-resizer-wrapper.is-floating.active::after {
+  opacity: 1;
+}
+
+/* مقبض التدوير الاحترافي (Rotation Handle) */
+.resizer-rotate-handle {
+  position: absolute;
+  top: -26px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 14px;
+  background: #ffffff;
+  border: 2px solid #6366f1;
+  border-radius: 50%;
+  cursor: grab;
+  z-index: 120;
+  display: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s, background-color 0.15s;
+}
+
+.resizer-rotate-handle:hover {
+  transform: translateX(-50%) scale(1.25);
+  background: #6366f1;
+}
+
+.resizer-rotate-handle::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1.5px;
+  height: 14px;
+  background: #6366f1;
+}
+
+.image-resizer-wrapper.active .resizer-rotate-handle {
+  display: block !important;
+}
+
+/* زر التحريك الحر النشط وزر التدوير */
+.resizer-btn.active-tool {
+  background: #6366f1 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
