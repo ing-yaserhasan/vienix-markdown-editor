@@ -7109,7 +7109,7 @@ function exportDocument(format) {
     privacy: {
       title: 'سياسة الخصوصية',
       sub: 'Privacy Policy (Google AdSense & GDPR Ready)',
-      icon: '🛡️',
+      icon: '<svg class="ui-icon" viewBox="0 0 24 24" width="22" height="22"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>',
       url: 'legal/privacy.html',
       html: `
         <div class="legal-modal-highlight">
@@ -7131,7 +7131,7 @@ function exportDocument(format) {
     terms: {
       title: 'شروط الاستخدام',
       sub: 'Terms of Service & Usage Policy',
-      icon: '📜',
+      icon: '<svg class="ui-icon" viewBox="0 0 24 24" width="22" height="22"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>',
       url: 'legal/terms.html',
       html: `
         <div class="legal-modal-highlight">
@@ -7150,7 +7150,7 @@ function exportDocument(format) {
     impressum: {
       title: 'إشعار الناشر (Impressum)',
       sub: 'Legal Notice & Publisher Identification (§ 5 TMG)',
-      icon: '🏛️',
+      icon: '<svg class="ui-icon" viewBox="0 0 24 24" width="22" height="22"><line x1="3" y1="21" x2="21" y2="21"></line><line x1="3" y1="10" x2="21" y2="10"></line><polyline points="12 3 3 10 21 10 12 3"></polyline><line x1="5" y1="10" x2="5" y2="21"></line><line x1="9" y1="10" x2="9" y2="21"></line><line x1="15" y1="10" x2="15" y2="21"></line><line x1="19" y1="10" x2="19" y2="21"></line></svg>',
       url: 'legal/impressum.html',
       html: `
         <div class="legal-modal-highlight">
@@ -7168,7 +7168,7 @@ function exportDocument(format) {
     license: {
       title: 'رخصة الاستخدام وحقوق الملكية',
       sub: 'MIT License & Open Source Terms',
-      icon: '⚖️',
+      icon: '<svg class="ui-icon" viewBox="0 0 24 24" width="22" height="22"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="M7 21h10"></path><path d="M12 3v18"></path><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path></svg>',
       url: 'legal/license.html',
       html: `
         <div class="legal-modal-highlight">
@@ -7186,7 +7186,7 @@ function exportDocument(format) {
     disclaimer: {
       title: 'إخلاء المسؤولية',
       sub: 'Disclaimer & Data Safety Notice',
-      icon: '⚠️',
+      icon: '<svg class="ui-icon" viewBox="0 0 24 24" width="22" height="22"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
       url: 'legal/disclaimer.html',
       html: `
         <div class="legal-modal-highlight">
@@ -7201,7 +7201,7 @@ function exportDocument(format) {
     cookies: {
       title: 'سياسة ملفات تعريف الارتباط',
       sub: 'Cookie Policy & Web Storage',
-      icon: '🍪',
+      icon: '<svg class="ui-icon" viewBox="0 0 24 24" width="22" height="22"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5Z"></path><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"></circle><circle cx="15.5" cy="15.5" r="1.5" fill="currentColor"></circle><circle cx="8.5" cy="15.5" r="1.5" fill="currentColor"></circle></svg>',
       url: 'legal/cookies.html',
       html: `
         <h4>1. التخزين الضروري لتشغيل الأداة</h4>
@@ -7219,7 +7219,7 @@ function exportDocument(format) {
     about: {
       title: 'من نحن',
       sub: 'About Vienix Markdown Editor',
-      icon: 'ℹ️',
+      icon: '<svg class="ui-icon" viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>',
       url: 'legal/about.html',
       html: `
         <div class="legal-modal-highlight">
@@ -7239,7 +7239,7 @@ function exportDocument(format) {
     contact: {
       title: 'اتصل بنا',
       sub: 'Contact Us & Intellectual Property',
-      icon: '✉️',
+      icon: '<svg class="ui-icon" viewBox="0 0 24 24" width="22" height="22"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>',
       url: 'legal/contact.html',
       html: `
         <h4>قنوات التواصل الرسمية:</h4>
@@ -7319,7 +7319,7 @@ function exportDocument(format) {
 
     if (heading) heading.textContent = doc.title;
     if (sub) sub.textContent = doc.sub;
-    if (icon) icon.textContent = doc.icon;
+    if (icon) icon.innerHTML = doc.icon;
     if (body) body.innerHTML = doc.html;
     if (extLink) extLink.href = doc.url;
 
@@ -9114,7 +9114,7 @@ function exportDocument(format) {
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
             <span>بطيء</span>
           </button>
-          <button type="button" class="wtb-close-btn" id="wtb-btn-close" aria-label="إغلاق">✕</button>
+          <button type="button" class="wtb-close-btn" id="wtb-btn-close" aria-label="إغلاق"><svg class="ui-icon" style="margin:0;" viewBox="0 0 24 24" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
         </div>
       </div>
       <div class="wtb-body">
@@ -9396,7 +9396,7 @@ function exportDocument(format) {
       <div class="pcm-header">
         <span class="pcm-phrase-preview" title="${text}">${cleanSnippet}</span>
         <div class="pcm-header-bar">
-          <span class="pcm-badge" id="pcm-active-badge">🔊 ${activeMeta.flag} ${activeMeta.label}</span>
+          <span class="pcm-badge" id="pcm-active-badge"><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg> ${activeMeta.flag} ${activeMeta.label}</span>
           <div class="pcm-quick-group" title="اختصارات التبديل السريع للغات">
             <button type="button" class="pcm-quick-btn ${activeLang === q1Code ? 'active' : ''}" id="pcm-qbtn-1" data-lang="${q1Code}" title="تعيين ونطق فوري كـ ${q1Meta.label}">
               <span class="pcm-qflag">${q1Meta.flag}</span>
@@ -9446,7 +9446,7 @@ function exportDocument(format) {
 
       <button type="button" class="pcm-item" id="pcm-settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-        <span>إعدادات النطق المتقدمة ⚙️</span>
+        <svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg><span>إعدادات النطق المتقدمة</span>
       </button>
     `;
 

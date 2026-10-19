@@ -6771,3 +6771,49 @@ body.is-resizing-workspace .workspace-resizer {
 [data-theme="dark"] .wtb-arabic {
   color: #f8fafc;
 }
+
+
+/* =========================================================
+   Unified SVG UI Icon Standard (نظام أيقونات الواجهة الموحد)
+   ========================================================= */
+.ui-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  flex-shrink: 0;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  margin-left: 6px;
+  line-height: 1;
+}
+
+.legal-popover-icon .ui-icon {
+  margin-left: 0;
+  width: 18px;
+  height: 18px;
+  color: var(--accent-color, #6366f1);
+}
+
+.settings-section-title .ui-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--accent-color, #6366f1);
+  margin-left: 8px;
+}
+
+.settings-radio-pill .ui-icon,
+.settings-preset-btn .ui-icon,
+.settings-mini-btn .ui-icon {
+  margin-left: 5px;
+}
+
+.settings-about-row .ui-icon {
+  width: 15px;
+  height: 15px;
+  color: var(--accent-color, #6366f1);
+  margin-left: 6px;
+}

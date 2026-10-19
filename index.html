@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Fira+Code:wght@400;500&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/earlyaccess/droidarabicnaskh.css">
   <link rel="stylesheet" href="assets/fonts/tajawal.css">
-  <link rel="stylesheet" href="app/css/style.css?v=obsidian36">
+  <link rel="stylesheet" href="app/css/style.css?v=obsidian37">
   <link rel="stylesheet" href="app/css/classic.css?v=obsidian4">
 </head>
 <body>
@@ -126,13 +126,13 @@
             <!-- High Quality Print -->
             <button class="dropdown-item" onclick="printPDF()">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-              <span>طباعة المستند مباشرة 🖨️</span>
+              <svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg><span>طباعة المستند مباشرة</span>
             </button>
             <div class="dropdown-divider"></div>
             <!-- Book Export -->
             <button class="dropdown-item" onclick="openBookModal()">
               <svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-              <span>📖 تصدير ككتاب احترافي (PDF Book)</span>
+              <svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg><span>تصدير ككتاب احترافي (PDF Book)</span>
             </button>
           </div>
         </div>
@@ -513,7 +513,7 @@
       </div>
 
       <div class="status-group status-left-group">
-        <span>جاهز للعمل بدون إنترنت 100% ⚡</span>
+        <svg class="ui-icon" viewBox="0 0 24 24" width="13" height="13"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg><span>جاهز للعمل بدون إنترنت 100%</span>
         <span class="status-sep">|</span>
         <div class="legal-dropdown-wrap" id="legal-dropdown-wrap">
           <button type="button" class="legal-btn" id="legal-btn" onclick="toggleLegalMenu(event)" title="الصفحات القانونية والسياسات (AdSense Ready)">
@@ -531,56 +531,56 @@
             </div>
             <div class="legal-popover-list">
               <a href="legal/privacy.html" class="legal-popover-item" onclick="openLegalModal(event, 'privacy')">
-                <span class="legal-popover-icon">🛡️</span>
+                <span class="legal-popover-icon"><svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span>
                 <span class="legal-popover-texts">
                   <span class="legal-popover-title">سياسة الخصوصية</span>
                   <span class="legal-popover-desc">Privacy Policy (AdSense & GDPR)</span>
                 </span>
               </a>
               <a href="legal/terms.html" class="legal-popover-item" onclick="openLegalModal(event, 'terms')">
-                <span class="legal-popover-icon">📜</span>
+                <span class="legal-popover-icon"><svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg></span>
                 <span class="legal-popover-texts">
                   <span class="legal-popover-title">شروط الاستخدام</span>
                   <span class="legal-popover-desc">Terms of Service</span>
                 </span>
               </a>
               <a href="legal/impressum.html" class="legal-popover-item" onclick="openLegalModal(event, 'impressum')">
-                <span class="legal-popover-icon">🏛️</span>
+                <span class="legal-popover-icon"><svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15"><line x1="3" y1="21" x2="21" y2="21"></line><line x1="3" y1="10" x2="21" y2="10"></line><polyline points="12 3 3 10 21 10 12 3"></polyline><line x1="5" y1="10" x2="5" y2="21"></line><line x1="9" y1="10" x2="9" y2="21"></line><line x1="15" y1="10" x2="15" y2="21"></line><line x1="19" y1="10" x2="19" y2="21"></line></svg></span>
                 <span class="legal-popover-texts">
                   <span class="legal-popover-title">إشعار الناشر (Impressum)</span>
                   <span class="legal-popover-desc">Legal Notice & Publisher info (§ 5 TMG)</span>
                 </span>
               </a>
               <a href="legal/license.html" class="legal-popover-item" onclick="openLegalModal(event, 'license')">
-                <span class="legal-popover-icon">⚖️</span>
+                <span class="legal-popover-icon"><svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="M7 21h10"></path><path d="M12 3v18"></path><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path></svg></span>
                 <span class="legal-popover-texts">
                   <span class="legal-popover-title">الرخصة والملكية</span>
                   <span class="legal-popover-desc">MIT License & Copyright</span>
                 </span>
               </a>
               <a href="legal/disclaimer.html" class="legal-popover-item" onclick="openLegalModal(event, 'disclaimer')">
-                <span class="legal-popover-icon">⚠️</span>
+                <span class="legal-popover-icon"><svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>
                 <span class="legal-popover-texts">
                   <span class="legal-popover-title">إخلاء المسؤولية</span>
                   <span class="legal-popover-desc">Disclaimer & Data Safety</span>
                 </span>
               </a>
               <a href="legal/cookies.html" class="legal-popover-item" onclick="openLegalModal(event, 'cookies')">
-                <span class="legal-popover-icon">🍪</span>
+                <span class="legal-popover-icon"><svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5Z"></path><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"></circle><circle cx="15.5" cy="15.5" r="1.5" fill="currentColor"></circle><circle cx="8.5" cy="15.5" r="1.5" fill="currentColor"></circle></svg></span>
                 <span class="legal-popover-texts">
                   <span class="legal-popover-title">سياسة الكوكيز</span>
                   <span class="legal-popover-desc">Cookie Policy & Storage</span>
                 </span>
               </a>
               <a href="legal/about.html" class="legal-popover-item" onclick="openLegalModal(event, 'about')">
-                <span class="legal-popover-icon">ℹ️</span>
+                <span class="legal-popover-icon"><svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg></span>
                 <span class="legal-popover-texts">
                   <span class="legal-popover-title">من نحن (About Us)</span>
                   <span class="legal-popover-desc">عن المحرر والمطور ورسالة المشروع</span>
                 </span>
               </a>
               <a href="legal/contact.html" class="legal-popover-item" onclick="openLegalModal(event, 'contact')">
-                <span class="legal-popover-icon">✉️</span>
+                <span class="legal-popover-icon"><svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></span>
                 <span class="legal-popover-texts">
                   <span class="legal-popover-title">اتصل بنا</span>
                   <span class="legal-popover-desc">Contact Us & Support</span>
@@ -695,7 +695,7 @@
   <div class="book-modal-overlay" id="book-modal-overlay" onclick="closeBookModal(event)">
     <div class="book-modal" onclick="event.stopPropagation()">
       <div class="book-modal-header">
-        <h2>📖 تصدير ككتاب احترافي</h2>
+        <h2><svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg><span>تصدير ككتاب احترافي</span></h2>
         <button class="book-modal-close" onclick="closeBookModal()" title="إغلاق">&times;</button>
       </div>
       <div class="book-modal-body">
@@ -733,11 +733,11 @@
           <div class="book-scope-options">
             <label class="book-radio-pill active" id="pill-scope-all">
               <input type="radio" name="book-scope-type" id="book-scope-all" value="all" checked onchange="toggleBookChamberScope(this.value)" />
-              <span>📚 تجميع الحجرات الممتلئة كفصول مستقلة</span>
+              <svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg><span>تجميع الحجرات الممتلئة كفصول مستقلة</span>
             </label>
             <label class="book-radio-pill" id="pill-scope-current">
               <input type="radio" name="book-scope-type" id="book-scope-current" value="current" onchange="toggleBookChamberScope(this.value)" />
-              <span id="book-scope-current-label">📄 الحجرة الحالية فقط (حجرة 1)</span>
+              <span id="book-scope-current-label"><svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg> الحجرة الحالية فقط (حجرة 1)</span>
             </label>
           </div>
           <div class="book-chambers-checklist" id="book-chambers-checklist">
@@ -822,7 +822,7 @@
           تحميل ككتاب HTML
         </button>
         <button class="btn btn-outline" onclick="exportAsBook('preview')" title="فتح الكتاب كاملاً في تبويب جديد لمعاينته">
-          👁️ معاينة
+          <svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg><span>معاينة</span>
         </button>
       </div>
     </div>
@@ -883,7 +883,7 @@
         <div class="diff-footer-actions">
           <button class="btn btn-ghost" onclick="closeChambersDiffModal()">إغلاق</button>
           <button class="btn btn-outline" onclick="copyDiffChamberB()" title="نسخ محتوى الحجرة المقابلة للحافظة">
-            📋 نسخ محتوى (ب)
+            <svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>نسخ محتوى (ب)</span>
           </button>
           <button class="btn btn-primary" onclick="applyChamberBToActive()" title="استبدال محتوى الحجرة النشطة بمحتوى الحجرة (ب)">
             نقل محتوى (ب) إلى الحجرة النشطة
@@ -1096,7 +1096,7 @@
       </div>
       <div class="chamber-modal-footer" style="display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px;">
         <button type="button" class="btn btn-ghost" onclick="closeNewFileModal()">إلغاء</button>
-        <button type="button" class="btn btn-primary" onclick="confirmCreateNewFile()">إنشاء وبدء التحرير ✍️</button>
+        <button type="button" class="btn btn-primary" onclick="confirmCreateNewFile()"><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg><span>إنشاء وبدء التحرير</span></button>
       </div>
     </div>
   </div>
@@ -1163,7 +1163,7 @@
       </div>
       <div class="chamber-modal-footer">
         <button type="button" class="btn btn-ghost" onclick="closeNewChamberModal()">إلغاء</button>
-        <button type="button" class="btn btn-primary" onclick="confirmCreateNewChamber()">إنشاء والبدء بالكتابة ✨</button>
+        <button type="button" class="btn btn-primary" onclick="confirmCreateNewChamber()"><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg><span>إنشاء والبدء بالكتابة</span></button>
       </div>
     </div>
   </div>
@@ -1186,12 +1186,12 @@
         <!-- قسم إنشاء مجلد جديد والنقل إليه مباشرة -->
         <div class="move-folder-create-box" style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border-color, #e2e8f0);">
           <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600; margin-bottom: 8px; color: var(--text-color, #1e293b);">
-            <span>📁 أو إنشاء مجلد جديد والنقل إليه فوراً:</span>
+            <span>أو إنشاء مجلد جديد والنقل إليه فوراً:</span>
           </label>
           <div style="display: flex; gap: 8px;">
             <input type="text" id="move-new-folder-name-input" class="form-control" placeholder="اكتب اسم المجلد الجديد..." style="flex: 1; font-size: 0.84rem; padding: 7px 12px; border-radius: 6px; border: 1px solid var(--border-color, #cbd5e1);" onkeydown="if(event.key==='Enter') confirmCreateFolderAndMove()" />
             <button type="button" class="btn btn-primary" onclick="confirmCreateFolderAndMove()" style="padding: 7px 14px; font-size: 0.84rem; white-space: nowrap; border-radius: 6px; font-weight: 600;">
-              إنشاء ونقل ✨
+              <svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg><span>إنشاء ونقل</span>
             </button>
           </div>
         </div>
@@ -1220,12 +1220,12 @@
         <!-- قسم إنشاء مجلد جديد والترحيل إليه مباشرة للمجلد الرئيسي -->
         <div id="migrate-new-folder-section" class="move-folder-create-box" style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border-color, #e2e8f0);">
           <label style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600; margin-bottom: 8px; color: var(--text-color, #1e293b);">
-            <span>📁 أو إنشاء مجلد جديد والترحيل إليه فوراً:</span>
+            <span>أو إنشاء مجلد جديد والترحيل إليه فوراً:</span>
           </label>
           <div style="display: flex; gap: 8px;">
             <input type="text" id="migrate-new-folder-name-input" class="form-control" placeholder="اكتب اسم المجلد الجديد..." style="flex: 1; font-size: 0.84rem; padding: 7px 12px; border-radius: 6px; border: 1px solid var(--border-color, #cbd5e1);" onkeydown="if(event.key==='Enter') confirmCreateFolderAndMigrate()" />
             <button type="button" class="btn btn-primary" onclick="confirmCreateFolderAndMigrate()" style="padding: 7px 14px; font-size: 0.84rem; white-space: nowrap; border-radius: 6px; font-weight: 600;">
-              إنشاء وترحيل 🚀
+              <svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg><span>إنشاء وترحيل</span>
             </button>
           </div>
         </div>
@@ -1237,7 +1237,7 @@
               إلغاء
             </button>
             <button type="button" class="btn btn-primary" id="confirm-migrate-to-root-btn" onclick="executeMigrateToRoot()" style="padding: 7px 18px; font-size: 0.84rem; border-radius: 6px; font-weight: 600;">
-              تأكيد الترحيل وتعبئة الحجرات 🚀
+              <svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg><span>تأكيد الترحيل وتعبئة الحجرات</span>
             </button>
           </div>
         </div>
@@ -1267,7 +1267,7 @@
       </div>
       <div class="chamber-modal-footer" style="display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px;">
         <button type="button" class="btn btn-ghost" onclick="closeWysiwygLinkModal()">إلغاء</button>
-        <button type="button" class="btn btn-primary" onclick="confirmInsertWysiwygLink()">إدراج الرابط 🔗</button>
+        <button type="button" class="btn btn-primary" onclick="confirmInsertWysiwygLink()"><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg><span>إدراج الرابط</span></button>
       </div>
     </div>
   </div>
@@ -1280,7 +1280,7 @@
     <div class="legal-modal-dialog">
       <div class="legal-modal-header">
         <div class="legal-modal-title" id="legal-modal-title">
-          <span class="legal-modal-icon" id="legal-modal-icon">🛡️</span>
+          <span class="legal-modal-icon" id="legal-modal-icon"></span>
           <div class="legal-modal-header-texts">
             <h3 id="legal-modal-heading">سياسة الخصوصية</h3>
             <span class="legal-modal-sub" id="legal-modal-sub">Privacy Policy</span>
@@ -1475,14 +1475,14 @@
 
           <!-- ═══════ Tab: Appearance ═══════ -->
           <div class="settings-panel active" id="settings-panel-appearance">
-            <h3 class="settings-section-title">🎨 المظهر والعرض</h3>
+            <h3 class="settings-section-title"><svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.563C22 6.5 17.5 2 12 2Z"></path></svg><span>المظهر والعرض</span></h3>
 
             <div class="settings-group">
               <label class="settings-label">وضع المظهر</label>
               <div class="settings-radio-group">
-                <label class="settings-radio-pill"><input type="radio" name="s-theme" value="light" onchange="applySetting('theme', 'light')"><span>☀️ فاتح</span></label>
-                <label class="settings-radio-pill"><input type="radio" name="s-theme" value="dark" onchange="applySetting('theme', 'dark')"><span>🌙 داكن</span></label>
-                <label class="settings-radio-pill"><input type="radio" name="s-theme" value="auto" onchange="applySetting('theme', 'auto')"><span>🖥️ تلقائي</span></label>
+                <label class="settings-radio-pill"><input type="radio" name="s-theme" value="light" onchange="applySetting('theme', 'light')"><span><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>فاتح</span></label>
+                <label class="settings-radio-pill"><input type="radio" name="s-theme" value="dark" onchange="applySetting('theme', 'dark')"><span><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>داكن</span></label>
+                <label class="settings-radio-pill"><input type="radio" name="s-theme" value="auto" onchange="applySetting('theme', 'auto')"><span><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><rect width="20" height="14" x="2" y="3" rx="2"></rect><line x1="8" x2="16" y1="21" y2="21"></line><line x1="12" x2="12" y1="17" y2="21"></line></svg>تلقائي</span></label>
               </div>
             </div>
 
@@ -1514,7 +1514,7 @@
 
           <!-- ═══════ Tab: Editor ═══════ -->
           <div class="settings-panel" id="settings-panel-editor">
-            <h3 class="settings-section-title">✍️ إعدادات المحرر</h3>
+            <h3 class="settings-section-title"><svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16"><line x1="4" x2="4" y1="21" y2="14"></line><line x1="4" x2="4" y1="10" y2="3"></line><line x1="12" x2="12" y1="21" y2="12"></line><line x1="12" x2="12" y1="8" y2="3"></line><line x1="20" x2="20" y1="21" y2="16"></line><line x1="20" x2="20" y1="12" y2="3"></line><line x1="1" x2="7" y1="14" y2="14"></line><line x1="9" x2="15" y1="8" y2="8"></line><line x1="17" x2="23" y1="16" y2="16"></line></svg><span>إعدادات المحرر</span></h3>
 
             <div class="settings-group">
               <label class="settings-label">التفاف الأسطر (Word Wrap)</label>
@@ -1553,7 +1553,7 @@
               <div class="settings-radio-group">
                 <label class="settings-radio-pill"><input type="radio" name="s-text-dir" value="rtl" checked onchange="applySetting('textDirection', 'rtl')"><span>→ RTL (عربي)</span></label>
                 <label class="settings-radio-pill"><input type="radio" name="s-text-dir" value="ltr" onchange="applySetting('textDirection', 'ltr')"><span>← LTR (لاتيني)</span></label>
-                <label class="settings-radio-pill"><input type="radio" name="s-text-dir" value="auto" onchange="applySetting('textDirection', 'auto')"><span>🔄 تلقائي</span></label>
+                <label class="settings-radio-pill"><input type="radio" name="s-text-dir" value="auto" onchange="applySetting('textDirection', 'auto')"><span><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>تلقائي</span></label>
               </div>
             </div>
 
@@ -1570,7 +1570,7 @@
 
           <!-- ═══════ Tab: Pronunciation (★ الميزة الرئيسية) ═══════ -->
           <div class="settings-panel" id="settings-panel-pronunciation">
-            <h3 class="settings-section-title">🔊 مساعد التدرب على نطق اللغات</h3>
+            <h3 class="settings-section-title"><svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg><span>مساعد التدرب على نطق اللغات</span></h3>
             <p class="settings-section-desc">عند التفعيل، ستظهر أيقونات نطق بجانب النصوص الأجنبية في المعاينة. هذه الميزة للمشاهدة فقط ولا تؤثر على التصدير.</p>
 
             <!-- Master Toggle -->
@@ -1592,7 +1592,7 @@
 
               <!-- Target Learning Language -->
               <div class="settings-group">
-                <label class="settings-label">🎯 لغة التدرب والتعلم المستهدفة</label>
+                <label class="settings-label"><svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg><span>لغة التدرب والتعلم المستهدفة</span></label>
                 <select class="settings-select" id="s-target-lang" onchange="applySetting('targetLanguage', this.value); updateTargetLangVoiceHint(this.value)">
                   <option value="de-AT">🇦🇹 الألمانية — النمسا (Österreichisch)</option>
                   <option value="de-DE">🇩🇪 الألمانية — ألمانيا (Hochdeutsch)</option>
@@ -1611,14 +1611,14 @@
                   <option value="nl-NL">🇳🇱 الهولندية (Nederlands)</option>
                   <option value="sv-SE">🇸🇪 السويدية (Svenska)</option>
                   <option value="pl-PL">🇵🇱 البولندية (Polski)</option>
-                  <option value="auto" selected>🤖 كشف تلقائي ذكي لجميع اللغات</option>
+                  <option value="auto" selected>كشف تلقائي ذكي لجميع اللغات (Auto-Detect)</option>
                 </select>
                 <p class="settings-hint" id="s-target-lang-hint">الوضع التلقائي: يحاول المتصفح استنتاج لغة كل عبارة تلقائياً بناءً على خصائص الحروف.</p>
               </div>
 
               <!-- Quick Language Switch Shortcuts in Context Menu -->
               <div class="settings-group">
-                <label class="settings-label">⚡ لغات التبديل السريع (في قائمة كليك يمين للسبيكر)</label>
+                <label class="settings-label"><svg class="ui-icon" viewBox="0 0 24 24" width="13" height="13"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg><span>لغات التبديل السريع (في قائمة كليك يمين للسبيكر)</span></label>
                 <p class="settings-hint">اختصاران سريعان يظهران بأعلى قائمة السبيكر للتبديل الفوري إذا أخطأ الكشف التلقائي في تحديد لغة العبارة.</p>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:6px;">
                   <div>
@@ -1680,9 +1680,9 @@
                   <span class="settings-slider-label-end">2.0×</span>
                 </div>
                 <div class="settings-speed-presets">
-                  <button type="button" class="settings-preset-btn" onclick="setSpeedPreset(0.75)">🐢 وضع التدرب (0.75×)</button>
-                  <button type="button" class="settings-preset-btn" onclick="setSpeedPreset(0.85)">🎧 متوسط (0.85×)</button>
-                  <button type="button" class="settings-preset-btn" onclick="setSpeedPreset(1.0)">⚡ سرعة طبيعية (1.0×)</button>
+                  <button type="button" class="settings-preset-btn" onclick="setSpeedPreset(0.75)"><svg class="ui-icon" viewBox="0 0 24 24" width="13" height="13"><path d="m12 14 4-4"></path><path d="M3.34 19a10 10 0 1 1 17.32 0"></path></svg><span>وضع التدرب (0.75×)</span></button>
+                  <button type="button" class="settings-preset-btn" onclick="setSpeedPreset(0.85)"><svg class="ui-icon" viewBox="0 0 24 24" width="13" height="13"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"></path></svg><span>متوسط (0.85×)</span></button>
+                  <button type="button" class="settings-preset-btn" onclick="setSpeedPreset(1.0)"><svg class="ui-icon" viewBox="0 0 24 24" width="13" height="13"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg><span>سرعة طبيعية (1.0×)</span></button>
                 </div>
               </div>
 
@@ -1690,9 +1690,9 @@
               <div class="settings-group">
                 <label class="settings-label">طريقة التفاعل في المعاينة (Preview)</label>
                 <div class="settings-radio-group">
-                  <label class="settings-radio-pill"><input type="radio" name="s-interact-mode" value="mixed" checked onchange="applySetting('interactionMode', 'mixed')"><span>🔊+👆 مختلط (سبيكر للجملة + نقر للكلمة)</span></label>
-                  <label class="settings-radio-pill"><input type="radio" name="s-interact-mode" value="click" onchange="applySetting('interactionMode', 'click')"><span>👆 نقر على الكلمات فقط</span></label>
-                  <label class="settings-radio-pill"><input type="radio" name="s-interact-mode" value="icon" onchange="applySetting('interactionMode', 'icon')"><span>🔊 أيقونة سبيكر فقط</span></label>
+                  <label class="settings-radio-pill"><input type="radio" name="s-interact-mode" value="mixed" checked onchange="applySetting('interactionMode', 'mixed')"><span><svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg> مختلط (سبيكر للجملة + نقر للكلمة)</span></label>
+                  <label class="settings-radio-pill"><input type="radio" name="s-interact-mode" value="click" onchange="applySetting('interactionMode', 'click')"><span><svg class="ui-icon" viewBox="0 0 24 24" width="13" height="13"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path><path d="m13 13 6 6"></path></svg> نقر على الكلمات فقط</span></label>
+                  <label class="settings-radio-pill"><input type="radio" name="s-interact-mode" value="icon" onchange="applySetting('interactionMode', 'icon')"><span><svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg> أيقونة سبيكر فقط</span></label>
                 </div>
               </div>
 
@@ -1704,7 +1704,7 @@
                     <option value="">تحديد الصوت تلقائياً حسب اللغة (موصى به)</option>
                     <!-- populated dynamically from speechSynthesis.getVoices() -->
                   </select>
-                  <button type="button" class="settings-mini-btn" id="s-btn-test-pron" onclick="testPronunciation()" title="اختبار نطق جملة تجريبية">🔊 تجربة الصوت</button>
+                  <button type="button" class="settings-mini-btn" id="s-btn-test-pron" onclick="testPronunciation()" title="اختبار نطق جملة تجريبية"><svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg><span>تجربة الصوت</span></button>
                 </div>
                 <p class="settings-hint" id="s-test-status" style="display:none; color:#6366f1; font-weight:600; margin-top:4px;"></p>
               </div>
@@ -1765,12 +1765,12 @@
 
           <!-- ═══════ Tab: Data & Storage ═══════ -->
           <div class="settings-panel" id="settings-panel-data">
-            <h3 class="settings-section-title">💾 البيانات والتخزين</h3>
+            <h3 class="settings-section-title"><svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg><span>البيانات والتخزين</span></h3>
 
             <div class="settings-group">
               <label class="settings-label">حجم البيانات المستخدم</label>
               <div class="settings-info-box" id="s-storage-info">
-                <span class="settings-info-icon">📊</span>
+                <span class="settings-info-icon"><svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16"><line x1="18" x2="18" y1="20" y2="10"></line><line x1="12" x2="12" y1="20" y2="4"></line><line x1="6" x2="6" y1="20" y2="14"></line></svg></span>
                 <span id="s-storage-used">جارٍ الحساب...</span>
               </div>
             </div>
@@ -1794,7 +1794,7 @@
             </div>
 
             <div class="settings-group settings-danger-zone">
-              <label class="settings-label" style="color: var(--danger-color, #ef4444);">⚠️ منطقة الخطر</label>
+              <label class="settings-label" style="color: var(--danger-color, #ef4444); display:flex; align-items:center; gap:6px;"><svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg><span>منطقة الخطر</span></label>
               <p class="settings-hint">سيتم مسح جميع الإعدادات المحفوظة وإعادتها للقيم الافتراضية.</p>
               <button class="settings-action-btn settings-danger-btn" onclick="resetAllSettings()">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -1805,7 +1805,7 @@
 
           <!-- ═══════ Tab: API Keys ═══════ -->
           <div class="settings-panel" id="settings-panel-api">
-            <h3 class="settings-section-title">🔌 مفاتيح API (للمتقدمين)</h3>
+            <h3 class="settings-section-title"><svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16"><path d="m21 2-2 2m-1.5 1.5L14 9l-2-2-4 4 2 2-3 3H3v-4l7-7 2 2 3.5-3.5Z"></path><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"></circle></svg><span>مفاتيح API (للمتقدمين)</span></h3>
             <p class="settings-section-desc">هذه المفاتيح اختيارية. المحرر يعمل بالكامل بدونها. تُحفظ محلياً فقط ولا تُرسل لأي خادم.</p>
 
             <div class="settings-group">
@@ -1813,8 +1813,8 @@
               <p class="settings-hint">للحصول على جودة نطق عالية (WaveNet). <a href="https://cloud.google.com/text-to-speech/docs/quickstart-client-libraries" target="_blank" rel="noopener">كيف تحصل على المفتاح؟</a></p>
               <div class="settings-api-row">
                 <input type="password" class="settings-input" id="s-google-tts-key" placeholder="AIza..." oninput="applySetting('googleTtsKey', this.value)">
-                <button class="settings-mini-btn" onclick="toggleApiKeyVisibility('s-google-tts-key')" title="إظهار/إخفاء">👁️</button>
-                <button class="settings-mini-btn" onclick="testApiKey('google')" title="اختبار الاتصال">🔗 اختبار</button>
+                <button class="settings-mini-btn" onclick="toggleApiKeyVisibility('s-google-tts-key')" title="إظهار/إخفاء"><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                <button class="settings-mini-btn" onclick="testApiKey('google')" title="اختبار الاتصال"><svg class="ui-icon" viewBox="0 0 24 24" width="13" height="13"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg><span>اختبار</span></button>
               </div>
             </div>
 
@@ -1823,8 +1823,8 @@
               <p class="settings-hint">بديل مجاني مع حدود استخدام. <a href="https://console.groq.com/keys" target="_blank" rel="noopener">الحصول على مفتاح مجاني</a></p>
               <div class="settings-api-row">
                 <input type="password" class="settings-input" id="s-groq-key" placeholder="gsk_..." oninput="applySetting('groqKey', this.value)">
-                <button class="settings-mini-btn" onclick="toggleApiKeyVisibility('s-groq-key')" title="إظهار/إخفاء">👁️</button>
-                <button class="settings-mini-btn" onclick="testApiKey('groq')" title="اختبار الاتصال">🔗 اختبار</button>
+                <button class="settings-mini-btn" onclick="toggleApiKeyVisibility('s-groq-key')" title="إظهار/إخفاء"><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                <button class="settings-mini-btn" onclick="testApiKey('groq')" title="اختبار الاتصال"><svg class="ui-icon" viewBox="0 0 24 24" width="13" height="13"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg><span>اختبار</span></button>
               </div>
             </div>
           </div>
@@ -1851,10 +1851,10 @@
             </div>
 
             <div class="settings-about-meta">
-              <div class="settings-about-row"><span>👨‍💻 المطور</span><span>Vienix / Yaser Hasan</span></div>
-              <div class="settings-about-row"><span>⚖️ الرخصة</span><span>MIT License</span></div>
-              <div class="settings-about-row"><span>📅 سنة النشر</span><span>2026</span></div>
-              <div class="settings-about-row"><span>🌐 يعمل بدون إنترنت</span><span>نعم — 100% أوفلاين ⚡</span></div>
+              <div class="settings-about-row"><span><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>المطور</span><span>Vienix / Yaser Hasan</span></div>
+              <div class="settings-about-row"><span><svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="M7 21h10"></path><path d="M12 3v18"></path><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path></svg>الرخصة</span><span>MIT License</span></div>
+              <div class="settings-about-row"><span><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect><line x1="16" x2="16" y1="2" y2="6"></line><line x1="8" x2="8" y1="2" y2="6"></line><line x1="3" x2="21" y1="10" y2="10"></line></svg>سنة النشر</span><span>2026</span></div>
+              <div class="settings-about-row"><span><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><circle cx="12" cy="12" r="10"></circle><line x1="2" x2="22" y1="12" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>يعمل بدون إنترنت</span><span>نعم — 100% أوفلاين</span></div>
             </div>
           </div>
 
@@ -1885,7 +1885,7 @@
   <script src="assets/icons/twemoji/twemoji_data.js"></script>
 
   <!-- Application Main Script -->
-  <script src="app/js/rtlmd.js?v=obsidian36"></script>
+  <script src="app/js/rtlmd.js?v=obsidian37"></script>
 
 </body>
 </html>
