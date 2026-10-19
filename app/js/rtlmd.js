@@ -1287,6 +1287,12 @@ function exportDocument(format) {
     const previewSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
 
     if (mode === 'editor') {
+      const dock = document.getElementById('floating-dock-wrapper');
+      const panelEditor = document.getElementById('panel-editor');
+      if (dock && panelEditor && dock.parentElement !== panelEditor) {
+        panelEditor.appendChild(dock);
+        dock.classList.remove('in-preview-mode');
+      }
       workspace.classList.add('mode-editor-only');
       if (cycleBtn) {
         cycleBtn.innerHTML = editorSvg;
@@ -7771,7 +7777,9 @@ function exportDocument(format) {
     isWysiwygActive = !isWysiwygActive;
     const btn = document.getElementById('btn-toggle-wysiwyg');
     const previewHeaderBtn = document.getElementById('btn-preview-header-edit');
-    const previewDock = document.getElementById('preview-floating-dock-wrapper');
+    const dock = document.getElementById('floating-dock-wrapper');
+    const panelPreview = document.getElementById('panel-preview');
+    const panelEditor = document.getElementById('panel-editor');
 
     if (isWysiwygActive) {
       // تفعيل وضع التحرير المباشر
@@ -7783,9 +7791,13 @@ function exportDocument(format) {
         previewHeaderBtn.classList.add('active');
         previewHeaderBtn.title = 'إلغاء وضع التحرير المباشر (Edit Preview: ON)';
       }
-      if (previewDock) {
-        previewDock.style.display = 'flex';
+
+      // نقل الكونتينر الأصلي نفسه إلى شاشة المعاينة
+      if (dock && panelPreview) {
+        panelPreview.appendChild(dock);
+        dock.classList.add('in-preview-mode');
       }
+
       previewContent.setAttribute('contenteditable', 'true');
       previewContent.classList.add('preview-editable');
 
@@ -7809,9 +7821,13 @@ function exportDocument(format) {
         previewHeaderBtn.classList.remove('active');
         previewHeaderBtn.title = 'تعديل من واجهة العرض (Edit Preview)';
       }
-      if (previewDock) {
-        previewDock.style.display = 'none';
+
+      // إعادة الكونتينر الأصلي نفسه إلى محرر النصوص
+      if (dock && panelEditor) {
+        panelEditor.appendChild(dock);
+        dock.classList.remove('in-preview-mode');
       }
+
       previewContent.removeAttribute('contenteditable');
       previewContent.classList.remove('preview-editable');
 
