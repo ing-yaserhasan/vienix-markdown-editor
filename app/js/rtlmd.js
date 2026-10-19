@@ -52,6 +52,7 @@
     speechVolume: '1.0',
     interactionMode: 'mixed', // mixed: 🔊 for phrase + click for individual word
     dottedUnderline: true,
+    keepSpeakingOnClick: false, // Default false: clicking preview stops speech automatically
     voiceName: '',
     // API
     googleTtsKey: '',
@@ -8559,6 +8560,9 @@ function exportDocument(format) {
     const dotted = document.getElementById('s-dotted-underline');
     if (dotted) dotted.checked = s.dottedUnderline !== false;
 
+    const keepSpeaking = document.getElementById('s-keep-speaking-on-click');
+    if (keepSpeaking) keepSpeaking.checked = !!s.keepSpeakingOnClick;
+
     // API keys
     const googleKey = document.getElementById('s-google-tts-key');
     if (googleKey) googleKey.value = s.googleTtsKey || '';
@@ -8656,6 +8660,8 @@ function exportDocument(format) {
     const cleanSpeech = text.replace(/[*_#`~[\]()]/g, ' ').replace(/\s+/g, ' ').trim();
     if (!cleanSpeech) return null;
 
+    window._isPronunciationSpeaking = true;
+
     // Chromium safe cancel
     if (speechSynthesis.speaking || speechSynthesis.pending) {
       speechSynthesis.cancel();
@@ -8679,10 +8685,12 @@ function exportDocument(format) {
         window._activeUtterances.push(utterance);
 
         utterance.onstart = () => {
+          window._isPronunciationSpeaking = true;
           if (callbacks.onStart) callbacks.onStart();
         };
 
         const cleanup = () => {
+          window._isPronunciationSpeaking = false;
           const idx = window._activeUtterances.indexOf(utterance);
           if (idx > -1) window._activeUtterances.splice(idx, 1);
         };
@@ -8706,8 +8714,36 @@ function exportDocument(format) {
     }, 35);
   }
 
+  function stopAllPronunciationSpeech() {
+    let wasSpeaking = false;
+    if (window._isPronunciationSpeaking) wasSpeaking = true;
+    window._isPronunciationSpeaking = false;
+    if (typeof speechSynthesis !== 'undefined') {
+      if (speechSynthesis.speaking || speechSynthesis.pending) {
+        wasSpeaking = true;
+      }
+      speechSynthesis.cancel();
+    }
+    if (window._activeUtterances && window._activeUtterances.length > 0) {
+      wasSpeaking = true;
+      window._activeUtterances = [];
+    }
+    const speakingEls = document.querySelectorAll('.pronunciation-speaker-btn.speaking, .pronunciation-word.speaking, #s-btn-test-pron.speaking');
+    if (speakingEls.length > 0) {
+      wasSpeaking = true;
+      speakingEls.forEach(el => el.classList.remove('speaking'));
+    }
+    return wasSpeaking;
+  }
+  window.stopAllPronunciationSpeech = stopAllPronunciationSpeech;
+
   window.speakPronunciation = function (text, btnElement, lang) {
     if (!text) return;
+    if (btnElement && btnElement.classList.contains('speaking')) {
+      stopAllPronunciationSpeech();
+      showToast('تم إيقاف النطق ⏹️', 'info');
+      return;
+    }
     const resolvedLang = lang || (vienixSettings.targetLanguage !== 'auto' ? vienixSettings.targetLanguage : detectLanguage(text));
     speakText(text, resolvedLang, {
       onStart: () => {
@@ -8724,6 +8760,11 @@ function exportDocument(format) {
 
   window.speakWord = function (word, wordElement, lang) {
     if (!word) return;
+    if (wordElement && wordElement.classList.contains('speaking')) {
+      stopAllPronunciationSpeech();
+      showToast('تم إيقاف النطق ⏹️', 'info');
+      return;
+    }
     const resolvedLang = lang || (vienixSettings.targetLanguage !== 'auto' ? vienixSettings.targetLanguage : detectLanguage(word));
     speakText(word, resolvedLang, {
       onStart: () => {
@@ -8763,6 +8804,12 @@ function exportDocument(format) {
     const text = testSamplePhrases[target] || testSamplePhrases['de-AT'] || 'Welcome to Vienix Editor!';
     const btn = document.getElementById('s-btn-test-pron');
     const statusEl = document.getElementById('s-test-status');
+
+    if (btn && btn.classList.contains('speaking')) {
+      stopAllPronunciationSpeech();
+      if (statusEl) statusEl.textContent = '⏹️ تم إيقاف الصوت التجريبي';
+      return;
+    }
 
     if (statusEl) {
       statusEl.style.display = 'block';
@@ -8927,11 +8974,8 @@ function exportDocument(format) {
     // 3. Stop
     menu.querySelector('#pcm-stop').addEventListener('click', (ev) => {
       ev.stopPropagation();
-      if (typeof speechSynthesis !== 'undefined') {
-        speechSynthesis.cancel();
-        if (triggerElement) triggerElement.classList.remove('speaking');
-        showToast('تم إيقاف النطق ⏹️', 'info');
-      }
+      stopAllPronunciationSpeech();
+      showToast('تم إيقاف النطق ⏹️', 'info');
       closePronunciationContextMenu();
     });
 
@@ -9169,6 +9213,33 @@ function exportDocument(format) {
 
       if (hasPronounceable && textNode.parentNode) {
         textNode.parentNode.replaceChild(fragment, textNode);
+      }
+    });
+  }
+
+  // ==========================================================================
+  // PRONUNCIATION — Preview Click to Stop Speech (توقف تلقائي عند النقر بالماوس في ساحة العرض)
+  // ==========================================================================
+  const previewPanel = document.getElementById('panel-preview') || document.getElementById('preview-output');
+  if (previewPanel) {
+    previewPanel.addEventListener('click', function (e) {
+      // If user enabled completing pronunciation to the end, ignore preview clicks
+      if (vienixSettings.keepSpeakingOnClick) return;
+
+      // Ignore clicks on context menu, resize handles, or preview tools
+      if (e.target.closest('.pronunciation-context-menu, .diagram-zoom-controls, .preview-tools, .image-resizer-wrapper')) {
+        return;
+      }
+
+      // If user clicked a speaker button or word, its own handler toggles or starts it
+      if (e.target.closest('.pronunciation-speaker-btn, .pronunciation-word')) {
+        return;
+      }
+
+      // Clicked anywhere else in the preview area: stop speech immediately!
+      const wasSpeaking = stopAllPronunciationSpeech();
+      if (wasSpeaking) {
+        showToast('تم إيقاف النطق ⏹️', 'info');
       }
     });
   }

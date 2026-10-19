@@ -1668,6 +1668,18 @@
                 </div>
               </div>
 
+              <!-- Keep speaking on preview click toggle -->
+              <div class="settings-group">
+                <label class="settings-label">إكمال النطق حتى النهاية عند النقر</label>
+                <div class="settings-toggle-row">
+                  <span class="settings-toggle-desc">مواصلة قراءة العبارة كاملة حتى لو تم النقر بالماوس في ساحة العرض (افتراضياً: غير مفعّل، ويتوقف الصوت تلقائياً عند النقر)</span>
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="s-keep-speaking-on-click" onchange="applySetting('keepSpeakingOnClick', this.checked)">
+                    <span class="settings-toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+
             </div>
           </div>
 
