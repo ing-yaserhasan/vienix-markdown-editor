@@ -9621,23 +9621,31 @@ function exportDocument(format) {
   window.updateGlobalBilingualBtnVisibility = updateGlobalBilingualBtnVisibility;
 
   // السيناريو 1: تبديل كارت الترجمة المنزلق لعبارة محددة (Accordion Push-down)
-  window.toggleInlinePhraseTranslation = async function (btn, boxEl, phraseText, langCode) {
-    if (!btn || !boxEl) return;
+  window.toggleInlinePhraseTranslation = async function (btn, boxEl, phraseText, langCode, isGlobal = false) {
+    if (!boxEl) return;
 
     const isOpen = boxEl.classList.contains('is-open');
 
     if (isOpen) {
       // إغلاق الكارت وسحب النص لأعلى
       boxEl.classList.remove('is-open');
-      btn.classList.remove('is-active');
-      checkAndUpdateGlobalBtnState();
+      if (btn) btn.classList.remove('is-active');
       return;
+    }
+
+    // إذا تم النقر بشكل فردي وليس بالترجمة الشاملة، نغلق أي كروت فردية أخرى مفتوحة
+    if (!isGlobal && !window._isGlobalBilingualActive) {
+      document.querySelectorAll('.inline-translation-box.is-open').forEach(b => {
+        if (b !== boxEl) {
+          b.classList.remove('is-open');
+          if (b._associatedBtn) b._associatedBtn.classList.remove('is-active');
+        }
+      });
     }
 
     // فتح الكارت ودفع النص لأسفل
     boxEl.classList.add('is-open');
-    btn.classList.add('is-active');
-    checkAndUpdateGlobalBtnState();
+    if (btn) btn.classList.add('is-active');
 
     const textEl = boxEl.querySelector('.itb-text');
     const loadEl = boxEl.querySelector('.itb-loading');
@@ -9686,19 +9694,19 @@ function exportDocument(format) {
     const btn = document.getElementById('btn-global-bilingual-trans');
     if (btn) btn.classList.toggle('is-active', active);
 
-    const transBtns = document.querySelectorAll('.pronunciation-trans-btn');
-    transBtns.forEach(b => {
-      const box = b._associatedBox;
-      const phrase = b._associatedPhrase;
-      const lang = b._associatedLang;
-      if (b && box) {
-        const isOpen = box.classList.contains('is-open');
-        if (active && !isOpen) {
-          toggleInlinePhraseTranslation(b, box, phrase, lang);
-        } else if (!active && isOpen) {
-          box.classList.remove('is-open');
-          b.classList.remove('is-active');
-        }
+    // البحث في كافة كروت الترجمة عبر المقال (تعمل دائماً سواء كانت أزرار الترجمة الفردية ظاهرة أو مخفية)
+    const allBoxes = document.querySelectorAll('.inline-translation-box');
+    allBoxes.forEach(box => {
+      const phrase = box._phrase;
+      const lang = (box._wrapper && box._wrapper.getAttribute('data-override-lang')) || box._lang;
+      const associatedBtn = box._associatedBtn;
+      const isOpen = box.classList.contains('is-open');
+
+      if (active && !isOpen) {
+        toggleInlinePhraseTranslation(associatedBtn, box, phrase, lang, true);
+      } else if (!active && isOpen) {
+        box.classList.remove('is-open');
+        if (associatedBtn) associatedBtn.classList.remove('is-active');
       }
     });
 
@@ -9709,16 +9717,24 @@ function exportDocument(format) {
     }
   };
 
-  function checkAndUpdateGlobalBtnState() {
-    const allBoxes = document.querySelectorAll('.inline-translation-box');
-    if (allBoxes.length === 0) return;
-    const openBoxes = document.querySelectorAll('.inline-translation-box.is-open');
-    const allOpen = openBoxes.length === allBoxes.length && allBoxes.length > 0;
-    window._isGlobalBilingualActive = allOpen;
+  // إغلاق كارت الترجمة الفردية تلقائياً عند النقر بالماوس في أي مكان آخر خارج الكارت
+  document.addEventListener('click', function (e) {
+    // في حالة الترجمة الشاملة للمقال، لا تغلق الكروت عند النقر بالماوس (تبقى ثابتة حتى يضغط المستخدم على الأيقونة الشاملة مجدداً)
+    if (window._isGlobalBilingualActive) return;
 
-    const btn = document.getElementById('btn-global-bilingual-trans');
-    if (btn) btn.classList.toggle('is-active', allOpen);
-  }
+    const openBoxes = document.querySelectorAll('.inline-translation-box.is-open');
+    if (openBoxes.length === 0) return;
+
+    openBoxes.forEach(box => {
+      // إذا كان النقر داخل الكارت أو على زر الترجمة الفردي التابع له، نتجاهل
+      if (box.contains(e.target)) return;
+      if (box._associatedBtn && box._associatedBtn.contains(e.target)) return;
+
+      // إغلاق الكارت وسحب النص لأعلى
+      box.classList.remove('is-open');
+      if (box._associatedBtn) box._associatedBtn.classList.remove('is-active');
+    });
+  });
 
   function processPronunciationInPreview() {
     if (!vienixSettings.pronunciationEnabled) return;
@@ -9904,7 +9920,17 @@ function exportDocument(format) {
             phraseWrapper.appendChild(btn);
           }
 
-          // إضافة زر الترجمة المنسدلة للعبارة (文A) وكارت الترجمة الحصري إذا كانت الميزة مفعلة
+          // إنشاء كارت الترجمة المنزلق دائماً لكل عبارة (لدعم الترجمة الشاملة حتى لو تم إطفاء أزرار الترجمة الفردية)
+          const transBox = document.createElement('div');
+          transBox.className = 'inline-translation-box';
+          transBox.setAttribute('dir', 'rtl');
+          transBox.innerHTML = '<div class="itb-loading"><span class="wtb-spinner"></span><span>جارٍ استحضار ترجمة العبارة...</span></div><p class="itb-text" style="display:none;"></p>';
+          transBox._phrase = part.content;
+          transBox._lang = detectedLang;
+          transBox._wrapper = phraseWrapper;
+          transBox._associatedBtn = null;
+
+          // إضافة زر الترجمة الفردي لكل عبارة (文A) فقط إذا كانت الميزة مفعلة في الإعدادات
           if (vienixSettings.inlinePhraseTranslation !== false) {
             const transBtn = document.createElement('button');
             transBtn.type = 'button';
@@ -9913,26 +9939,22 @@ function exportDocument(format) {
             transBtn.setAttribute('aria-label', 'Translate phrase inline');
             transBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>';
 
-            // إنشاء كارت الترجمة المنزلق
-            const transBox = document.createElement('div');
-            transBox.className = 'inline-translation-box';
-            transBox.setAttribute('dir', 'rtl');
-            transBox.innerHTML = '<div class="itb-loading"><span class="wtb-spinner"></span><span>جارٍ استحضار ترجمة العبارة...</span></div><p class="itb-text" style="display:none;"></p>';
-
             transBtn._associatedBox = transBox;
             transBtn._associatedPhrase = part.content;
             transBtn._associatedLang = detectedLang;
+            transBox._associatedBtn = transBtn;
 
             transBtn.addEventListener('click', function (e) {
               e.stopPropagation();
               e.preventDefault();
               const effectiveLang = phraseWrapper.getAttribute('data-override-lang') || detectedLang;
-              toggleInlinePhraseTranslation(transBtn, transBox, part.content, effectiveLang);
+              toggleInlinePhraseTranslation(transBtn, transBox, part.content, effectiveLang, false);
             });
 
             phraseWrapper.appendChild(transBtn);
-            phraseWrapper.appendChild(transBox);
           }
+
+          phraseWrapper.appendChild(transBox);
 
           fragment.appendChild(phraseWrapper);
         }
