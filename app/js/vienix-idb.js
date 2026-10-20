@@ -341,6 +341,9 @@
   // Expose globally
   window.VienixIDB = VienixIDB;
 
+  // Immediate synchronous cache hydration from localStorage so memoryCache is never empty
+  VienixIDB.hydrateFromLocalStorage();
+
   // Immediate database bootstrap
   VienixIDB.openDB();
 

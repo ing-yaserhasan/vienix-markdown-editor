@@ -212,7 +212,14 @@
   }
 
   // Initialize Application
-  function initApplication() {
+  async function initApplication() {
+    if (window.VienixIDB && typeof window.VienixIDB.openDB === 'function') {
+      try {
+        await window.VienixIDB.openDB();
+      } catch (err) {
+        console.warn('[Vienix] IDB bootstrap warning:', err);
+      }
+    }
     loadSettings();
     applyAllSettings();
     initTheme();
@@ -704,9 +711,9 @@ function exportDocument(format) {
       initChambersSystem();
     };
 
-    const saved = getChamberContent(activeChamber);
+    let saved = getChamberContent(activeChamber);
     
-    // تعافي تلقائي وتنظيف أي شوائب قديمة للترجمة من النصوص المحفوظة
+    // تعافي تلقائي وتنظيف أي شوائب قديمة للترجمة من النصوص المحفوظة إن وجدت
     if (saved && (saved.includes('جار استحضار') || saved.includes('جارٍ استحضار'))) {
       saved = saved
         .replace(/<br\s*\/?>\s*<br\s*\/?>\s*جارٍ?\s*استحضار\s*ترجمة\s*العبارة\s*\.\.\.?/gi, '')
@@ -714,17 +721,26 @@ function exportDocument(format) {
       setChamberContent(activeChamber, saved);
     }
 
-    const isOutdatedOrEmpty = !saved || saved.trim().length < 160 || saved.indexOf('Pronunciation Assistant') === -1;
-    if (!isOutdatedOrEmpty) {
-      editor.value = saved;
-      renderMarkdown();
-      finishInit();
-    } else {
-      editor.value = DEFAULT_INIT_CONTENT;
-      setChamberContent(activeChamber, DEFAULT_INIT_CONTENT);
-      renderMarkdown();
-      finishInit();
+    // التحقق مما إذا كان التطبيق قد تم تشغيله سابقاً لدى الزائر
+    const isAppInitialized = getStored('vienix_app_initialized', 'yaser_app_initialized') === 'true';
+
+    // تحميل النموذج التوضيحي يتم حصراً للمستخدم الجديد لأول مرة فقط في الحجرة 1 إذا كانت فارغة تماماً
+    if (!isAppInitialized) {
+      safeSaveToStorage('vienix_app_initialized', 'true');
+      safeSaveToStorage('yaser_app_initialized', 'true');
+      if (activeChamber === 1 && (!saved || saved.trim().length === 0)) {
+        editor.value = DEFAULT_INIT_CONTENT;
+        setChamberContent(1, DEFAULT_INIT_CONTENT);
+        renderMarkdown();
+        finishInit();
+        return;
+      }
     }
+
+    // في جميع الحالات الأخرى: محتوى الحجرة المحفوظ يعرض كما هو بالكامل، ولا يتم مسحه أو استبداله أبداً
+    editor.value = saved || '';
+    renderMarkdown();
+    finishInit();
   }
 
   // Render Markdown with Mermaid & Syntax Highlighting
