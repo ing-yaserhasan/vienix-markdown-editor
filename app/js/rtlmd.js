@@ -2070,19 +2070,11 @@ function exportDocument(format) {
       // 1. إخفاء سهم العودة (>)
       if (navPrevBtn) navPrevBtn.style.display = 'none';
 
-      // 2. رندرة وتحديث الحجرات 1 إلى 7 بسلاسة ودون مسح الـ DOM
+      // 2. رندرة الحجرات 1 إلى 7 بالترتيب الصحيح دائماً
+      listEl.innerHTML = '';
       for (let i = 1; i <= 7; i++) {
-        let btn = document.getElementById('chamber-btn-' + i);
-        if (!btn || btn.parentElement !== listEl) {
-          btn = createChamberButton(i);
-          listEl.appendChild(btn);
-        } else {
-          applyChamberButtonState(btn, i);
-        }
-      }
-      // إزالة أي أزرار زائدة داخل listEl إن وجدت
-      while (listEl.children.length > 7) {
-        listEl.removeChild(listEl.lastChild);
+        const btn = createChamberButton(i);
+        listEl.appendChild(btn);
       }
 
       // 3. فحص الحجرة رقم 8: هل تحتوي على نصوص سابقة؟
