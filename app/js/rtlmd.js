@@ -214,6 +214,18 @@
   let TOTAL_CHAMBERS = getTotalChambers();
   window.VienixGetTotalChambers = () => TOTAL_CHAMBERS;
 
+  // ضمان وجود الحجرة في نطاق العدد الكلي — تُستدعى قبل أي switchChamber
+  function ensureChamberExists(chNum) {
+    chNum = parseInt(chNum, 10);
+    if (isNaN(chNum) || chNum < 1) return false;
+    if (chNum > TOTAL_CHAMBERS) {
+      TOTAL_CHAMBERS = chNum;
+      safeSaveToStorage('vienix_total_chambers', TOTAL_CHAMBERS);
+      safeSaveToStorage('yaser_total_chambers', TOTAL_CHAMBERS);
+    }
+    return true;
+  }
+
   let activeChamber = parseInt(getStored('vienix_active_chamber', 'yaser_active_chamber') || '1', 10);
   if (isNaN(activeChamber) || activeChamber < 1 || activeChamber > TOTAL_CHAMBERS) {
     activeChamber = 1;
@@ -2175,7 +2187,7 @@ function exportDocument(format) {
   // التبديل بين الحجرات بسلاسة وحفظ فوري
   window.switchChamber = function (targetChamber) {
     targetChamber = parseInt(targetChamber, 10);
-    if (isNaN(targetChamber) || targetChamber < 1 || targetChamber > TOTAL_CHAMBERS) return;
+    if (!ensureChamberExists(targetChamber)) return;
     if (targetChamber === activeChamber) return;
 
     // 1. حفظ المحتوى الحالي في الحجرة المغادرة
@@ -3111,7 +3123,7 @@ function exportDocument(format) {
   // ==========================================
   function getFolderOverrides() {
     try {
-      const saved = localStorage.getItem('vienix_folder_name_overrides');
+      const saved = getStored('vienix_folder_name_overrides');
       if (saved) return JSON.parse(saved);
     } catch (e) {}
     return {};
@@ -3119,7 +3131,7 @@ function exportDocument(format) {
 
   function saveFolderOverrides(overrides) {
     try {
-      localStorage.setItem('vienix_folder_name_overrides', JSON.stringify(overrides));
+      safeSaveToStorage('vienix_folder_name_overrides', JSON.stringify(overrides));
     } catch (e) {}
   }
 
@@ -3129,7 +3141,7 @@ function exportDocument(format) {
 
   function getFolderFiles(folderKey) {
     try {
-      const saved = localStorage.getItem('vienix_folder_files_' + folderKey);
+      const saved = getStored('vienix_folder_files_' + folderKey);
       if (saved) return JSON.parse(saved);
     } catch (e) {}
     return [];
@@ -3137,7 +3149,7 @@ function exportDocument(format) {
 
   function saveFolderFiles(folderKey, files) {
     try {
-      localStorage.setItem('vienix_folder_files_' + folderKey, JSON.stringify(files));
+      safeSaveToStorage('vienix_folder_files_' + folderKey, JSON.stringify(files));
     } catch (e) {}
   }
 
@@ -3145,7 +3157,7 @@ function exportDocument(format) {
   function getNextFolderFileNum(folderKey) {
     const files = getFolderFiles(folderKey);
     let maxNum = 0;
-    for (let ch = 1; ch <= 7; ch++) {
+    for (let ch = 1; ch <= TOTAL_CHAMBERS; ch++) {
       const meta = getChamberMeta(ch);
       const chFolder = meta.folder || (ch <= 7 ? 'book' : 'drafts');
       if (chFolder === folderKey && ch > maxNum) {
@@ -3164,7 +3176,7 @@ function exportDocument(format) {
   function resequenceFolderFiles(folderKey, files) {
     if (!files || !Array.isArray(files) || files.length === 0) return files;
     let maxChamberNum = 0;
-    for (let ch = 1; ch <= 7; ch++) {
+    for (let ch = 1; ch <= TOTAL_CHAMBERS; ch++) {
       const meta = getChamberMeta(ch);
       const chFolder = meta.folder || (ch <= 7 ? 'book' : 'drafts');
       if (chFolder === folderKey && ch > maxChamberNum) {
@@ -4017,10 +4029,18 @@ function exportDocument(format) {
 
   function getChambersOrder() {
     try {
-      const saved = localStorage.getItem('vienix_chambers_order');
+      const saved = getStored('vienix_chambers_order');
       if (saved) {
         const arr = JSON.parse(saved);
-        if (Array.isArray(arr) && arr.length === TOTAL_CHAMBERS) return arr;
+        if (Array.isArray(arr) && arr.length > 0) {
+          // إضافة الحجرات الجديدة التي لم تكن في الترتيب المحفوظ
+          for (let i = 1; i <= TOTAL_CHAMBERS; i++) {
+            if (!arr.includes(i)) arr.push(i);
+          }
+          // إزالة الحجرات المحذوفة التي تتجاوز النطاق
+          const filtered = arr.filter(n => n >= 1 && n <= TOTAL_CHAMBERS);
+          if (filtered.length === TOTAL_CHAMBERS) return filtered;
+        }
       }
     } catch (e) {}
     const defOrder = [];
@@ -4030,7 +4050,7 @@ function exportDocument(format) {
 
   function saveChambersOrder(order) {
     try {
-      localStorage.setItem('vienix_chambers_order', JSON.stringify(order));
+      safeSaveToStorage('vienix_chambers_order', JSON.stringify(order));
     } catch (e) {}
   }
 
@@ -5053,20 +5073,36 @@ function exportDocument(format) {
         return;
       }
 
-      setChamberContent(chNum, text);
-      updateChamberMetaStats(chNum);
-      updateChambersUI();
-      if (typeof renderChambersExplorerTree === 'function') {
-        renderChambersExplorerTree();
-      }
+      const applyPaste = (finalContent) => {
+        setChamberContent(chNum, finalContent);
+        updateChamberMetaStats(chNum);
+        updateChambersUI();
+        if (typeof renderChambersExplorerTree === 'function') {
+          renderChambersExplorerTree();
+        }
+        if (chNum === activeChamber) {
+          if (typeof editor !== 'undefined' && editor) editor.value = finalContent;
+          if (typeof classicEditor !== 'undefined' && classicEditor) classicEditor.value = finalContent;
+          if (isClassicMode) { if (typeof renderClassicMarkdown === 'function') renderClassicMarkdown(); }
+          else { if (typeof renderMarkdown === 'function') renderMarkdown(); }
+        }
+        showToast(`تم لصق المحتوى في الحجرة ${chNum} بنجاح! 📋`, 'success', 1600);
+      };
 
-      if (chNum === activeChamber) {
-        if (typeof editor !== 'undefined' && editor) editor.value = text;
-        if (typeof classicEditor !== 'undefined' && classicEditor) classicEditor.value = text;
-        if (typeof updateMarkdownPreview === 'function') updateMarkdownPreview();
+      const existing = getChamberContent(chNum).trim();
+      if (existing.length > 0) {
+        // الحجرة ممتلئة — نسأل المستخدم: استبدال أم إلحاق؟
+        const title = getChamberTitle(chNum);
+        const replace = confirm(`الحجرة ${chNum} (${title}) تحتوي على نص بالفعل.\n\n• اضغط "موافق" لاستبدال المحتوى بالكامل\n• اضغط "إلغاء" لإلحاق النص الجديد في النهاية`);
+        if (replace) {
+          applyPaste(text);
+        } else {
+          applyPaste(getChamberContent(chNum) + '\n\n' + text);
+        }
+      } else {
+        // الحجرة فارغة — لصق مباشر
+        applyPaste(text);
       }
-
-      showToast(`تم لصق المحتوى في الحجرة ${chNum} بنجاح! 📋`, 'success', 1600);
     } catch (err) {
       showToast('يرجى السماح بصلاحية اللصق في المتصفح', 'error', 2000);
     }
