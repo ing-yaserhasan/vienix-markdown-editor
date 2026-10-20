@@ -18,6 +18,7 @@
   const DRIVE_FOLDER_NAME = 'Vienix Notes';
   const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
   const GIS_SDK_URL = 'https://accounts.google.com/gsi/client';
+  const DEFAULT_CLIENT_ID = '910465707186-ku2139v0blb6m9pkomehfc1dmdnp9lv5.apps.googleusercontent.com';
 
   let tokenClient = null;
   let autoSyncDebounceTimer = null;
@@ -30,7 +31,7 @@
     isSyncing: false,
     lastSyncTime: null,
     autoSyncEnabled: true,
-    clientId: localStorage.getItem('vienix_google_client_id') || '',
+    clientId: localStorage.getItem('vienix_google_client_id') || DEFAULT_CLIENT_ID,
 
     // ─────────────────────────────────────────────────────────────
     // 1. INITIALIZATION & SDK LOADER
@@ -131,35 +132,12 @@
     // ─────────────────────────────────────────────────────────────
     connect: function () {
       if (!this.clientId) {
-        if (window.VienixStorage && typeof window.VienixStorage.showCustomModal === 'function') {
-          window.VienixStorage.showCustomModal({
-            title: 'مطلوب معرّف العميل (Google Client ID) 🔑',
-            icon: 'ℹ️',
-            content: `
-              <p style="margin-bottom:12px; color:var(--text-secondary);">لضمان خصوصيتك 100% وتفادي قيود الحصص المشتركة، يرجى إدخال Google OAuth Client ID الخاص بك:</p>
-              <div style="margin-bottom:12px;">
-                <input type="text" id="modal-client-id-input" class="settings-input" placeholder="xxxx.apps.googleusercontent.com" style="width:100%; direction:ltr;" value="${this.clientId}">
-              </div>
-              <p style="font-size:0.78rem; color:var(--text-muted); line-height:1.6;">
-                💡 لا تملك Client ID بعد؟ يمكنك إنشاء واحد مجاناً خلال دقيقتين عبر <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:var(--accent-color); font-weight:600;">Google Cloud Console</a> باختيار Web Application وإضافة نطاق موقعك.
-              </p>
-            `,
-            confirmText: 'حفظ ومتابعة تسجيل الدخول',
-            onConfirm: () => {
-              const input = document.getElementById('modal-client-id-input');
-              if (input && input.value.trim()) {
-                this.setClientId(input.value.trim());
-                setTimeout(() => { this.connect(); }, 400);
-              }
-            }
-          });
-        } else {
-          const id = prompt('أدخل Google Client ID الخاص بك:');
-          if (id) {
-            this.setClientId(id);
-            this.connect();
-          }
-        }
+        this.clientId = DEFAULT_CLIENT_ID;
+      }
+
+      if (!window.google || !window.google.accounts) {
+        this.loadGoogleSDK();
+        setTimeout(() => { this.connect(); }, 400);
         return;
       }
 
@@ -171,6 +149,14 @@
         tokenClient.requestAccessToken({ prompt: this.accessToken ? '' : 'select_account' });
       } else {
         alert('تعذر تحميل واجهة Google Identity Services. تأكد من اتصالك بالإنترنت.');
+      }
+    },
+
+    handleCloudBtnClick: function () {
+      if (!this.accessToken) {
+        this.connect();
+      } else {
+        this.syncAllToDrive();
       }
     },
 
@@ -598,19 +584,6 @@
             </p>
           </div>
         ` : ''}
-
-        <!-- Advanced Client ID Configuration -->
-        <div class="settings-group" style="margin-top:20px; border-top:1px solid var(--border-color); padding-top:16px;">
-          <label class="settings-label" style="display:flex; align-items:center; justify-content:space-between;">
-            <span>معرّف تطبيق Google (Client ID)</span>
-            <span style="font-size:0.72rem; color:var(--text-muted); font-weight:normal;">للمطورين والمتقدمين</span>
-          </label>
-          <p class="settings-hint">يمكنك استخدام Client ID مخصص لك للتحكم الكامل بصلاحيات الوصول.</p>
-          <div style="display:flex; gap:8px;">
-            <input type="text" class="settings-input" id="s-google-client-id" value="${this.clientId}" placeholder="xxxx.apps.googleusercontent.com" style="direction:ltr; font-family:monospace; font-size:0.8rem; flex:1;" onchange="VienixDrive.setClientId(this.value)">
-            <button class="settings-mini-btn" onclick="VienixDrive.setClientId(document.getElementById('s-google-client-id').value)">حفظ</button>
-          </div>
-        </div>
       `;
     }
   };
