@@ -141,6 +141,63 @@ bdi, .bidi-isolate {
   unicode-bidi: isolate;
 }
 
+/* 1. تخصيص لون تظليل النصوص الفاخر (Text Selection) */
+::selection {
+  background: rgba(59, 130, 246, 0.22);
+  color: inherit;
+}
+
+::-moz-selection {
+  background: rgba(59, 130, 246, 0.22);
+  color: inherit;
+}
+
+[data-theme="dark"] ::selection {
+  background: rgba(59, 130, 246, 0.35);
+  color: inherit;
+}
+
+[data-theme="dark"] ::-moz-selection {
+  background: rgba(59, 130, 246, 0.35);
+  color: inherit;
+}
+
+/* تظليل نصوص الأكواد البرمجية */
+pre code::selection,
+pre::selection {
+  background: rgba(59, 130, 246, 0.45);
+  color: #ffffff;
+}
+
+/* 2. تحسين مظهر التركيز والتنقل النظيف (Focus-Visible) */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-color, #3b82f6);
+  outline-offset: 2px;
+}
+
+/* استثناء حقول الإدخال ومحرر النصوص من الإطار المزدوج */
+.editor-textarea:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+/* 3. احترام تفضيلات المستخدم لتقليل الحركة (Accessibility & Reduced Motion) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* App Container */
 .app-wrapper {
   display: flex;
