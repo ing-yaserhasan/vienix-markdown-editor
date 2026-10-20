@@ -3557,28 +3557,7 @@ function exportDocument(format) {
     const targetCh = (typeof file.num === 'number' && file.num >= 1) ? file.num : 8;
     ensureChamberExists(targetCh);
 
-    // 2. حماية محتوى الحجرة 8 المستقل من الضياع عند فتح ملف مستكشف
-    if (targetCh === 8) {
-      const currentCh8Content = getChamberContent(8).trim();
-      const isCurrentlyExplorerFile = !!(activeExplorerFile && activeExplorerFile.fileId);
-      const isSameFile = isCurrentlyExplorerFile && activeExplorerFile.fileId === fileId;
-
-      if (currentCh8Content.length > 0 && !isSameFile && !isCurrentlyExplorerFile) {
-        // الحجرة 8 تحتوي على محتوى مستقل (ليس ملف مستكشف) — نحفظه تلقائياً في حجرة جديدة
-        const newCh = TOTAL_CHAMBERS + 1;
-        ensureChamberExists(newCh);
-        setChamberContent(newCh, currentCh8Content);
-        const oldMeta = getChamberMeta(8);
-        const savedTitle = oldMeta.customTitle || getChamberTitle(8);
-        setChamberCustomTitle(newCh, savedTitle);
-        const newMeta = getChamberMeta(newCh);
-        newMeta.folder = oldMeta.folder || 'drafts';
-        saveChamberMeta(newCh, newMeta);
-        showToast(`تم حفظ محتوى الحجرة 8 تلقائياً في الحجرة ${newCh} 💾`, 'info', 2000);
-      }
-    }
-
-    // 3. تحديد بيانات الملف المعروض حالياً
+    // 2. تحديد بيانات الملف المعروض حالياً
     activeExplorerFile = {
       folderKey: folderKey,
       fileId: file.id,
@@ -3588,13 +3567,13 @@ function exportDocument(format) {
       safeSaveToStorage('vienix_active_explorer_file', JSON.stringify(activeExplorerFile));
     } catch (e) {}
 
-    // 4. تحميل محتوى الملف في الحجرة دائماً (وليس فقط عند فراغها)
+    // 3. تحميل محتوى الملف في الحجرة دائماً
     if (file.content) {
       setChamberContent(targetCh, file.content);
     }
     setChamberCustomTitle(targetCh, file.title || ('ملف ' + targetCh));
 
-    // 5. التبديل إلى الحجرة المستهدفة مباشرة
+    // 4. التبديل إلى الحجرة المستهدفة مباشرة
     window.switchChamber(targetCh);
     showToast(`تم الانتقال إلى "${file.title}" (حجرة ${targetCh}) 🟢`, 'info', 1400);
   };
