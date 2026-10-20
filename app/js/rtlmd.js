@@ -687,6 +687,15 @@ function exportDocument(format) {
     };
 
     const saved = getChamberContent(activeChamber);
+    
+    // تعافي تلقائي وتنظيف أي شوائب قديمة للترجمة من النصوص المحفوظة
+    if (saved && (saved.includes('جار استحضار') || saved.includes('جارٍ استحضار'))) {
+      saved = saved
+        .replace(/<br\s*\/?>\s*<br\s*\/?>\s*جارٍ?\s*استحضار\s*ترجمة\s*العبارة\s*\.\.\.?/gi, '')
+        .replace(/جارٍ?\s*استحضار\s*ترجمة\s*العبارة\s*\.\.\.?/gi, '');
+      setChamberContent(activeChamber, saved);
+    }
+
     const isOutdatedOrEmpty = !saved || saved.trim().length < 160 || saved.indexOf('Pronunciation Assistant') === -1;
     if (!isOutdatedOrEmpty) {
       editor.value = saved;
@@ -7619,7 +7628,7 @@ function exportDocument(format) {
       }
     });
 
-    // قاعدة تجريد عناصر واجهة المستخدم الداخلية (أزرار الزوم، أزرار النسخ، ومقابض التحجيم)
+    // قاعدة تجريد عناصر واجهة المستخدم الداخلية (أزرار الزوم، أزرار النسخ، ومقابض التحجيم، وكروت النطق والترجمة)
     turndownService.addRule('stripInternalUIElements', {
       filter: function (node) {
         return (
@@ -7627,11 +7636,33 @@ function exportDocument(format) {
           (node.classList.contains('diagram-zoom-controls') ||
            node.classList.contains('code-copy-btn') ||
            node.classList.contains('img-resize-handle') ||
-           node.classList.contains('image-action-overlay'))
+           node.classList.contains('image-action-overlay') ||
+           node.classList.contains('pronunciation-speaker-btn') ||
+           node.classList.contains('pronunciation-trans-btn') ||
+           node.classList.contains('inline-translation-box') ||
+           node.classList.contains('pronunciation-floating-pill') ||
+           node.classList.contains('word-trans-bubble') ||
+           node.classList.contains('itb-loading') ||
+           node.classList.contains('itb-text') ||
+           node.classList.contains('bilingual-trans-tag'))
         );
       },
       replacement: function () {
         return '';
+      }
+    });
+
+    // قاعدة تفكيك وسوم النطق والترجمة لاسترجاع النص الصافي بدون أي وسوم
+    turndownService.addRule('unwrapPronunciation', {
+      filter: function (node) {
+        return (
+          node.nodeName === 'SPAN' &&
+          node.classList &&
+          (node.classList.contains('pronunciation-phrase') || node.classList.contains('pronunciation-word'))
+        );
+      },
+      replacement: function (content) {
+        return content;
       }
     });
 
@@ -7715,16 +7746,30 @@ function exportDocument(format) {
         // نسخ مؤقت لشجرة العناصر لتنظيفها قبل التحويل
         const clone = previewContent.cloneNode(true);
 
-        // إزالة أزرار الزوم والنسخ ومقابض التحجيم من النسخة
+        // إزالة أزرار الزوم والنسخ ومقابض التحجيم وكافة كروت وملحقات الترجمة والنطق
         clone.querySelectorAll(
-          '.diagram-zoom-controls, .code-copy-btn, .img-resize-handle, .image-action-overlay'
+          '.diagram-zoom-controls, .code-copy-btn, .img-resize-handle, .image-action-overlay, ' +
+          '.pronunciation-speaker-btn, .pronunciation-trans-btn, .inline-translation-box, ' +
+          '.pronunciation-floating-pill, .word-trans-bubble, .itb-loading, .itb-text, .bilingual-trans-tag'
         ).forEach(el => el.remove());
+
+        // تفكيك واستخراج النصوص الصافية من وسوم النطق لضمان عدم تسرب أي وسوم أو أكواد للماركداون
+        clone.querySelectorAll('.pronunciation-phrase, .pronunciation-word').forEach(span => {
+          const parent = span.parentNode;
+          if (!parent) return;
+          while (span.firstChild) {
+            parent.insertBefore(span.firstChild, span);
+          }
+          parent.removeChild(span);
+        });
 
         // تحويل شجرة HTML إلى نصوص ماركداون دقيقة
         let md = turndownService.turndown(clone.innerHTML);
 
-        // توحيد فواصل الأسطر
-        md = md.replace(/\r\n/g, '\n');
+        // تنظيف أي شوائب قديمة للترجمة أو فواصل زائدة
+        md = md.replace(/<br\s*\/?>\s*<br\s*\/?>\s*جارٍ?\s*استحضار\s*ترجمة\s*العبارة\s*\.\.\.?/gi, '')
+               .replace(/جارٍ?\s*استحضار\s*ترجمة\s*العبارة\s*\.\.\.?/gi, '')
+               .replace(/\r\n/g, '\n');
 
         // تحديث محرر النصوص بدون وميض
         editor.value = md;
@@ -9985,6 +10030,8 @@ function exportDocument(format) {
           const phraseWrapper = document.createElement('span');
           phraseWrapper.className = 'pronunciation-phrase';
           phraseWrapper.setAttribute('dir', 'ltr');
+          phraseWrapper.setAttribute('data-phrase', part.content);
+          phraseWrapper.setAttribute('data-lang', detectedLang);
 
           // Split phrase into word tokens and separators
           const tokens = part.content.match(/([\p{L}\p{N}\-']+|[^\p{L}\p{N}\-']+)/gu) || [part.content];
@@ -10014,125 +10061,6 @@ function exportDocument(format) {
             }
           });
 
-          // Speaker icon button for phrase pronunciation
-          if (mode === 'icon' || mode === 'mixed') {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'pronunciation-speaker-btn';
-            btn.title = `🔊 استمع للعبارة كاملة: ${part.content} (نقر مطول أو زر يمين للخيارات)`;
-            btn.setAttribute('aria-label', `Listen to ${part.content}`);
-            btn.innerHTML = speakerSvg;
-
-            // Long-press detection on touch screens (Mobile/Tablet)
-            let longPressTimer = null;
-            let touchStartX = 0;
-            let touchStartY = 0;
-            let hasTriggeredLongPress = false;
-
-            btn.addEventListener('touchstart', function (e) {
-              hasTriggeredLongPress = false;
-              if (e.touches && e.touches.length === 1) {
-                touchStartX = e.touches[0].clientX;
-                touchStartY = e.touches[0].clientY;
-                longPressTimer = setTimeout(() => {
-                  hasTriggeredLongPress = true;
-                  if (navigator.vibrate) {
-                    try { navigator.vibrate(40); } catch (_) {}
-                  }
-                  openPronunciationContextMenu(
-                    { clientX: touchStartX, clientY: touchStartY },
-                    part.content,
-                    detectedLang,
-                    btn
-                  );
-                }, 450); // 450ms long-press hold
-              }
-            }, { passive: true });
-
-            btn.addEventListener('touchmove', function (e) {
-              if (longPressTimer && e.touches && e.touches.length === 1) {
-                const diffX = Math.abs(e.touches[0].clientX - touchStartX);
-                const diffY = Math.abs(e.touches[0].clientY - touchStartY);
-                if (diffX > 10 || diffY > 10) {
-                  clearTimeout(longPressTimer);
-                  longPressTimer = null;
-                }
-              }
-            }, { passive: true });
-
-            btn.addEventListener('touchend', function () {
-              if (longPressTimer) {
-                clearTimeout(longPressTimer);
-                longPressTimer = null;
-              }
-            });
-
-            btn.addEventListener('touchcancel', function () {
-              if (longPressTimer) {
-                clearTimeout(longPressTimer);
-                longPressTimer = null;
-              }
-            });
-
-            // Regular click/tap on speaker icon
-            btn.addEventListener('click', function (e) {
-              e.stopPropagation();
-              e.preventDefault();
-              if (hasTriggeredLongPress) {
-                hasTriggeredLongPress = false;
-                return; // Suppress regular click if long-press just opened the menu
-              }
-              const effectiveLang = this.getAttribute('data-override-lang') || this.getAttribute('data-lang') || detectedLang;
-              speakPronunciation(part.content, this, effectiveLang);
-            });
-
-            // Right-click context menu on desktop
-            btn.addEventListener('contextmenu', function (e) {
-              e.stopPropagation();
-              e.preventDefault();
-              const effectiveLang = this.getAttribute('data-override-lang') || this.getAttribute('data-lang') || detectedLang;
-              openPronunciationContextMenu(e, part.content, effectiveLang, this);
-            });
-
-            phraseWrapper.appendChild(btn);
-          }
-
-          // إنشاء كارت الترجمة المنزلق دائماً لكل عبارة (لدعم الترجمة الشاملة حتى لو تم إطفاء أزرار الترجمة الفردية)
-          const transBox = document.createElement('div');
-          transBox.className = 'inline-translation-box';
-          transBox.setAttribute('dir', 'rtl');
-          transBox.innerHTML = '<div class="itb-loading"><span class="wtb-spinner"></span><span>جارٍ استحضار ترجمة العبارة...</span></div><p class="itb-text" style="display:none;"></p>';
-          transBox._phrase = part.content;
-          transBox._lang = detectedLang;
-          transBox._wrapper = phraseWrapper;
-          transBox._associatedBtn = null;
-
-          // إضافة زر الترجمة الفردي لكل عبارة (文A) فقط إذا كانت الميزة مفعلة في الإعدادات
-          if (vienixSettings.inlinePhraseTranslation !== false) {
-            const transBtn = document.createElement('button');
-            transBtn.type = 'button';
-            transBtn.className = 'pronunciation-trans-btn';
-            transBtn.title = 'ترجمة العبارة وعرضها بالأسفل (دفع النص)';
-            transBtn.setAttribute('aria-label', 'Translate phrase inline');
-            transBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>';
-
-            transBtn._associatedBox = transBox;
-            transBtn._associatedPhrase = part.content;
-            transBtn._associatedLang = detectedLang;
-            transBox._associatedBtn = transBtn;
-
-            transBtn.addEventListener('click', function (e) {
-              e.stopPropagation();
-              e.preventDefault();
-              const effectiveLang = phraseWrapper.getAttribute('data-override-lang') || detectedLang;
-              toggleInlinePhraseTranslation(transBtn, transBox, part.content, effectiveLang, false);
-            });
-
-            phraseWrapper.appendChild(transBtn);
-          }
-
-          phraseWrapper.appendChild(transBox);
-
           fragment.appendChild(phraseWrapper);
         }
       });
@@ -10142,6 +10070,167 @@ function exportDocument(format) {
       }
     });
   }
+
+
+  // ==========================================================================
+  // FLOATING PRONUNCIATION & TRANSLATION PILL (عنصر عائم طافٍ لا يؤثر في المحتوى)
+  // ==========================================================================
+  let floatingPillEl = null;
+  let pillHideTimer = null;
+  let activePillPhraseEl = null;
+
+  function getOrCreateFloatingPill() {
+    if (floatingPillEl) return floatingPillEl;
+
+    floatingPillEl = document.createElement('div');
+    floatingPillEl.className = 'pronunciation-floating-pill';
+    floatingPillEl.id = 'pronunciation-floating-pill';
+    floatingPillEl.setAttribute('dir', 'ltr');
+
+    floatingPillEl.innerHTML = `
+      <button type="button" class="pfp-btn pfp-speak" id="pfp-btn-speak" title="🔊 استمع للعبارة كاملة">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+        <span>نطق</span>
+      </button>
+      <button type="button" class="pfp-btn pfp-trans" id="pfp-btn-trans" title="🌐 ترجمة فورية">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>
+        <span>ترجمة</span>
+      </button>
+      <button type="button" class="pfp-btn pfp-slow" id="pfp-btn-slow" title="🐢 نطق بطيء (0.6×)">
+        <span>0.6×</span>
+      </button>
+      <button type="button" class="pfp-btn pfp-more" id="pfp-btn-more" title="⚙️ خيارات ولهجات">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="1.5"></circle><circle cx="19" cy="12" r="1.5"></circle><circle cx="5" cy="12" r="1.5"></circle></svg>
+      </button>
+    `;
+
+    document.body.appendChild(floatingPillEl);
+
+    // Keep pill visible when cursor enters the pill
+    floatingPillEl.addEventListener('mouseenter', () => {
+      clearTimeout(pillHideTimer);
+    });
+
+    floatingPillEl.addEventListener('mouseleave', () => {
+      scheduleHideFloatingPill();
+    });
+
+    // Speak button
+    const speakBtn = floatingPillEl.querySelector('#pfp-btn-speak');
+    if (speakBtn) {
+      speakBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!activePillPhraseEl) return;
+        const phrase = activePillPhraseEl.getAttribute('data-phrase');
+        const lang = activePillPhraseEl.getAttribute('data-override-lang') || activePillPhraseEl.getAttribute('data-lang');
+        speakPronunciation(phrase, speakBtn, lang);
+      });
+    }
+
+    // Translate button (opens the instant floating translation bubble)
+    const transBtn = floatingPillEl.querySelector('#pfp-btn-trans');
+    if (transBtn) {
+      transBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!activePillPhraseEl) return;
+        const phrase = activePillPhraseEl.getAttribute('data-phrase');
+        const lang = activePillPhraseEl.getAttribute('data-override-lang') || activePillPhraseEl.getAttribute('data-lang');
+        showWordTranslationBubble(activePillPhraseEl, phrase, lang);
+      });
+    }
+
+    // Slow speech button
+    const slowBtn = floatingPillEl.querySelector('#pfp-btn-slow');
+    if (slowBtn) {
+      slowBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!activePillPhraseEl) return;
+        const phrase = activePillPhraseEl.getAttribute('data-phrase');
+        const lang = activePillPhraseEl.getAttribute('data-override-lang') || activePillPhraseEl.getAttribute('data-lang');
+        speakText(phrase, lang, { rateOverride: 0.6 });
+        slowBtn.classList.add('playing');
+        setTimeout(() => slowBtn.classList.remove('playing'), 1200);
+      });
+    }
+
+    // Context menu / dialect options button
+    const moreBtn = floatingPillEl.querySelector('#pfp-btn-more');
+    if (moreBtn) {
+      moreBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!activePillPhraseEl) return;
+        const phrase = activePillPhraseEl.getAttribute('data-phrase');
+        const lang = activePillPhraseEl.getAttribute('data-override-lang') || activePillPhraseEl.getAttribute('data-lang');
+        openPronunciationContextMenu(e, phrase, lang, activePillPhraseEl);
+      });
+    }
+
+    return floatingPillEl;
+  }
+
+  function showFloatingPillForPhrase(phraseEl) {
+    if (!phraseEl) return;
+    clearTimeout(pillHideTimer);
+    activePillPhraseEl = phraseEl;
+
+    const pill = getOrCreateFloatingPill();
+    const rect = phraseEl.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return;
+
+    pill.style.display = 'inline-flex';
+    const pillWidth = pill.offsetWidth || 180;
+    const pillHeight = pill.offsetHeight || 32;
+
+    let top = rect.top - pillHeight - 6;
+    if (top < 10) {
+      top = rect.bottom + 6;
+    }
+
+    let left = rect.left + (rect.width / 2) - (pillWidth / 2);
+    if (left < 10) left = 10;
+    if (left + pillWidth > window.innerWidth - 10) {
+      left = window.innerWidth - 10 - pillWidth;
+    }
+
+    pill.style.top = `${top}px`;
+    pill.style.left = `${left}px`;
+    pill.classList.add('is-visible');
+  }
+
+  function scheduleHideFloatingPill() {
+    clearTimeout(pillHideTimer);
+    pillHideTimer = setTimeout(() => {
+      if (floatingPillEl) {
+        floatingPillEl.classList.remove('is-visible');
+        floatingPillEl.style.display = 'none';
+        activePillPhraseEl = null;
+      }
+    }, 220);
+  }
+
+  // Preview Hover Event Delegation for Floating Pill
+  if (typeof previewContent !== 'undefined' && previewContent) {
+    previewContent.addEventListener('mouseover', (e) => {
+      const phrase = e.target.closest('.pronunciation-phrase');
+      if (phrase) {
+        showFloatingPillForPhrase(phrase);
+      } else if (!e.target.closest('#pronunciation-floating-pill')) {
+        scheduleHideFloatingPill();
+      }
+    });
+
+    previewContent.addEventListener('mouseleave', () => {
+      scheduleHideFloatingPill();
+    });
+
+    previewContent.addEventListener('scroll', () => {
+      scheduleHideFloatingPill();
+    }, { passive: true });
+  }
+
+  window.addEventListener('scroll', () => {
+    scheduleHideFloatingPill();
+  }, { passive: true });
 
   // ==========================================================================
   // PRONUNCIATION — Preview Click to Stop Speech (توقف تلقائي عند النقر بالماوس في ساحة العرض)

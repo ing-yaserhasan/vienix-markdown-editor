@@ -6919,118 +6919,139 @@ body.is-resizing-workspace .workspace-resizer {
 
 
 /* =========================================================
-   نظام الترجمة المزدوجة المنسدلة (Bilingual Translation System)
+   نظام النطق والترجمة الطافي (Floating Pronunciation & Translation Pill)
+   عناصر طافية عائمة لا تؤثر في المحتوى ولا تشوه الماركداون
    ========================================================= */
 
-/* 1. زر الترجمة الفردي لكل عبارة (文A) */
-.pronunciation-trans-btn {
+.pronunciation-floating-pill {
+  position: fixed;
+  z-index: 10000;
+  display: none;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  border-radius: 9999px;
+  box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.15), 0 3px 8px -2px rgba(15, 23, 42, 0.08);
+  opacity: 0;
+  transform: translateY(4px) scale(0.96);
+  transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+  user-select: none;
+  direction: ltr;
+}
+
+[data-theme="dark"] .pronunciation-floating-pill {
+  background: rgba(15, 23, 42, 0.94);
+  border-color: rgba(99, 102, 241, 0.45);
+  box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.pronunciation-floating-pill.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.pfp-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  margin: 0 3px;
-  padding: 0;
-  background: var(--bg-hover, #f1f5f9);
-  border: 1px solid var(--border-color, #cbd5e1);
-  border-radius: 6px;
-  color: var(--text-secondary, #475569);
+  gap: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary, #0f172a);
+  font-family: var(--font-arabic, sans-serif);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 9999px;
   cursor: pointer;
-  vertical-align: middle;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-  user-select: none;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.12s ease;
   line-height: 1;
 }
 
-.pronunciation-trans-btn:hover {
-  background: #ecfdf5;
-  border-color: #a7f3d0;
-  color: #059669;
-  transform: scale(1.06);
+[data-theme="dark"] .pfp-btn {
+  color: #f8fafc;
 }
 
-.pronunciation-trans-btn.is-active {
-  background: #dcfce7 !important;
-  border-color: #86efac !important;
-  color: #16a34a !important;
-  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25) !important;
+.pfp-btn:hover {
+  background: rgba(99, 102, 241, 0.12);
+  color: #6366f1;
 }
 
-[data-theme="dark"] .pronunciation-trans-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: #94a3b8;
+[data-theme="dark"] .pfp-btn:hover {
+  background: rgba(99, 102, 241, 0.25);
+  color: #a5b4fc;
 }
 
-[data-theme="dark"] .pronunciation-trans-btn:hover {
-  background: rgba(16, 185, 129, 0.18);
-  border-color: rgba(16, 185, 129, 0.4);
+.pfp-btn.pfp-speak {
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.08);
+}
+
+[data-theme="dark"] .pfp-btn.pfp-speak {
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.18);
+}
+
+.pfp-btn.pfp-speak:hover {
+  background: #6366f1;
+  color: #ffffff;
+}
+
+.pfp-btn.pfp-trans {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.08);
+}
+
+[data-theme="dark"] .pfp-btn.pfp-trans {
   color: #34d399;
+  background: rgba(16, 185, 129, 0.18);
 }
 
-[data-theme="dark"] .pronunciation-trans-btn.is-active {
-  background: rgba(16, 185, 129, 0.22) !important;
-  border-color: rgba(16, 185, 129, 0.5) !important;
-  color: #4ade80 !important;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25) !important;
+.pfp-btn.pfp-trans:hover {
+  background: #10b981;
+  color: #ffffff;
 }
 
-/* 2. كارت الترجمة المنزلق الانسيابي (Accordion Push-down) */
-.inline-translation-box {
-  display: block;
-  width: 100%;
-  clear: both;
-  box-sizing: border-box;
-  overflow: hidden;
-  max-height: 0;
-  opacity: 0;
-  transform: translateY(-6px);
-  transition: max-height 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, transform 0.28s ease, margin 0.28s ease, padding 0.28s ease;
-  margin: 0;
-  padding: 0 16px;
-  direction: rtl;
-  text-align: right;
-  font-family: 'Tajawal', sans-serif;
-  border-radius: 12px;
-  background: #fefce8; /* Soft warm cream */
-  border: 1px solid #fef08a;
-  color: #1e293b;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
-  font-size: 0.96rem;
-  line-height: 1.6;
+.pfp-btn.pfp-slow {
+  font-size: 0.72rem;
+  color: var(--text-muted, #64748b);
+  padding: 3px 5px;
 }
 
-[data-theme="dark"] .inline-translation-box {
-  background: rgba(30, 41, 59, 0.92);
-  border-color: rgba(99, 102, 241, 0.3);
-  color: #f1f5f9;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+.pfp-btn.pfp-more {
+  padding: 3px 5px;
+  color: var(--text-muted, #64748b);
 }
 
-.inline-translation-box.is-open {
-  max-height: 350px;
-  opacity: 1;
-  transform: translateY(0);
-  margin: 10px 0 14px 0;
-  padding: 12px 18px;
-}
-
-.inline-translation-box .itb-loading {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.82rem;
-  color: #64748b;
+/* شارات الترجمة الفورية للمقال دون تشويه التنسيق */
+.bilingual-trans-tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-family: var(--font-arabic, sans-serif);
   font-weight: 500;
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin: 0 4px;
+  vertical-align: middle;
+  line-height: 1.3;
+  user-select: none;
 }
 
-.inline-translation-box .itb-text {
-  font-weight: 700;
-  color: inherit;
-  margin: 0;
+[data-theme="dark"] .bilingual-trans-tag {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.35);
 }
 
-/* 3. زر الترجمة الشاملة في شريط الأدوات */
+/* زر الترجمة الشاملة في شريط الأدوات */
 .global-trans-tool-btn.active,
 .global-trans-tool-btn.is-active {
   background: #dcfce7 !important;
