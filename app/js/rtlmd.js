@@ -764,7 +764,7 @@ function exportDocument(format) {
       saveStatus.className = 'save-badge';
     }
     setChamberContent(activeChamber, rawText);
-    updateChambersUI();
+    updateActiveChamberDotState();
 
     if (typeof marked === 'undefined') {
       previewContent.textContent = rawText;
@@ -1870,10 +1870,6 @@ function exportDocument(format) {
     btn.setAttribute('type', 'button');
     btn.innerHTML = `<span class="chamber-num">${i}</span><span class="chamber-dot"></span>`;
 
-    btn.addEventListener('click', () => {
-      window.switchChamber(i);
-    });
-
     btn.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       openChamberContextMenu(e, i);
@@ -1901,6 +1897,17 @@ function exportDocument(format) {
       btn.setAttribute('title', `حجرة ${i} (ممتلئة) • ${title} (اضغط للتبديل إليها)`);
     } else {
       btn.setAttribute('title', `حجرة ${i} (فارغة) • اضغط للكتابة هنا دون مسح حجرة ${activeChamber}`);
+    }
+  }
+
+  // تحديث حالة نقطة الحجرة النشطة فورياً أثناء الكتابة دون مسح عناصر الـ DOM
+  function updateActiveChamberDotState() {
+    const currentVal = isClassicMode ? (classicEditor?.value || editor.value) : editor.value;
+    const isFilled = (currentVal || '').trim().length > 0;
+    const activeBtn = document.querySelector(`.chamber-btn[data-chamber="${activeChamber}"]`);
+    if (activeBtn) {
+      activeBtn.classList.toggle('filled', isFilled);
+      activeBtn.classList.toggle('empty', !isFilled);
     }
   }
 
@@ -1948,97 +1955,174 @@ function exportDocument(format) {
     showToast(`تم حذف الحجرة ${lastCh}`, 'info', 1500);
   };
 
-  // معالج السهم الأيسر في الوضع العادي (<= 7 كما في الصورة 1)
-  window.handleChamberNavEnd = function () {
-    if (TOTAL_CHAMBERS >= 8) {
-      window.switchChamber(8);
+  // معالج النقر على الحجرة المتقطعة الفارغة
+  window.handleDashedSlotClick = function () {
+    const dashedSlot = document.getElementById('chamber-dashed-slot');
+    let targetCh = 8;
+    if (dashedSlot && dashedSlot.getAttribute('data-chamber')) {
+      targetCh = parseInt(dashedSlot.getAttribute('data-chamber'), 10) || 8;
     } else {
-      window.addNewChamber();
+      targetCh = activeChamber <= 7 ? 8 : (activeChamber + 1);
     }
+
+    if (targetCh > TOTAL_CHAMBERS) {
+      TOTAL_CHAMBERS = targetCh;
+      safeSaveToStorage('vienix_total_chambers', TOTAL_CHAMBERS);
+      safeSaveToStorage('yaser_total_chambers', TOTAL_CHAMBERS);
+    }
+    window.switchChamber(targetCh);
   };
 
-  // معالج السهم الأيمن في الوضع المتجاوز (> 7 كما في الصورة 2)
+  // معالج سهم العودة (>) للرجوع للحجرة السابقة
   window.handleChamberNavPrev = function () {
     if (activeChamber > 1) {
       window.switchChamber(activeChamber - 1);
     }
   };
 
-  // معالج السهم الأيسر في الوضع المتجاوز (> 7 كما في الصورة 2)
+  // معالج سهم التقدم (<) للانتقال للحجرة التالية
   window.handleChamberNavNext = function () {
-    if (activeChamber < TOTAL_CHAMBERS) {
-      window.switchChamber(activeChamber + 1);
-    } else {
-      window.addNewChamber();
+    const target = activeChamber <= 7 ? 8 : (activeChamber + 1);
+    if (target > TOTAL_CHAMBERS) {
+      TOTAL_CHAMBERS = target;
+      safeSaveToStorage('vienix_total_chambers', TOTAL_CHAMBERS);
+      safeSaveToStorage('yaser_total_chambers', TOTAL_CHAMBERS);
     }
+    window.switchChamber(target);
   };
 
-  // بناء عناصر شريط الحجرات
+  // مزامنة تلقائية لملفات المجلد الرئيسي book السابقة لضمان ربطها بالحجرات
+  function autoSyncBookFilesToChambers() {
+    try {
+      const bookFiles = getFolderFiles('book');
+      if (Array.isArray(bookFiles) && bookFiles.length > 0) {
+        bookFiles.forEach(f => {
+          const fileNum = typeof f.num === 'number' ? f.num : parseInt(f.num, 10);
+          if (!isNaN(fileNum) && fileNum >= 8) {
+            if (fileNum > TOTAL_CHAMBERS) {
+              TOTAL_CHAMBERS = fileNum;
+              safeSaveToStorage('vienix_total_chambers', TOTAL_CHAMBERS);
+            }
+            const existingContent = getChamberContent(fileNum);
+            if ((!existingContent || existingContent.trim().length === 0) && f.content && f.content.trim().length > 0) {
+              setChamberContent(fileNum, f.content);
+              setChamberCustomTitle(fileNum, f.title || ('ملف ' + fileNum));
+            }
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('Auto-sync book files to chambers failed:', e);
+    }
+  }
+
+  // بناء عناصر شريط الحجرات وتفعيل التفويض بالنقرة الواحدة
   function initChambersSystem() {
+    const wrapper = document.getElementById('chambers-slider-wrapper');
+    if (wrapper && !wrapper.dataset.listenerAttached) {
+      wrapper.dataset.listenerAttached = 'true';
+      wrapper.addEventListener('click', (e) => {
+        const btn = e.target.closest('.chamber-btn');
+        if (!btn) return;
+        if (btn.id === 'chamber-dashed-slot') {
+          window.handleDashedSlotClick();
+          return;
+        }
+        const ch = parseInt(btn.getAttribute('data-chamber'), 10);
+        if (!isNaN(ch) && ch >= 1) {
+          window.switchChamber(ch);
+        }
+      });
+    }
+
+    autoSyncBookFilesToChambers();
     updateChambersUI();
     setupChamberContextMenu();
   }
 
-  // تحديث حالة شريط الحجرات والتنقل المتحرك (Mode A vs Mode B)
+  // تحديث حالة شريط الحجرات وتطبيق قالب الحجرات المتناسق
   function updateChambersUI() {
     const listEl = document.getElementById('chambers-list');
-    const overflowNav = document.getElementById('chambers-overflow-nav');
-    const overflowSlot = document.getElementById('chamber-active-overflow-slot');
-    const navEndBtn = document.getElementById('chamber-nav-end');
     const navPrevBtn = document.getElementById('chamber-nav-prev');
+    const overflowSlot = document.getElementById('chamber-active-overflow-slot');
+    const dashedSlot = document.getElementById('chamber-dashed-slot');
     const navNextBtn = document.getElementById('chamber-nav-next');
 
     if (!listEl) return;
 
     if (activeChamber <= 7) {
       // ══════════════════════════════════════════════════════════════
-      // الصورة رقم 1: الحجرات من 1 إلى 7 وسهم الانتقال الأيسر في الطرف
+      // القالب الأساسي: الحجرات من 1 إلى 7 ثم الحجرة الفارغة المتقطعة وسهم <
       // ══════════════════════════════════════════════════════════════
-      if (overflowNav) overflowNav.style.display = 'none';
-      if (navEndBtn) {
-        navEndBtn.style.display = 'inline-flex';
-        navEndBtn.title = TOTAL_CHAMBERS >= 8 ? 'الانتقال للحجرة 8 (أو الحجرات التالية)' : 'إضافة الحجرة 8 ✨';
-      }
 
-      listEl.innerHTML = '';
-      const visibleCount = Math.min(7, TOTAL_CHAMBERS);
-      for (let i = 1; i <= visibleCount; i++) {
-        const btn = createChamberButton(i);
-        listEl.appendChild(btn);
-      }
-    } else {
-      // ══════════════════════════════════════════════════════════════
-      // الصورة رقم 2: الحجرة النشطة المتجاوزة لـ 7 محاطة بأسهم التنقل > و <
-      // ══════════════════════════════════════════════════════════════
-      if (navEndBtn) navEndBtn.style.display = 'none';
-      if (overflowNav) overflowNav.style.display = 'inline-flex';
+      // 1. إخفاء سهم العودة (>)
+      if (navPrevBtn) navPrevBtn.style.display = 'none';
 
-      // زر الحجرة النشطة في الموضع المحاط بالسهمين
-      if (overflowSlot) {
-        overflowSlot.innerHTML = '';
-        const activeBtn = createChamberButton(activeChamber);
-        overflowSlot.appendChild(activeBtn);
-      }
-
-      // تحديث وظائف الأسهم المحيطة بالحجرة النشطة
-      if (navPrevBtn) {
-        navPrevBtn.title = `الرجوع للحجرة السابقة (${activeChamber - 1})`;
-      }
-      if (navNextBtn) {
-        if (activeChamber < TOTAL_CHAMBERS) {
-          navNextBtn.title = `الانتقال للحجرة التالية (${activeChamber + 1})`;
+      // 2. رندرة وتحديث الحجرات 1 إلى 7 بسلاسة ودون مسح الـ DOM
+      for (let i = 1; i <= 7; i++) {
+        let btn = document.getElementById('chamber-btn-' + i);
+        if (!btn || btn.parentElement !== listEl) {
+          btn = createChamberButton(i);
+          listEl.appendChild(btn);
         } else {
-          navNextBtn.title = `إضافة حجرة جديدة (${activeChamber + 1}) ✨`;
+          applyChamberButtonState(btn, i);
+        }
+      }
+      // إزالة أي أزرار زائدة داخل listEl إن وجدت
+      while (listEl.children.length > 7) {
+        listEl.removeChild(listEl.lastChild);
+      }
+
+      // 3. فحص الحجرة رقم 8: هل تحتوي على نصوص سابقة؟
+      const ch8Content = getChamberContent(8).trim();
+      const ch8HasContent = ch8Content.length > 0;
+
+      if (ch8HasContent) {
+        // في حال صار في محتوى لاحقاً بالحجرة 8:
+        // يتبدل شكل الحجرة وتظهر كزر ممتلئ برقمها 8
+        if (overflowSlot) {
+          overflowSlot.style.display = 'inline-flex';
+          overflowSlot.innerHTML = '';
+          const btn8 = createChamberButton(8);
+          overflowSlot.appendChild(btn8);
+        }
+        // والحجرة المتقطعة تصبح للحجرة 9
+        if (dashedSlot) {
+          dashedSlot.style.display = 'inline-flex';
+          dashedSlot.setAttribute('data-chamber', '9');
+          dashedSlot.title = 'حجرة 9 (فارغة - اضغط للبدء فيها)';
+        }
+      } else {
+        // الحجرة 8 فارغة: القالب الأصلي تماماً كما بالصورة:
+        // 1 2 3 4 5 6 7 [  متقطعة  ] < المستكشف
+        if (overflowSlot) {
+          overflowSlot.style.display = 'none';
+          overflowSlot.innerHTML = '';
+        }
+        if (dashedSlot) {
+          dashedSlot.style.display = 'inline-flex';
+          dashedSlot.setAttribute('data-chamber', '8');
+          dashedSlot.title = 'حجرة 8 (فارغة - اضغط للبدء فيها)';
         }
       }
 
-      // الحجرات السابقة المعروضة في شريط التمرير إلى يمين سهم الرجوع
-      listEl.innerHTML = '';
+      // 4. سهم التقدم (<) ظاهر دائماً
+      if (navNextBtn) {
+        navNextBtn.style.display = 'inline-flex';
+        navNextBtn.title = ch8HasContent ? 'الانتقال للحجرة 8 (أو الحجرات التالية)' : 'الانتقال للحجرة 8 ✨';
+      }
+
+    } else {
+      // ══════════════════════════════════════════════════════════════
+      // وضع التواجد في حجرة متجاوزة لـ 7 (مثلاً 8، 9، 10...)
+      // "يتبدل شكل الحجرة الفارغة ويظهر بعدها سهم العودة"
+      // ══════════════════════════════════════════════════════════════
+
+      // 1. عرض الحجرات السابقة (حتى 6 حجرات لتتسع في الشريط)
       const prevChambers = [];
       for (let i = 1; i < activeChamber; i++) {
         prevChambers.push(i);
       }
-      // عرض ما يصل إلى 6 حجرات سابقة لتتسع بشكل مريح في الشريط (كما في الصورة 2)
       let chambersToShow = [];
       if (prevChambers.length <= 6) {
         chambersToShow = prevChambers;
@@ -2046,10 +2130,40 @@ function exportDocument(format) {
         chambersToShow = [1].concat(prevChambers.slice(-5));
       }
 
+      listEl.innerHTML = '';
       chambersToShow.forEach(num => {
         const btn = createChamberButton(num);
         listEl.appendChild(btn);
       });
+
+      // 2. إظهار سهم العودة (>) للرجوع للحجرة السابقة
+      if (navPrevBtn) {
+        navPrevBtn.style.display = 'inline-flex';
+        navPrevBtn.title = `الرجوع للحجرة السابقة (${activeChamber - 1})`;
+      }
+
+      // 3. تبديل شكل الحجرة الفارغة لتصبح الحجرة النشطة المحددة برقمها الترتيبي ومظهرها النشط
+      if (overflowSlot) {
+        overflowSlot.style.display = 'inline-flex';
+        overflowSlot.innerHTML = '';
+        const activeBtn = createChamberButton(activeChamber);
+        overflowSlot.appendChild(activeBtn);
+      }
+
+      // 4. الحجرة المتقطعة التالية (تمثل activeChamber + 1)
+      const nextCh = activeChamber + 1;
+      const nextContent = getChamberContent(nextCh).trim();
+      if (dashedSlot) {
+        dashedSlot.style.display = 'inline-flex';
+        dashedSlot.setAttribute('data-chamber', String(nextCh));
+        dashedSlot.title = `حجرة ${nextCh} (${nextContent ? 'ممتلئة' : 'فارغة - اضغط للبدء فيها'})`;
+      }
+
+      // 5. سهم التقدم (<) للانتقال للحجرة التالية
+      if (navNextBtn) {
+        navNextBtn.style.display = 'inline-flex';
+        navNextBtn.title = `الانتقال للحجرة التالية (${nextCh}) ✨`;
+      }
     }
 
     updateBookChambersList();
@@ -6346,7 +6460,7 @@ function exportDocument(format) {
     }
     setupImageResizers(classicOutput);
     setChamberContent(activeChamber, rawText);
-    updateChambersUI();
+    updateActiveChamberDotState();
   }
 
   function syncClassicTogglePosition() {

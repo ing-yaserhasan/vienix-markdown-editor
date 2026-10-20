@@ -485,12 +485,22 @@ textarea:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
+  flex-wrap: nowrap !important;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   gap: 8px;
 }
 
 .toolbar-group {
   display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.toolbar-view-controls {
+  flex-shrink: 0 !important;
+  display: flex !important;
   align-items: center;
   gap: 4px;
 }
@@ -2739,6 +2749,41 @@ body.is-resizing-workspace .workspace-resizer {
 
 .chamber-btn.empty .chamber-dot {
   display: none;
+}
+
+/* الحجرة الفارغة القادمة بنمط الإطار المتقطع تماماً كما في قالب صورة المستخدم */
+.chamber-btn.chamber-btn-dashed {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1.5px dashed rgba(148, 163, 184, 0.45) !important;
+  background: transparent !important;
+  color: transparent !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+[data-theme="dark"] .chamber-btn.chamber-btn-dashed {
+  border-color: rgba(148, 163, 184, 0.3) !important;
+}
+
+.chamber-btn.chamber-btn-dashed:hover {
+  opacity: 1;
+  border-color: var(--accent-color, #3b82f6) !important;
+  background: rgba(59, 130, 246, 0.08) !important;
+  transform: translateY(-1px);
+}
+
+.chamber-btn.chamber-btn-dashed .chamber-dot,
+.chamber-btn.chamber-btn-dashed .chamber-num {
+  display: none !important;
 }
 
 /* 2. الحجرة الممتلئة (Filled Slot) */

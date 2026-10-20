@@ -306,19 +306,19 @@
             <!-- قائمة الحجرات المعروضة في الشريط -->
             <div class="chambers-list" id="chambers-list"></div>
 
-            <!-- مجموعة التنقل للحجرة النشطة المتجاوزة لـ 7 (كما في الصورة 2) -->
-            <div class="chambers-overflow-nav" id="chambers-overflow-nav" style="display: none;">
-              <button type="button" class="chamber-nav-arrow chamber-nav-prev" id="chamber-nav-prev" onclick="handleChamberNavPrev()" title="الحجرة السابقة">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-              </button>
-              <div id="chamber-active-overflow-slot" class="chamber-active-overflow-slot"></div>
-              <button type="button" class="chamber-nav-arrow chamber-nav-next" id="chamber-nav-next" onclick="handleChamberNavNext()" title="الحجرة التالية / إضافة جديدة">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-              </button>
-            </div>
+            <!-- سهم العودة (>) للرجوع للحجرات السابقة (يظهر عند تجاوز الحجرة 7) -->
+            <button type="button" class="chamber-nav-arrow chamber-nav-prev" id="chamber-nav-prev" onclick="handleChamberNavPrev()" title="الرجوع للحجرة السابقة" style="display: none;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
 
-            <!-- سهم التنقل الأيسر للوضع العادي (<= 7) كما في الصورة 1 -->
-            <button type="button" class="chamber-nav-arrow chamber-nav-end" id="chamber-nav-end" onclick="handleChamberNavEnd()" title="الانتقال للحجرة التالية أو إضافة حجرة جديدة">
+            <!-- موضع الحجرة النشطة المتجاوزة لـ 7 -->
+            <div id="chamber-active-overflow-slot" class="chamber-active-overflow-slot" style="display: none;"></div>
+
+            <!-- الحجرة الفارغة التالية بإطار متقطع كما في قالب الصورة -->
+            <button type="button" class="chamber-btn chamber-btn-dashed" id="chamber-dashed-slot" onclick="handleDashedSlotClick()" title="حجرة جديدة (فارغة - اضغط للبدء فيها)"></button>
+
+            <!-- سهم التقدم (<) للانتقال للحجرة التالية -->
+            <button type="button" class="chamber-nav-arrow chamber-nav-next" id="chamber-nav-next" onclick="handleChamberNavNext()" title="الانتقال للحجرة التالية">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
             </button>
           </div>
@@ -371,7 +371,7 @@
       </div>
 
       <!-- View Controls & Utilities -->
-      <div class="toolbar-group">
+      <div class="toolbar-group toolbar-view-controls" id="toolbar-view-controls">
         <!-- 1. زر إعادة تنصيف موقع الخط الفاصل (50% / 50%) -->
         <button class="tool-btn" id="btn-reset-split" onclick="resetSplitPercentage()" title="إعادة تنصيف موقع الخط الفاصل (50% / 50%)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
