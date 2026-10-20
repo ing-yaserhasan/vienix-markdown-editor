@@ -541,7 +541,7 @@
   // إدارة الملف المعروض حالياً في حجرة رقم 8 المخصصة
   let activeExplorerFile = null;
   try {
-    const savedActive = localStorage.getItem('vienix_active_explorer_file');
+    const savedActive = getStored('vienix_active_explorer_file');
     if (savedActive) activeExplorerFile = JSON.parse(savedActive);
   } catch (e) {}
 
@@ -3553,31 +3553,48 @@ function exportDocument(format) {
     const file = files.find(f => f.id === fileId);
     if (!file) return;
 
-    // 1. تحديد بيانات الملف المعروض حالياً
+    // 1. رقم الحجرة المرتبط بالملف
+    const targetCh = (typeof file.num === 'number' && file.num >= 1) ? file.num : 8;
+    ensureChamberExists(targetCh);
+
+    // 2. حماية محتوى الحجرة 8 المستقل من الضياع عند فتح ملف مستكشف
+    if (targetCh === 8) {
+      const currentCh8Content = getChamberContent(8).trim();
+      const isCurrentlyExplorerFile = !!(activeExplorerFile && activeExplorerFile.fileId);
+      const isSameFile = isCurrentlyExplorerFile && activeExplorerFile.fileId === fileId;
+
+      if (currentCh8Content.length > 0 && !isSameFile && !isCurrentlyExplorerFile) {
+        // الحجرة 8 تحتوي على محتوى مستقل (ليس ملف مستكشف) — نحفظه تلقائياً في حجرة جديدة
+        const newCh = TOTAL_CHAMBERS + 1;
+        ensureChamberExists(newCh);
+        setChamberContent(newCh, currentCh8Content);
+        const oldMeta = getChamberMeta(8);
+        const savedTitle = oldMeta.customTitle || getChamberTitle(8);
+        setChamberCustomTitle(newCh, savedTitle);
+        const newMeta = getChamberMeta(newCh);
+        newMeta.folder = oldMeta.folder || 'drafts';
+        saveChamberMeta(newCh, newMeta);
+        showToast(`تم حفظ محتوى الحجرة 8 تلقائياً في الحجرة ${newCh} 💾`, 'info', 2000);
+      }
+    }
+
+    // 3. تحديد بيانات الملف المعروض حالياً
     activeExplorerFile = {
       folderKey: folderKey,
       fileId: file.id,
       title: file.title
     };
     try {
-      localStorage.setItem('vienix_active_explorer_file', JSON.stringify(activeExplorerFile));
+      safeSaveToStorage('vienix_active_explorer_file', JSON.stringify(activeExplorerFile));
     } catch (e) {}
 
-    // 2. رقم الحجرة المرتبط بالملف
-    const targetCh = (typeof file.num === 'number' && file.num >= 1) ? file.num : 8;
-    if (targetCh > TOTAL_CHAMBERS) {
-      TOTAL_CHAMBERS = targetCh;
-      safeSaveToStorage('vienix_total_chambers', TOTAL_CHAMBERS);
-      safeSaveToStorage('yaser_total_chambers', TOTAL_CHAMBERS);
-    }
-
-    // مزامنة محتوى الحجرة بمحتوى الملف إذا كانت الحجرة فارغة
-    if (file.content && getChamberContent(targetCh).trim().length === 0) {
+    // 4. تحميل محتوى الملف في الحجرة دائماً (وليس فقط عند فراغها)
+    if (file.content) {
       setChamberContent(targetCh, file.content);
-      setChamberCustomTitle(targetCh, file.title || ('ملف ' + targetCh));
     }
+    setChamberCustomTitle(targetCh, file.title || ('ملف ' + targetCh));
 
-    // 3. التبديل إلى الحجرة المستهدفة مباشرة
+    // 5. التبديل إلى الحجرة المستهدفة مباشرة
     window.switchChamber(targetCh);
     showToast(`تم الانتقال إلى "${file.title}" (حجرة ${targetCh}) 🟢`, 'info', 1400);
   };
@@ -3640,7 +3657,7 @@ function exportDocument(format) {
       saveFolderFiles(folderKey, files);
       if (activeExplorerFile && activeExplorerFile.folderKey === folderKey && activeExplorerFile.fileId === fileId) {
         activeExplorerFile.title = file.title;
-        try { localStorage.setItem('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (err) {}
+        try { safeSaveToStorage('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (err) {}
         if (activeChamber === 8) {
           setChamberCustomTitle(8, file.title);
         }
@@ -4140,7 +4157,7 @@ function exportDocument(format) {
 
           if (activeExplorerFile && activeExplorerFile.folderKey === srcFolderKey && activeExplorerFile.fileId === srcFileId) {
             activeExplorerFile.folderKey = targetFolderKey;
-            try { localStorage.setItem('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (err) {}
+            try { safeSaveToStorage('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (err) {}
           }
           collapsedFolders[targetFolderKey] = false;
           renderChambersExplorerTree();
@@ -4281,7 +4298,7 @@ function exportDocument(format) {
 
       if (activeExplorerFile && activeExplorerFile.folderKey === srcFolderKey && activeExplorerFile.fileId === srcFileId) {
         activeExplorerFile.folderKey = targetFolderKey;
-        try { localStorage.setItem('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (err) {}
+        try { safeSaveToStorage('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (err) {}
       }
 
       collapsedFolders[targetFolderKey] = false;
@@ -4375,7 +4392,7 @@ function exportDocument(format) {
 
       if (activeExplorerFile && activeExplorerFile.folderKey === srcFolderKey && activeExplorerFile.fileId === srcFileId) {
         activeExplorerFile.folderKey = targetFolderKey;
-        try { localStorage.setItem('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (err) {}
+        try { safeSaveToStorage('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (err) {}
       }
 
       collapsedFolders[targetFolderKey] = false;
@@ -4540,7 +4557,7 @@ function exportDocument(format) {
 
       if (activeExplorerFile && activeExplorerFile.folderKey === srcFolderKey && activeExplorerFile.fileId === fileId) {
         activeExplorerFile.folderKey = targetFolder;
-        try { localStorage.setItem('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (err) {}
+        try { safeSaveToStorage('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (err) {}
       }
 
       collapsedFolders[targetFolder] = false;
@@ -4654,7 +4671,7 @@ function exportDocument(format) {
       });
       if (activeExplorerFile && activeExplorerFile.title && activeExplorerFile.title.includes('ملف #')) {
         activeExplorerFile.title = activeExplorerFile.title.replace(/ملف\s*#(\d+)/g, 'ملف $1');
-        try { localStorage.setItem('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (e) {}
+        try { safeSaveToStorage('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (e) {}
         if (activeChamber === 8) {
           setChamberCustomTitle(8, activeExplorerFile.title);
         }
