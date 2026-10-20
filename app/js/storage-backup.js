@@ -255,7 +255,8 @@
 
       // 1. Gather all chambers data
       const chambers = [];
-      for (let ch = 1; ch <= 8; ch++) {
+      const totalCh = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
+      for (let ch = 1; ch <= totalCh; ch++) {
         let content = '';
         let metaRaw = null;
         if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {

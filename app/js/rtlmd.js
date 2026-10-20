@@ -204,8 +204,16 @@
   const classicEditor = document.getElementById('classic-markdown-input');
   const classicOutput = document.getElementById('classic-output');
 
-  // Chambers System (نظام الحجرات التخزينية والمطابقة)
-  const TOTAL_CHAMBERS = 8;
+  // Chambers System (نظام الحجرات التخزينية والمطابقة الديناميكي)
+  const MIN_CHAMBERS = 8;
+  function getTotalChambers() {
+    let count = parseInt(getStored('vienix_total_chambers', 'yaser_total_chambers') || '8', 10);
+    if (isNaN(count) || count < MIN_CHAMBERS) count = MIN_CHAMBERS;
+    return count;
+  }
+  let TOTAL_CHAMBERS = getTotalChambers();
+  window.VienixGetTotalChambers = () => TOTAL_CHAMBERS;
+
   let activeChamber = parseInt(getStored('vienix_active_chamber', 'yaser_active_chamber') || '1', 10);
   if (isNaN(activeChamber) || activeChamber < 1 || activeChamber > TOTAL_CHAMBERS) {
     activeChamber = 1;
@@ -1853,85 +1861,195 @@ function exportDocument(format) {
   // CHAMBERS UI & SWITCHING LOGIC (شريط الحجرات)
   // ==========================================
 
+  // دالة إنشاء زر حجرة برقمها الترتيبي دائماً
+  function createChamberButton(i) {
+    const btn = document.createElement('button');
+    btn.className = 'chamber-btn';
+    btn.id = 'chamber-btn-' + i;
+    btn.setAttribute('data-chamber', i);
+    btn.setAttribute('type', 'button');
+    btn.innerHTML = `<span class="chamber-num">${i}</span><span class="chamber-dot"></span>`;
+
+    btn.addEventListener('click', () => {
+      window.switchChamber(i);
+    });
+
+    btn.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      openChamberContextMenu(e, i);
+    });
+
+    applyChamberButtonState(btn, i);
+    return btn;
+  }
+
+  // تطبيق حالة الحجرة (فارغة / ممتلئة / نشطة)
+  function applyChamberButtonState(btn, i) {
+    if (!btn) return;
+    const content = getChamberContent(i).trim();
+    const isFilled = content.length > 0;
+    const isActive = i === activeChamber;
+    const title = getChamberTitle(i);
+
+    btn.classList.toggle('active', isActive);
+    btn.classList.toggle('filled', isFilled);
+    btn.classList.toggle('empty', !isFilled);
+
+    if (isActive) {
+      btn.setAttribute('title', `حجرة ${i} (النشطة حالياً) • ${isFilled ? title : 'جاهزة للكتابة'}`);
+    } else if (isFilled) {
+      btn.setAttribute('title', `حجرة ${i} (ممتلئة) • ${title} (اضغط للتبديل إليها)`);
+    } else {
+      btn.setAttribute('title', `حجرة ${i} (فارغة) • اضغط للكتابة هنا دون مسح حجرة ${activeChamber}`);
+    }
+  }
+
+  // إضافة حجرة جديدة ديناميكياً
+  window.addNewChamber = function () {
+    const newTotal = TOTAL_CHAMBERS + 1;
+    TOTAL_CHAMBERS = newTotal;
+    safeSaveToStorage('vienix_total_chambers', newTotal);
+    safeSaveToStorage('yaser_total_chambers', newTotal);
+
+    window.switchChamber(newTotal);
+    showToast(`تمت إضافة الحجرة ${newTotal} بنجاح! ✨`, 'success', 1500);
+  };
+
+  // حذف الحجرة الأخيرة إن كانت زائدة عن 8
+  window.removeLastChamber = function () {
+    if (TOTAL_CHAMBERS <= MIN_CHAMBERS) {
+      showToast('لا يمكن حذف الحجرات الأساسية (الحد الأدنى 8 حجرات)', 'warning', 2000);
+      return;
+    }
+    const lastCh = TOTAL_CHAMBERS;
+    const content = getChamberContent(lastCh).trim();
+    if (content.length > 0) {
+      if (!confirm(`الحجرة ${lastCh} تحتوي على نصوص. هل أنت متأكد من حذفها؟`)) {
+        return;
+      }
+    }
+    safeSaveToStorage('vienix_chamber_' + lastCh, '');
+    safeSaveToStorage('yaser_chamber_' + lastCh, '');
+    safeSaveToStorage('vienix_chamber_meta_' + lastCh, '');
+    safeSaveToStorage('yaser_chamber_meta_' + lastCh, '');
+
+    TOTAL_CHAMBERS--;
+    safeSaveToStorage('vienix_total_chambers', TOTAL_CHAMBERS);
+    safeSaveToStorage('yaser_total_chambers', TOTAL_CHAMBERS);
+
+    if (activeChamber > TOTAL_CHAMBERS) {
+      window.switchChamber(TOTAL_CHAMBERS);
+    } else {
+      updateChambersUI();
+    }
+    if (typeof renderChambersExplorerTree === 'function') {
+      renderChambersExplorerTree();
+    }
+    showToast(`تم حذف الحجرة ${lastCh}`, 'info', 1500);
+  };
+
+  // معالج السهم الأيسر في الوضع العادي (<= 7 كما في الصورة 1)
+  window.handleChamberNavEnd = function () {
+    if (TOTAL_CHAMBERS >= 8) {
+      window.switchChamber(8);
+    } else {
+      window.addNewChamber();
+    }
+  };
+
+  // معالج السهم الأيمن في الوضع المتجاوز (> 7 كما في الصورة 2)
+  window.handleChamberNavPrev = function () {
+    if (activeChamber > 1) {
+      window.switchChamber(activeChamber - 1);
+    }
+  };
+
+  // معالج السهم الأيسر في الوضع المتجاوز (> 7 كما في الصورة 2)
+  window.handleChamberNavNext = function () {
+    if (activeChamber < TOTAL_CHAMBERS) {
+      window.switchChamber(activeChamber + 1);
+    } else {
+      window.addNewChamber();
+    }
+  };
+
   // بناء عناصر شريط الحجرات
   function initChambersSystem() {
-    const listEl = document.getElementById('chambers-list');
-    if (!listEl) return;
-    listEl.innerHTML = '';
-
-    for (let i = 1; i <= TOTAL_CHAMBERS; i++) {
-      const btn = document.createElement('button');
-      btn.className = 'chamber-btn';
-      btn.id = 'chamber-btn-' + i;
-      btn.setAttribute('data-chamber', i);
-      btn.setAttribute('type', 'button');
-
-      if (i === 8) {
-        // الحجرة رقم 8 مخصصة لعرض ملفات المستكشف (بدون رقم 8، مع نقطة خضراء)
-        btn.classList.add('chamber-file-dedicated');
-        btn.innerHTML = `<span class="chamber-green-dot"></span>`;
-        btn.setAttribute('title', 'حجرة مخصصة لعرض وتحرير ملفات المستكشف 🟢');
-      } else {
-        btn.innerHTML = `<span class="chamber-num">${i}</span><span class="chamber-dot"></span>`;
-      }
-
-      btn.addEventListener('click', () => {
-        window.switchChamber(i);
-      });
-
-      // النقر بالزر الأيمن لإظهار القائمة السياقية للحجرة
-      btn.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        openChamberContextMenu(e, i);
-      });
-
-      listEl.appendChild(btn);
-    }
-
     updateChambersUI();
     setupChamberContextMenu();
   }
 
-  // تحديث حالة كل حجرة في الشريط (فارغة / ممتلئة / نشطة)
+  // تحديث حالة شريط الحجرات والتنقل المتحرك (Mode A vs Mode B)
   function updateChambersUI() {
-    for (let i = 1; i <= TOTAL_CHAMBERS; i++) {
-      const btn = document.getElementById('chamber-btn-' + i);
-      if (!btn) continue;
+    const listEl = document.getElementById('chambers-list');
+    const overflowNav = document.getElementById('chambers-overflow-nav');
+    const overflowSlot = document.getElementById('chamber-active-overflow-slot');
+    const navEndBtn = document.getElementById('chamber-nav-end');
+    const navPrevBtn = document.getElementById('chamber-nav-prev');
+    const navNextBtn = document.getElementById('chamber-nav-next');
 
-      const content = getChamberContent(i).trim();
-      const isFilled = content.length > 0;
-      const isActive = i === activeChamber;
-      const title = getChamberTitle(i);
+    if (!listEl) return;
 
-      btn.classList.toggle('active', isActive);
-      btn.classList.toggle('filled', isFilled);
-      btn.classList.toggle('empty', !isFilled);
+    if (activeChamber <= 7) {
+      // ══════════════════════════════════════════════════════════════
+      // الصورة رقم 1: الحجرات من 1 إلى 7 وسهم الانتقال الأيسر في الطرف
+      // ══════════════════════════════════════════════════════════════
+      if (overflowNav) overflowNav.style.display = 'none';
+      if (navEndBtn) {
+        navEndBtn.style.display = 'inline-flex';
+        navEndBtn.title = TOTAL_CHAMBERS >= 8 ? 'الانتقال للحجرة 8 (أو الحجرات التالية)' : 'إضافة الحجرة 8 ✨';
+      }
 
-      if (i === 8) {
-        btn.classList.add('chamber-file-dedicated');
-        if (!btn.querySelector('.chamber-green-dot')) {
-          btn.innerHTML = `<span class="chamber-green-dot"></span>`;
-        }
-        let activeFileTitle = '';
-        if (activeExplorerFile && activeExplorerFile.title) {
-          activeFileTitle = activeExplorerFile.title;
-        } else if (isFilled) {
-          activeFileTitle = title;
-        }
-        if (isActive) {
-          btn.setAttribute('title', `حجرة عرض الملفات (النشطة حالياً 🟢) • ${activeFileTitle || 'جاهزة لفتح أي ملف من المستكشف'}`);
+      listEl.innerHTML = '';
+      const visibleCount = Math.min(7, TOTAL_CHAMBERS);
+      for (let i = 1; i <= visibleCount; i++) {
+        const btn = createChamberButton(i);
+        listEl.appendChild(btn);
+      }
+    } else {
+      // ══════════════════════════════════════════════════════════════
+      // الصورة رقم 2: الحجرة النشطة المتجاوزة لـ 7 محاطة بأسهم التنقل > و <
+      // ══════════════════════════════════════════════════════════════
+      if (navEndBtn) navEndBtn.style.display = 'none';
+      if (overflowNav) overflowNav.style.display = 'inline-flex';
+
+      // زر الحجرة النشطة في الموضع المحاط بالسهمين
+      if (overflowSlot) {
+        overflowSlot.innerHTML = '';
+        const activeBtn = createChamberButton(activeChamber);
+        overflowSlot.appendChild(activeBtn);
+      }
+
+      // تحديث وظائف الأسهم المحيطة بالحجرة النشطة
+      if (navPrevBtn) {
+        navPrevBtn.title = `الرجوع للحجرة السابقة (${activeChamber - 1})`;
+      }
+      if (navNextBtn) {
+        if (activeChamber < TOTAL_CHAMBERS) {
+          navNextBtn.title = `الانتقال للحجرة التالية (${activeChamber + 1})`;
         } else {
-          btn.setAttribute('title', `حجرة عرض الملفات 🟢 • ${activeFileTitle ? `معروض فيها: "${activeFileTitle}"` : 'جاهزة لعرض أي ملف عند النقر عليه'}`);
-        }
-      } else {
-        if (isActive) {
-          btn.setAttribute('title', `حجرة ${i} (النشطة حالياً) • ${isFilled ? title : 'جاهزة للكتابة'}`);
-        } else if (isFilled) {
-          btn.setAttribute('title', `حجرة ${i} (ممتلئة) • ${title} (اضغط للتبديل إليها)`);
-        } else {
-          btn.setAttribute('title', `حجرة ${i} (فارغة) • اضغط للكتابة هنا دون مسح حجرة ${activeChamber}`);
+          navNextBtn.title = `إضافة حجرة جديدة (${activeChamber + 1}) ✨`;
         }
       }
+
+      // الحجرات السابقة المعروضة في شريط التمرير إلى يمين سهم الرجوع
+      listEl.innerHTML = '';
+      const prevChambers = [];
+      for (let i = 1; i < activeChamber; i++) {
+        prevChambers.push(i);
+      }
+      // عرض ما يصل إلى 6 حجرات سابقة لتتسع بشكل مريح في الشريط (كما في الصورة 2)
+      let chambersToShow = [];
+      if (prevChambers.length <= 6) {
+        chambersToShow = prevChambers;
+      } else {
+        chambersToShow = [1].concat(prevChambers.slice(-5));
+      }
+
+      chambersToShow.forEach(num => {
+        const btn = createChamberButton(num);
+        listEl.appendChild(btn);
+      });
     }
 
     updateBookChambersList();
@@ -4368,7 +4486,7 @@ function exportDocument(format) {
 
         // تصحيح ترقيم الملفات إذا كان هناك ملف أخذ رقماً مساوياً أو أقل من حجرات المجلد (مثل ملف 666 الذي أخذ #7)
         let maxChamberNum = 0;
-        for (let ch = 1; ch <= 7; ch++) {
+        for (let ch = 1; ch <= TOTAL_CHAMBERS; ch++) {
           const meta = getChamberMeta(ch);
           const chFolder = meta.folder || (ch <= 7 ? 'book' : 'drafts');
           if (chFolder === folder.key && ch > maxChamberNum) {
@@ -4409,7 +4527,7 @@ function exportDocument(format) {
     const folderBuckets = {};
     foldersDef.forEach(f => { folderBuckets[f.key] = []; });
 
-    for (let i = 1; i <= 7; i++) {
+    for (let i = 1; i <= TOTAL_CHAMBERS; i++) {
       const content = getChamberContent(i);
       const isFilled = content.trim().length > 0;
       const meta = getChamberMeta(i);

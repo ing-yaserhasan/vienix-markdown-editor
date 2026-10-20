@@ -347,7 +347,8 @@
         let syncedCount = 0;
 
         // 1. Sync all active Chambers as individual .md files
-        for (let ch = 1; ch <= 8; ch++) {
+        const maxCh = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
+        for (let ch = 1; ch <= maxCh; ch++) {
           let content = '';
           let meta = null;
 

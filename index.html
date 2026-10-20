@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/earlyaccess/droidarabicnaskh.css">
   <link rel="stylesheet" href="assets/fonts/tajawal.css">
-  <link rel="stylesheet" href="app/css/style.css?v=obsidian48">
+  <link rel="stylesheet" href="app/css/style.css?v=obsidian49">
   <link rel="stylesheet" href="app/css/classic.css?v=obsidian4">
 </head>
 <body>
@@ -301,8 +301,26 @@
         <!-- نظام الحجرات التخزينية (Chambers 1-8) ومستكشف المجلدات والمطابقة -->
         <div class="chambers-container" id="chambers-container" role="region" aria-label="الحجرات التخزينية">
           <span class="chambers-label" title="الحجرات: تتيح لك العمل على عدة مسودات ومطابقتها وفصول للكتاب دون مسح العمل">الحجرات:</span>
-          <div class="chambers-list" id="chambers-list">
-            <!-- سيتم توليد الأزرار من 1 إلى 8 ديناميكياً مع مؤشرات الامتلاء والفراغ -->
+          <!-- الشريط التفاعلي والمتحرك للحجرات (Slider & Overflow Carousel) -->
+          <div class="chambers-slider-wrapper" id="chambers-slider-wrapper">
+            <!-- قائمة الحجرات المعروضة في الشريط -->
+            <div class="chambers-list" id="chambers-list"></div>
+
+            <!-- مجموعة التنقل للحجرة النشطة المتجاوزة لـ 7 (كما في الصورة 2) -->
+            <div class="chambers-overflow-nav" id="chambers-overflow-nav" style="display: none;">
+              <button type="button" class="chamber-nav-arrow chamber-nav-prev" id="chamber-nav-prev" onclick="handleChamberNavPrev()" title="الحجرة السابقة">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
+              <div id="chamber-active-overflow-slot" class="chamber-active-overflow-slot"></div>
+              <button type="button" class="chamber-nav-arrow chamber-nav-next" id="chamber-nav-next" onclick="handleChamberNavNext()" title="الحجرة التالية / إضافة جديدة">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+              </button>
+            </div>
+
+            <!-- سهم التنقل الأيسر للوضع العادي (<= 7) كما في الصورة 1 -->
+            <button type="button" class="chamber-nav-arrow chamber-nav-end" id="chamber-nav-end" onclick="handleChamberNavEnd()" title="الانتقال للحجرة التالية أو إضافة حجرة جديدة">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
           </div>
 
           <!-- زر المجلد الأصفر (مستكشف الفصول والمجلدات على غرار ويندوز) -->
@@ -2001,16 +2019,16 @@
   <script src="assets/icons/twemoji/twemoji_data.js"></script>
 
   <!-- Next-Gen Storage Adapter (IndexedDB Unlimited Storage - Phase 1) -->
-  <script src="app/js/vienix-idb.js?v=1.1"></script>
+  <script src="app/js/vienix-idb.js?v=1.2"></script>
 
   <!-- Application Main Script -->
-  <script src="app/js/rtlmd.js?v=obsidian49"></script>
+  <script src="app/js/rtlmd.js?v=obsidian50"></script>
 
   <!-- Storage Health Monitor & Full Workspace Backup Module (Phase 0) -->
-  <script src="app/js/storage-backup.js?v=1.1"></script>
+  <script src="app/js/storage-backup.js?v=1.2"></script>
 
   <!-- Google Drive Personal Cloud Sync Engine (Phase 2) -->
-  <script src="app/js/vienix-drive.js?v=1.1"></script>
+  <script src="app/js/vienix-drive.js?v=1.2"></script>
 
 </body>
 </html>
