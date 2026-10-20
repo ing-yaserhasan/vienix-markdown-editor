@@ -43,8 +43,8 @@
     editorFont: "'Fira Code', monospace",
     textDirection: 'rtl',
     autoSaveInterval: '5000',
-    // Pronunciation Assistant (★ مساعد التدرب على نطق اللغات)
-    pronunciationEnabled: true,
+    // Pronunciation Assistant (★ مساعد التدرب على نطق اللغات - معطل افتراضياً للزائر لأول مرة)
+    pronunciationEnabled: false,
     pronunciationEngine: 'native',
     targetLanguage: 'auto',  // Default: Smart Auto-Detect 🤖
     speechRate: '0.8',       // 0.8× ideal for learning & clear syllable perception
@@ -784,8 +784,8 @@ function exportDocument(format) {
       protectNonEditableElements();
     }
 
-    // مساعد التدرب على النطق — معالجة النصوص الأجنبية بعد الرندر
-    if (typeof vienixSettings !== 'undefined' && vienixSettings.pronunciationEnabled !== false) {
+    // مساعد التدرب على النطق — معالجة النصوص الأجنبية بعد الرندر إذا كان مفعلاً
+    if (typeof vienixSettings !== 'undefined' && vienixSettings.pronunciationEnabled === true) {
       processPronunciationInPreview();
     }
   }
@@ -8795,10 +8795,11 @@ function exportDocument(format) {
     const autoSave = document.getElementById('s-auto-save-interval');
     if (autoSave) autoSave.value = s.autoSaveInterval || '5000';
 
-    // Pronunciation settings
+    // Pronunciation settings (معطل افتراضياً للزائر لأول مرة إلا إذا قام بتفعيله)
     const pronEnabled = document.getElementById('s-pronunciation-enabled');
-    if (pronEnabled) pronEnabled.checked = s.pronunciationEnabled !== false;
-    togglePronunciationSubSettings(s.pronunciationEnabled !== false);
+    const isPronOn = s.pronunciationEnabled === true;
+    if (pronEnabled) pronEnabled.checked = isPronOn;
+    togglePronunciationSubSettings(isPronOn);
 
     const targetLang = document.getElementById('s-target-lang');
     if (targetLang) targetLang.value = s.targetLanguage || 'auto';
