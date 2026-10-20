@@ -3431,21 +3431,8 @@ function exportDocument(format) {
 
       // 1. حفظ المحتوى الحالي في الحجرة النشطة قبل الانتقال
       const currentVal = isClassicMode ? (classicEditor?.value || editor.value) : editor.value;
-      if (activeChamber !== 8) {
-        setChamberContent(activeChamber, currentVal);
-        updateChamberMetaStats(activeChamber, currentVal);
-      } else if (activeExplorerFile) {
-        const curFiles = getFolderFiles(activeExplorerFile.folderKey);
-        const f = curFiles.find(x => x.id === activeExplorerFile.fileId);
-        if (f) {
-          f.content = currentVal;
-          const trimmedCur = currentVal.replace(/data:image\/[^"')\s]+/g, '[صورة]').trim();
-          f.words = trimmedCur ? (trimmedCur.match(/[\w\u0600-\u06FF]+/g) || []).length : 0;
-          f.chars = trimmedCur.length;
-          f.updatedAt = Date.now();
-          saveFolderFiles(activeExplorerFile.folderKey, curFiles);
-        }
-      }
+      setChamberContent(activeChamber, currentVal);
+      updateChamberMetaStats(activeChamber, currentVal);
 
       // 2. البحث عن أول حجرة فارغة من الحجرات 1 إلى 7
       let targetChamber = null;
@@ -3477,7 +3464,6 @@ function exportDocument(format) {
         setChamberContent(targetChamber, text);
         updateChamberMetaStats(targetChamber, text);
 
-        // التبديل فوراً للحجرة وتحديث الواجهة والمحرر
         window.switchChamber(targetChamber);
         if (typeof renderChambersExplorerTree === 'function') {
           renderChambersExplorerTree();
@@ -3487,21 +3473,39 @@ function exportDocument(format) {
         return;
       }
 
-      // 4. الحالة الثانية: الحجرات من 1 إلى 7 كلها ممتلئة -> إنشاء ملف جديد في المجلد الرئيسي (book)
+      // 4. الحالة الثانية: الحجرات من 1 إلى 7 كلها ممتلئة
+      // البحث عن أول حجرة فارغة بدءاً من 8 فصاعداً
+      let ch = 8;
+      while (getChamberContent(ch).trim().length > 0) {
+        ch++;
+      }
+      targetChamber = ch;
+
+      if (targetChamber > TOTAL_CHAMBERS) {
+        TOTAL_CHAMBERS = targetChamber;
+        safeSaveToStorage('vienix_total_chambers', TOTAL_CHAMBERS);
+        safeSaveToStorage('yaser_total_chambers', TOTAL_CHAMBERS);
+      }
+
+      const fileTitle = `ملف ${targetChamber}`;
+      setChamberContent(targetChamber, text);
+      setChamberCustomTitle(targetChamber, fileTitle);
+      const chMeta = getChamberMeta(targetChamber);
+      chMeta.folder = 'book';
+      saveChamberMeta(targetChamber, chMeta);
+      updateChamberMetaStats(targetChamber, text);
+
+      // مزامنة الملف مع مجلد book في المستكشف
       const folderKey = 'book';
       const files = getFolderFiles(folderKey);
-
-      // حساب الرقم التسلسلي التصاعدي التالي بدءاً من 8
-      const nextNum = getNextFolderFileNum(folderKey);
-
       const textWithoutDataUrls = text.replace(/data:image\/[^"')\s]+/g, '[صورة]');
       const trimmed = textWithoutDataUrls.trim();
       const wordsCount = trimmed ? (trimmed.match(/[\w\u0600-\u06FF]+/g) || []).length : 0;
 
-      const newFile = {
-        id: 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-        num: nextNum,
-        title: `ملف ${nextNum}`,
+      const fileRecord = {
+        id: 'file_ch_' + targetChamber,
+        num: targetChamber,
+        title: fileTitle,
         content: text,
         words: wordsCount,
         chars: trimmed.length,
@@ -3509,20 +3513,29 @@ function exportDocument(format) {
         updatedAt: Date.now()
       };
 
-      files.push(newFile);
+      const existingIdx = files.findIndex(f => f.num === targetChamber);
+      if (existingIdx >= 0) {
+        files[existingIdx] = fileRecord;
+      } else {
+        files.push(fileRecord);
+      }
       saveFolderFiles(folderKey, files);
 
-      // فتح وعرض الملف فوراً في الحجرة المخصصة (حجرة 8)
-      window.handleFolderFileClick(folderKey, newFile.id);
+      // الانتقال فوراً للحجرة الجديدة
+      window.switchChamber(targetChamber);
 
-      showToast(`تم إنشاء ولصق المحتوى في "${newFile.title}" داخل المجلد الرئيسي 📂✨`, 'success', 1800);
+      if (typeof renderChambersExplorerTree === 'function') {
+        renderChambersExplorerTree();
+      }
+
+      showToast(`تم إنشاء ولصق المحتوى في "${fileTitle}" (الحجرة ${targetChamber}) 📂✨`, 'success', 1800);
 
     } catch (err) {
       showToast('تعذر الوصول إلى الحافظة، يرجى السماح بصلاحيات المتصفح', 'error', 2000);
     }
   };
 
-  // تفاعل النقر على ملف داخل مجلد: يُعرض دائماً في الحجرة رقم 8 المخصصة بعلامة النقطة الخضراء
+  // تفاعل النقر على ملف داخل مجلد: التبديل للحجرة المرتبطة به مباشرة
   window.handleFolderFileClick = function (folderKey, fileId) {
     const files = getFolderFiles(folderKey);
     const file = files.find(f => f.id === fileId);
@@ -3538,31 +3551,23 @@ function exportDocument(format) {
       localStorage.setItem('vienix_active_explorer_file', JSON.stringify(activeExplorerFile));
     } catch (e) {}
 
-    // 2. إذا كنا في حجرة أخرى (1-7)، نحفظ محتواها قبل الانتقال لحجرة 8
-    if (activeChamber !== 8) {
-      const curVal = isClassicMode ? (classicEditor?.value || editor.value) : editor.value;
-      setChamberContent(activeChamber, curVal);
+    // 2. رقم الحجرة المرتبط بالملف
+    const targetCh = (typeof file.num === 'number' && file.num >= 1) ? file.num : 8;
+    if (targetCh > TOTAL_CHAMBERS) {
+      TOTAL_CHAMBERS = targetCh;
+      safeSaveToStorage('vienix_total_chambers', TOTAL_CHAMBERS);
+      safeSaveToStorage('yaser_total_chambers', TOTAL_CHAMBERS);
     }
 
-    // 3. نعيّن حجرة 8 كالحجرة النشطة المخصصة لعرض الملف
-    activeChamber = 8;
-    setChamberContent(8, file.content || '');
-    setChamberCustomTitle(8, file.title || 'ملف المستكشف');
-
-    // 4. تحميل النص في المحرر فوراً
-    if (isClassicMode && classicEditor) {
-      classicEditor.value = file.content || '';
-    } else if (editor) {
-      editor.value = file.content || '';
+    // مزامنة محتوى الحجرة بمحتوى الملف إذا كانت الحجرة فارغة
+    if (file.content && getChamberContent(targetCh).trim().length === 0) {
+      setChamberContent(targetCh, file.content);
+      setChamberCustomTitle(targetCh, file.title || ('ملف ' + targetCh));
     }
 
-    initHistoryWithContent(file.content || '');
-    if (isClassicMode) renderClassicMarkdown(); else renderMarkdown();
-    updateStats();
-    updateChambersUI();
-    renderChambersExplorerTree();
-
-    showToast(`تم عرض "${file.title}" في حجرة الملفات 🟢`, 'success', 1600);
+    // 3. التبديل إلى الحجرة المستهدفة مباشرة
+    window.switchChamber(targetCh);
+    showToast(`تم الانتقال إلى "${file.title}" (حجرة ${targetCh}) 🟢`, 'info', 1400);
   };
 
   window.startFolderFileRename = function (e, folderKey, fileId) {
