@@ -7227,3 +7227,579 @@ body.is-resizing-workspace .workspace-resizer {
   color: #ffffff !important;
   font-weight: 700 !important;
 }
+
+/* ==========================================================================
+   VIENIX STORAGE HEALTH MONITOR & WORKSPACE BACKUP STYLES (PHASE 0)
+   ========================================================================== */
+
+/* 1. Status Bar Storage Item */
+.status-storage-item {
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-storage-item:hover {
+  background: var(--bg-surface-hover, rgba(99, 102, 241, 0.08));
+}
+
+.status-storage-safe {
+  color: var(--text-muted);
+}
+.status-storage-safe:hover {
+  color: var(--text-primary);
+}
+
+.status-storage-warning {
+  color: #f59e0b !important;
+  background: rgba(245, 158, 11, 0.1) !important;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.status-storage-danger {
+  color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.15) !important;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  animation: vienixPulseAlert 1.8s infinite;
+}
+
+@keyframes vienixPulseAlert {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  50% { transform: scale(1.02); box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* 2. Settings Modal Storage Interactive Box */
+.storage-meter-box {
+  background: var(--bg-canvas, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 6px;
+  transition: border-color 0.2s ease;
+}
+
+[data-theme="dark"] .storage-meter-box {
+  background: rgba(15, 23, 42, 0.5);
+  border-color: rgba(51, 65, 85, 0.6);
+}
+
+.storage-meter-head {
+  margin-bottom: 12px;
+}
+
+.storage-meter-title-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.storage-meter-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.storage-meter-numbers {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.storage-meter-numbers strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.storage-meter-subdesc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.storage-progress-track {
+  width: 100%;
+  height: 9px;
+  background: var(--border-color, #e2e8f0);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 10px 0 16px 0;
+}
+
+[data-theme="dark"] .storage-progress-track {
+  background: #334155;
+}
+
+.storage-progress-bar {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Storage breakdown cards */
+.storage-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.storage-breakdown-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  padding: 9px 12px;
+  transition: transform 0.15s ease;
+}
+
+[data-theme="dark"] .storage-breakdown-card {
+  background: #1e293b;
+  border-color: rgba(51, 65, 85, 0.8);
+}
+
+.storage-breakdown-card:hover {
+  transform: translateY(-1px);
+}
+
+.storage-breakdown-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.storage-breakdown-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.storage-breakdown-name {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.storage-breakdown-val {
+  font-size: 0.84rem;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+/* Full Backup Action Cards */
+.backup-action-card {
+  background: var(--bg-canvas, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+[data-theme="dark"] .backup-action-card {
+  background: rgba(15, 23, 42, 0.4);
+  border-color: rgba(51, 65, 85, 0.6);
+}
+
+.backup-action-info {
+  flex: 1;
+}
+
+.backup-action-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.backup-action-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.btn-backup-primary {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.btn-backup-primary:hover {
+  background: linear-gradient(135deg, #0369a1 0%, #075985 100%) !important;
+  transform: translateY(-1px);
+}
+
+.btn-restore-action {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.25);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.btn-restore-action:hover {
+  background: linear-gradient(135deg, #b45309 0%, #92400e 100%) !important;
+  transform: translateY(-1px);
+}
+
+/* 3. Floating Quota Exceeded Alert Banner */
+.vienix-quota-alert-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 99999;
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  color: #ffffff;
+  padding: 10px 20px;
+  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
+  animation: slideDownQuotaBanner 0.3s ease-out;
+}
+
+@keyframes slideDownQuotaBanner {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+
+.quota-banner-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.quota-banner-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.quota-banner-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85rem;
+}
+
+.quota-banner-text strong {
+  font-size: 0.95rem;
+}
+
+.quota-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.quota-banner-btn-backup {
+  background: #ffffff;
+  color: #b91c1c;
+  font-weight: 700;
+  border: none;
+  padding: 7px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.quota-banner-btn-backup:hover {
+  background: #fef2f2;
+  transform: translateY(-1px);
+}
+
+.quota-banner-btn-close {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.15s ease;
+}
+
+.quota-banner-btn-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* 4. Custom Vienix Modal Dialog */
+.vienix-custom-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 99998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.vienix-custom-modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.vienix-custom-modal {
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalPopIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.vienix-custom-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vienix-custom-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+}
+
+.vienix-custom-modal-close:hover {
+  color: var(--text-primary);
+}
+
+.vienix-custom-modal-body {
+  padding: 20px;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.vienix-custom-modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  background: var(--bg-canvas);
+}
+
+/* ==========================================================================
+   GOOGLE DRIVE CLOUD SYNC STYLES (PHASE 2)
+   ========================================================================== */
+
+/* 1. Header Cloud Button & Status Dot */
+.cloud-sync-btn {
+  position: relative;
+}
+
+.cloud-sync-status-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--bg-surface);
+  transition: all 0.25s ease;
+}
+
+.cloud-sync-status-dot.status-disconnected {
+  background: #94a3b8;
+}
+
+.cloud-sync-status-dot.status-connected {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+}
+
+.cloud-sync-status-dot.status-syncing {
+  background: #0284c7;
+  animation: driveSyncPulse 1s infinite;
+}
+
+@keyframes driveSyncPulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.5; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* 2. Cloud Account Card in Settings */
+.cloud-account-card {
+  background: var(--bg-canvas, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 14px;
+  padding: 18px;
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+[data-theme="dark"] .cloud-account-card {
+  background: rgba(15, 23, 42, 0.5);
+  border-color: rgba(51, 65, 85, 0.7);
+}
+
+.cloud-connect-prompt {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cloud-drive-logo {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-google-connect {
+  background: #ffffff !important;
+  color: #1f2937 !important;
+  border: 1px solid #d1d5db !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  padding: 10px 18px !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer;
+}
+
+[data-theme="dark"] .btn-google-connect {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #475569 !important;
+}
+
+.btn-google-connect:hover {
+  background: #f9fafb !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12) !important;
+}
+
+[data-theme="dark"] .btn-google-connect:hover {
+  background: #334155 !important;
+}
+
+/* Connected profile display */
+.cloud-profile-wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.cloud-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-color, #6366f1);
+  object-fit: cover;
+}
+
+.cloud-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cloud-user-name {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.cloud-user-email {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.cloud-badge-connected {
+  font-size: 0.72rem;
+  color: #10b981;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.cloud-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+
+.btn-sync-now {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  padding: 8px 16px !important;
+  border-radius: 7px !important;
+  font-weight: 600 !important;
+}
+
+.btn-sync-now.loading {
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.btn-disconnect {
+  color: #ef4444 !important;
+}
+
+.btn-disconnect:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+}
+
+

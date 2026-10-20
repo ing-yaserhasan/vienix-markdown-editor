@@ -19,8 +19,12 @@
   const statReadingTime = document.getElementById('stat-reading-time');
   const saveStatus = document.getElementById('save-status');
 
-  // Storage key helper with fallback for seamless compatibility
+  // Storage key helper with fallback for seamless compatibility (IndexedDB + LocalStorage)
   function getStored(key, legacyKey) {
+    if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
+      const val = window.VienixIDB.getSync(key, legacyKey);
+      if (val !== null) return val;
+    }
     try {
       const val = localStorage.getItem(key);
       if (val !== null) return val;
@@ -379,12 +383,23 @@
     }
   }
 
-  // Safe localStorage helper to prevent quota exceeded exceptions from interrupting app execution
+  // Safe localStorage & IndexedDB helper to prevent quota exceeded exceptions from interrupting app execution
   function safeSaveToStorage(key, value) {
+    if (window.VienixIDB && typeof window.VienixIDB.setSync === 'function') {
+      window.VienixIDB.setSync(key, value);
+    }
     try {
       localStorage.setItem(key, value);
+      if (window.VienixStorage && typeof window.VienixStorage.updateStatusMeterDebounced === 'function') {
+        window.VienixStorage.updateStatusMeterDebounced();
+      }
     } catch (e) {
-      console.warn(`تعذر حفظ البيانات في localStorage (${key}):`, e);
+      if (!window.VienixIDB || !window.VienixIDB.isReady) {
+        console.warn(`تعذر حفظ البيانات في localStorage (${key}):`, e);
+        if (window.VienixStorage && typeof window.VienixStorage.handleQuotaExceeded === 'function') {
+          window.VienixStorage.handleQuotaExceeded(key, e);
+        }
+      }
     }
   }
 
@@ -535,6 +550,9 @@
     }
     if (typeof isExplorerOpen !== 'undefined' && isExplorerOpen && typeof renderChambersExplorerTree === 'function') {
       renderChambersExplorerTree();
+    }
+    if (window.VienixDrive && typeof window.VienixDrive.triggerAutoSync === 'function') {
+      window.VienixDrive.triggerAutoSync();
     }
   }
 
@@ -8606,6 +8624,9 @@ function exportDocument(format) {
     syncSettingsUI();
     populateVoicesList();
     calculateStorageUsage();
+    if (window.VienixDrive && typeof window.VienixDrive.updateUI === 'function') {
+      window.VienixDrive.updateUI();
+    }
     const overlay = document.getElementById('settings-modal-overlay');
     if (overlay) overlay.classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -8746,6 +8767,10 @@ function exportDocument(format) {
   }
 
   function calculateStorageUsage() {
+    if (window.VienixStorage && typeof window.VienixStorage.updateSettingsUI === 'function') {
+      window.VienixStorage.updateSettingsUI();
+      return;
+    }
     const el = document.getElementById('s-storage-used');
     if (!el) return;
     let total = 0;

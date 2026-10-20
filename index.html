@@ -134,8 +134,27 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
               <svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg><span>تصدير ككتاب احترافي (PDF Book)</span>
             </button>
+            <div class="dropdown-divider"></div>
+            <!-- Full Backup JSON -->
+            <button class="dropdown-item" onclick="exportFullWorkspaceBackup()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+              <span>تصدير نسخة احتياطية شاملة (.json)</span>
+            </button>
+            <!-- Full Restore JSON -->
+            <button class="dropdown-item" onclick="triggerRestoreWorkspaceBackup()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              <span>استعادة نسخة احتياطية شاملة (.json)</span>
+            </button>
           </div>
         </div>
+
+        <!-- Cloud Sync Button (Google Drive) -->
+        <button class="btn btn-ghost btn-icon-only cloud-sync-btn" id="btn-cloud-sync" onclick="openSettingsModalToTab('cloud')" title="المزامنة السحابية مع Google Drive">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
+          </svg>
+          <span class="cloud-sync-status-dot status-disconnected" id="cloud-sync-dot"></span>
+        </button>
 
         <!-- Settings Gear Button -->
         <button class="btn btn-ghost btn-icon-only settings-gear-btn" onclick="openSettingsModal()" title="الإعدادات (Settings)" id="btn-settings-gear">
@@ -517,6 +536,10 @@
         </div>
         <div class="status-item">
           <span id="stat-reading-time">دقيقة قراءة: ~0</span>
+        </div>
+        <div class="status-item status-storage-item" id="stat-storage-item" onclick="openSettingsModalToTab('data')" title="مؤشر سعة التخزين المحلي (LocalStorage) - انقر لإدارة النسخ الاحتياطية">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+          <span id="stat-storage-text">الذاكرة: جارٍ الفحص...</span>
         </div>
       </div>
 
@@ -1472,6 +1495,11 @@
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
             <span>البيانات</span>
           </button>
+          <button class="settings-tab-btn" data-tab="cloud" onclick="switchSettingsTab('cloud')">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg>
+            <span>السحابة</span>
+            <span class="settings-tab-badge" style="background:rgba(2, 132, 199, 0.15); color:#0284c7;">Drive</span>
+          </button>
           <button class="settings-tab-btn" data-tab="api" onclick="switchSettingsTab('api')">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
             <span>مفاتيح API</span>
@@ -1813,32 +1841,67 @@
 
           <!-- ═══════ Tab: Data & Storage ═══════ -->
           <div class="settings-panel" id="settings-panel-data">
-            <h3 class="settings-section-title"><svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg><span>البيانات والتخزين</span></h3>
+            <h3 class="settings-section-title"><svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg><span>صحة التخزين والنسخ الاحتياطي</span></h3>
 
+            <!-- Live Interactive Storage Monitor Box -->
             <div class="settings-group">
-              <label class="settings-label">حجم البيانات المستخدم</label>
-              <div class="settings-info-box" id="s-storage-info">
-                <span class="settings-info-icon"><svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16"><line x1="18" x2="18" y1="20" y2="10"></line><line x1="12" x2="12" y1="20" y2="4"></line><line x1="6" x2="6" y1="20" y2="14"></line></svg></span>
-                <span id="s-storage-used">جارٍ الحساب...</span>
+              <label class="settings-label">حالة الذاكرة التخزينية المحلية (LocalStorage)</label>
+              <div class="storage-meter-box" id="s-storage-interactive-box">
+                <div class="storage-meter-head">
+                  <span id="s-storage-used">جارٍ قياس وتحليل استهلاك البيانات...</span>
+                </div>
               </div>
             </div>
 
+            <!-- Full Workspace Backup Action Cards -->
             <div class="settings-group">
-              <label class="settings-label">تصدير الإعدادات</label>
-              <p class="settings-hint">تحميل ملف JSON يحتوي جميع الإعدادات والتفضيلات.</p>
-              <button class="settings-action-btn" onclick="exportSettings()">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                تصدير الإعدادات (JSON)
-              </button>
+              <label class="settings-label">النسخ الاحتياطي الشامل لبيئة العمل (Local-First Protection)</label>
+
+              <!-- Export Backup Card -->
+              <div class="backup-action-card">
+                <div class="backup-action-info">
+                  <div class="backup-action-title">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#0284c7" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                    <span>تصدير نسخة احتياطية شاملة (.json)</span>
+                  </div>
+                  <p class="backup-action-desc">حفظ الحجرات الـ 8، شجرة المجلدات والملفات، الإعدادات، والبيانات الوصفية في ملف واحد متكامل.</p>
+                </div>
+                <button type="button" class="btn btn-primary btn-backup-primary" onclick="exportFullWorkspaceBackup()">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  تصدير الكل الآن
+                </button>
+              </div>
+
+              <!-- Restore Backup Card -->
+              <div class="backup-action-card">
+                <div class="backup-action-info">
+                  <div class="backup-action-title">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#d97706" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <span>استعادة بيئة العمل من نسخة سابقة (.json)</span>
+                  </div>
+                  <p class="backup-action-desc">استرجاع كافة المستندات والمجلدات من ملف نسخة احتياطية محفوظ على جهازك مع نافذة معاينة ذكية.</p>
+                </div>
+                <button type="button" class="btn btn-primary btn-restore-action" onclick="triggerRestoreWorkspaceBackup()">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                  استعادة ملف JSON
+                </button>
+              </div>
             </div>
 
-            <div class="settings-group">
-              <label class="settings-label">استيراد الإعدادات</label>
-              <p class="settings-hint">استعادة الإعدادات من ملف JSON محفوظ مسبقاً.</p>
-              <button class="settings-action-btn" onclick="document.getElementById('settings-import-input').click()">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                استيراد من ملف JSON
-              </button>
+            <!-- Single Settings Export/Import (Secondary) -->
+            <div class="settings-group" style="opacity: 0.85;">
+              <label class="settings-label">تصدير واستيراد الإعدادات والتفضيلات فقط</label>
+              <p class="settings-hint">لتخصيصات الواجهة والخطوط وأصوات القراءة دون المساس بالمحتوى.</p>
+              <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="settings-action-btn" onclick="exportSettings()" style="margin:0; flex:1;">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  تصدير الإعدادات فقط
+                </button>
+                <button class="settings-action-btn" onclick="document.getElementById('settings-import-input').click()" style="margin:0; flex:1;">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  استيراد الإعدادات فقط
+                </button>
+              </div>
             </div>
 
             <div class="settings-group settings-danger-zone">
@@ -1849,6 +1912,11 @@
                 إعادة ضبط جميع الإعدادات
               </button>
             </div>
+          </div>
+
+          <!-- ═══════ Tab: Cloud Sync (Google Drive) ═══════ -->
+          <div class="settings-panel" id="settings-panel-cloud">
+            <!-- Populated dynamically by VienixDrive.updateUI() -->
           </div>
 
           <!-- ═══════ Tab: API Keys ═══════ -->
@@ -1932,8 +2000,17 @@
   <!-- Twemoji Full Vector SVG Dataset (3,689 Icons Categorized) -->
   <script src="assets/icons/twemoji/twemoji_data.js"></script>
 
+  <!-- Next-Gen Storage Adapter (IndexedDB Unlimited Storage - Phase 1) -->
+  <script src="app/js/vienix-idb.js?v=1.0"></script>
+
   <!-- Application Main Script -->
   <script src="app/js/rtlmd.js?v=obsidian48"></script>
+
+  <!-- Storage Health Monitor & Full Workspace Backup Module (Phase 0) -->
+  <script src="app/js/storage-backup.js?v=1.0"></script>
+
+  <!-- Google Drive Personal Cloud Sync Engine (Phase 2) -->
+  <script src="app/js/vienix-drive.js?v=1.0"></script>
 
 </body>
 </html>
