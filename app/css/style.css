@@ -6084,19 +6084,21 @@ body.is-resizing-workspace .workspace-resizer {
    PRONUNCIATION ASSISTANT — مساعد النطق في المعاينة
    ========================================================================== */
 
-/* Isolated phrase wrapper with strict LTR direction */
+/* Isolated phrase wrapper with strict LTR direction - strictly on baseline */
 .pronunciation-phrase {
   display: inline;
   direction: ltr !important;
   unicode-bidi: isolate !important;
   text-align: left;
   margin: 0 2px;
-  vertical-align: middle;
+  vertical-align: baseline;
+  line-height: inherit;
 }
 
 /* Pronunciation-enabled words (dotted underline) */
 .pronunciation-word {
   display: inline;
+  vertical-align: baseline;
   text-decoration: underline dotted;
   text-decoration-color: rgba(99, 102, 241, 0.45);
   text-underline-offset: 3px;
@@ -6151,7 +6153,7 @@ body.is-resizing-workspace .workspace-resizer {
   text-decoration: none;
 }
 
-/* Speaker icon button */
+/* Speaker icon button - Beautiful circular design */
 .pronunciation-speaker-btn {
   display: inline-flex;
   align-items: center;
@@ -6165,10 +6167,12 @@ body.is-resizing-workspace .workspace-resizer {
   cursor: pointer;
   margin: 0 3px;
   padding: 0;
-  vertical-align: middle;
+  vertical-align: -2.5px;
   transition: all 0.2s ease;
   flex-shrink: 0;
   user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 [data-theme="dark"] .pronunciation-speaker-btn {
   background: rgba(99, 102, 241, 0.15);
@@ -6195,6 +6199,66 @@ body.is-resizing-workspace .workspace-resizer {
 .pronunciation-speaker-btn svg {
   width: 12px;
   height: 12px;
+}
+
+/* Translation icon button (文A) - Beautiful rounded rectangle */
+.pronunciation-trans-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: 0 3px;
+  padding: 0;
+  background: var(--bg-hover, #f1f5f9);
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 6px;
+  color: var(--text-secondary, #475569);
+  cursor: pointer;
+  vertical-align: -2.5px;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  line-height: 1;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pronunciation-trans-btn:hover {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #059669;
+  transform: scale(1.12);
+}
+
+.pronunciation-trans-btn.is-active {
+  background: #dcfce7 !important;
+  border-color: #86efac !important;
+  color: #16a34a !important;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25) !important;
+}
+
+[data-theme="dark"] .pronunciation-trans-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pronunciation-trans-btn:hover {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+
+[data-theme="dark"] .pronunciation-trans-btn.is-active {
+  background: rgba(16, 185, 129, 0.22) !important;
+  border-color: rgba(16, 185, 129, 0.5) !important;
+  color: #4ade80 !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25) !important;
+}
+
+.pronunciation-trans-btn svg {
+  width: 13px;
+  height: 13px;
 }
 
 /* Quick speed presets */

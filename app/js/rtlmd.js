@@ -10061,6 +10061,92 @@ function exportDocument(format) {
             }
           });
 
+          // Speaker icon button for phrase pronunciation (20px round, sleek indigo)
+          if (mode === 'icon' || mode === 'mixed') {
+            const speakerBtn = document.createElement('button');
+            speakerBtn.type = 'button';
+            speakerBtn.className = 'pronunciation-speaker-btn';
+            speakerBtn.title = `🔊 استمع للعبارة: ${part.content} (نقر مطول أو زر يمين للخيارات)`;
+            speakerBtn.setAttribute('aria-label', `Listen to ${part.content}`);
+            speakerBtn.innerHTML = speakerSvg;
+
+            // Long-press detection on touch screens (Mobile/Tablet)
+            let longPressTimer = null;
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let hasTriggeredLongPress = false;
+
+            speakerBtn.addEventListener('touchstart', function (e) {
+              hasTriggeredLongPress = false;
+              if (e.touches && e.touches.length === 1) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                longPressTimer = setTimeout(() => {
+                  hasTriggeredLongPress = true;
+                  if (navigator.vibrate) try { navigator.vibrate(40); } catch (_) {}
+                  openPronunciationContextMenu(
+                    { clientX: touchStartX, clientY: touchStartY },
+                    part.content,
+                    detectedLang,
+                    speakerBtn
+                  );
+                }, 450);
+              }
+            }, { passive: true });
+
+            speakerBtn.addEventListener('touchmove', function (e) {
+              if (longPressTimer && e.touches && e.touches.length === 1) {
+                if (Math.abs(e.touches[0].clientX - touchStartX) > 10 || Math.abs(e.touches[0].clientY - touchStartY) > 10) {
+                  clearTimeout(longPressTimer);
+                  longPressTimer = null;
+                }
+              }
+            }, { passive: true });
+
+            speakerBtn.addEventListener('touchend', function () {
+              if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+            });
+            speakerBtn.addEventListener('touchcancel', function () {
+              if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+            });
+
+            speakerBtn.addEventListener('click', function (e) {
+              e.stopPropagation();
+              e.preventDefault();
+              if (hasTriggeredLongPress) { hasTriggeredLongPress = false; return; }
+              const effectiveLang = phraseWrapper.getAttribute('data-override-lang') || phraseWrapper.getAttribute('data-lang') || detectedLang;
+              speakPronunciation(part.content, this, effectiveLang);
+            });
+
+            speakerBtn.addEventListener('contextmenu', function (e) {
+              e.stopPropagation();
+              e.preventDefault();
+              const effectiveLang = phraseWrapper.getAttribute('data-override-lang') || phraseWrapper.getAttribute('data-lang') || detectedLang;
+              openPronunciationContextMenu(e, part.content, effectiveLang, this);
+            });
+
+            phraseWrapper.appendChild(speakerBtn);
+          }
+
+          // Individual translation button (文A) - opens the instant floating translation bubble
+          if (vienixSettings.inlinePhraseTranslation !== false) {
+            const transBtn = document.createElement('button');
+            transBtn.type = 'button';
+            transBtn.className = 'pronunciation-trans-btn';
+            transBtn.title = `🌐 ترجمة العبارة: ${part.content}`;
+            transBtn.setAttribute('aria-label', `Translate ${part.content}`);
+            transBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>';
+
+            transBtn.addEventListener('click', function (e) {
+              e.stopPropagation();
+              e.preventDefault();
+              const effectiveLang = phraseWrapper.getAttribute('data-override-lang') || phraseWrapper.getAttribute('data-lang') || detectedLang;
+              showWordTranslationBubble(phraseWrapper, part.content, effectiveLang);
+            });
+
+            phraseWrapper.appendChild(transBtn);
+          }
+
           fragment.appendChild(phraseWrapper);
         }
       });
@@ -10208,25 +10294,7 @@ function exportDocument(format) {
     }, 220);
   }
 
-  // Preview Hover Event Delegation for Floating Pill
-  if (typeof previewContent !== 'undefined' && previewContent) {
-    previewContent.addEventListener('mouseover', (e) => {
-      const phrase = e.target.closest('.pronunciation-phrase');
-      if (phrase) {
-        showFloatingPillForPhrase(phrase);
-      } else if (!e.target.closest('#pronunciation-floating-pill')) {
-        scheduleHideFloatingPill();
-      }
-    });
-
-    previewContent.addEventListener('mouseleave', () => {
-      scheduleHideFloatingPill();
-    });
-
-    previewContent.addEventListener('scroll', () => {
-      scheduleHideFloatingPill();
-    }, { passive: true });
-  }
+  // (Hover pill disabled in favor of direct inline icons to maintain clean baseline and touch accessibility)
 
   window.addEventListener('scroll', () => {
     scheduleHideFloatingPill();
