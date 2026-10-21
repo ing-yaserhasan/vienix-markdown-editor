@@ -230,6 +230,13 @@
   if (isNaN(activeChamber) || activeChamber < 1 || activeChamber > TOTAL_CHAMBERS) {
     activeChamber = 1;
   }
+  let lastActiveOverflowChamber = parseInt(getStored('vienix_last_overflow_chamber') || '8', 10);
+  if (isNaN(lastActiveOverflowChamber) || lastActiveOverflowChamber < 8) {
+    lastActiveOverflowChamber = 8;
+  }
+  if (activeChamber >= 8) {
+    lastActiveOverflowChamber = activeChamber;
+  }
 
   // Initialize Application
   async function initApplication() {
@@ -571,8 +578,8 @@
     if (typeof syncLinkedFolderFiles === 'function') {
       syncLinkedFolderFiles(chNum, content);
     }
-    // مزامنة فورية إذا كان التعديل في حجرة 8 المخصصة للملفات
-    if (chNum === 8 && typeof syncActiveExplorerFile === 'function') {
+    // مزامنة فورية إذا كان التعديل في حجرات الملفات (8 فما فوق)
+    if (chNum >= 8 && typeof syncActiveExplorerFile === 'function') {
       syncActiveExplorerFile(content);
     }
     if (typeof isExplorerOpen !== 'undefined' && isExplorerOpen && typeof renderChambersExplorerTree === 'function') {
@@ -1962,10 +1969,48 @@ function exportDocument(format) {
     showToast(`تم حذف الحجرة ${lastCh}`, 'info', 1500);
   };
 
+  // الحصول على أعلى رقم حجرة/ملف متاح في النظام للتنقل
+  function getMaxAvailableChamber() {
+    let max = typeof TOTAL_CHAMBERS !== 'undefined' ? TOTAL_CHAMBERS : 8;
+    try {
+      const allFolders = getAppFolders();
+      allFolders.forEach(folder => {
+        const files = getFolderFiles(folder.key);
+        if (Array.isArray(files)) {
+          files.forEach(f => {
+            if (typeof f.num === 'number' && f.num > max) {
+              max = f.num;
+            }
+          });
+        }
+      });
+    } catch (e) {}
+    return Math.max(max, 8);
+  }
+
+  // البحث عن ملف المجلد المرتبط برقم الحجرة المعطى
+  function findFolderFileByChamberNum(chNum) {
+    chNum = parseInt(chNum, 10);
+    if (isNaN(chNum)) return null;
+    try {
+      const allFolders = getAppFolders();
+      for (const folder of allFolders) {
+        const files = getFolderFiles(folder.key);
+        if (Array.isArray(files)) {
+          const match = files.find(f => f.num === chNum || f.linkedChamber === chNum);
+          if (match) {
+            return { folderKey: folder.key, file: match };
+          }
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+
   // معالج النقر على الحجرة المتقطعة الفارغة
   window.handleDashedSlotClick = function () {
-    // الحجرة المتقطعة تنتقل دائماً للحجرة 8 (حجرة المستكشف)
-    window.switchChamber(8);
+    const nextCh = (lastActiveOverflowChamber || 8);
+    window.switchChamber(nextCh);
   };
 
   // معالج سهم العودة (>) للرجوع للحجرة السابقة
@@ -1977,29 +2022,34 @@ function exportDocument(format) {
 
   // معالج سهم التقدم (<) للانتقال للحجرة التالية
   window.handleChamberNavNext = function () {
-    const maxChambers = typeof TOTAL_CHAMBERS !== 'undefined' ? TOTAL_CHAMBERS : 8;
+    const maxChambers = getMaxAvailableChamber();
     if (activeChamber < maxChambers) {
       window.switchChamber(activeChamber + 1);
     }
   };
 
-  // مزامنة تلقائية لملفات المجلد الرئيسي book السابقة لضمان ربطها بالحجرات
+  // مزامنة تلقائية لملفات المجلدات (8 فما فوق) لضمان ربطها بالحجرات
   function autoSyncBookFilesToChambers() {
     try {
-      const bookFiles = getFolderFiles('book');
-      if (Array.isArray(bookFiles) && bookFiles.length > 0) {
-        // مزامنة آخر ملف في مجلد الكتاب مع الحجرة 8 فقط (لا حجرات 9+)
-        const lastFile = bookFiles[bookFiles.length - 1];
-        if (lastFile && lastFile.content && lastFile.content.trim().length > 0) {
-          const existingContent = getChamberContent(8);
-          if (!existingContent || existingContent.trim().length === 0) {
-            setChamberContent(8, lastFile.content);
-            setChamberCustomTitle(8, lastFile.title || 'ملف 8');
-          }
+      const allFolders = getAppFolders();
+      allFolders.forEach(folder => {
+        const files = getFolderFiles(folder.key);
+        if (Array.isArray(files)) {
+          files.forEach(f => {
+            const fileNum = typeof f.num === 'number' ? f.num : null;
+            if (fileNum && fileNum >= 8) {
+              ensureChamberExists(fileNum);
+              const existingContent = getChamberContent(fileNum);
+              if ((!existingContent || existingContent.trim().length === 0) && f.content && f.content.trim().length > 0) {
+                setChamberContent(fileNum, f.content);
+                setChamberCustomTitle(fileNum, f.title || ('ملف ' + fileNum));
+              }
+            }
+          });
         }
-      }
+      });
     } catch (e) {
-      console.warn('Auto-sync book files to chambers failed:', e);
+      console.warn('Auto-sync folder files to chambers failed:', e);
     }
   }
 
@@ -2055,12 +2105,13 @@ function exportDocument(format) {
       navPrevBtn.title = 'الرجوع للحجرة السابقة';
     }
 
-    // 3. حجرة المستكشف (8) — ظاهرة دائماً
+    // 3. الحجرة الديناميكية (حجرة المستكشف أو الحجرة المتجاوزة لـ 7)
     if (overflowSlot) {
       overflowSlot.style.display = 'inline-flex';
       overflowSlot.innerHTML = '';
-      const btn8 = createChamberButton(8);
-      overflowSlot.appendChild(btn8);
+      const overflowCh = activeChamber >= 8 ? activeChamber : (lastActiveOverflowChamber || 8);
+      const dynamicBtn = createChamberButton(overflowCh);
+      overflowSlot.appendChild(dynamicBtn);
     }
 
     // 4. لا توجد حجرة 9 — إخفاء الحجرة المتقطعة
@@ -2092,8 +2143,34 @@ function exportDocument(format) {
 
     // 2. تحديث الحجرة النشطة
     activeChamber = targetChamber;
+    if (activeChamber >= 8) {
+      lastActiveOverflowChamber = activeChamber;
+      safeSaveToStorage('vienix_last_overflow_chamber', lastActiveOverflowChamber);
+    }
     safeSaveToStorage('vienix_active_chamber', activeChamber);
     safeSaveToStorage('yaser_active_chamber', activeChamber);
+
+    // إذا كانت الحجرة >= 8، نتحقق إن كان هناك ملف مطابق في المجلدات لمزامنته
+    if (activeChamber >= 8 && typeof findFolderFileByChamberNum === 'function') {
+      const matched = findFolderFileByChamberNum(activeChamber);
+      if (matched && matched.file) {
+        activeExplorerFile = {
+          folderKey: matched.folderKey,
+          fileId: matched.file.id,
+          title: matched.file.title
+        };
+        try {
+          safeSaveToStorage('vienix_active_explorer_file', JSON.stringify(activeExplorerFile));
+        } catch (e) {}
+        const curChContent = getChamberContent(activeChamber);
+        if ((!curChContent || curChContent.trim().length === 0) && matched.file.content) {
+          setChamberContent(activeChamber, matched.file.content);
+        }
+        if (matched.file.title) {
+          setChamberCustomTitle(activeChamber, matched.file.title);
+        }
+      }
+    }
 
     // 3. جلب محتوى الحجرة الهدف وتحميله في المحرر
     const targetVal = getChamberContent(targetChamber);
@@ -4616,7 +4693,7 @@ function exportDocument(format) {
     // استخدام الأرقام اللاتينية بشكل صارم (Western Latin Numerals 1, 2, 3...)
     if (foldersCountEl) foldersCountEl.textContent = `${totalFoldersCount} مجلدات`;
     if (filesCountEl) filesCountEl.textContent = `${totalFilesCount} ملف`;
-    if (activeNumEl) activeNumEl.textContent = activeChamber === 8 ? 'المستعرض: 🟢 ملف' : `النشطة: #${activeChamber}`;
+    if (activeNumEl) activeNumEl.textContent = activeChamber >= 8 ? `المستعرض: 🟢 ملف ${activeChamber}` : `النشطة: #${activeChamber}`;
 
     // حساب عدد الحجرات التراكمي للمجلد والمجلدات المتفرعة منه
     function getFolderTotalCount(folderKey) {
@@ -4679,7 +4756,7 @@ function exportDocument(format) {
 
     // رندرة ملفات المجلد المستنسخة أو المنقولة أو المنشأة (نمط الفهرس العصري: سطر واحد مدمج بدون # وبدون أسطر ثانوية)
     function renderFolderFileHTML(file, parentFolderKey) {
-      const isViewingInChamber8 = (activeChamber === 8 && activeExplorerFile && activeExplorerFile.folderKey === parentFolderKey && activeExplorerFile.fileId === file.id);
+      const isViewingInChamber = (activeChamber === file.num) || (activeExplorerFile && activeExplorerFile.folderKey === parentFolderKey && activeExplorerFile.fileId === file.id && activeChamber >= 8);
       const isFilled = !!(file.content && file.content.trim().length > 0);
 
       const editIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
@@ -4691,7 +4768,7 @@ function exportDocument(format) {
       const formattedNum = String(file.num).padStart(2, '0');
 
       return `
-        <div class="obsidian-tree-item is-folder-file ${isViewingInChamber8 ? 'active' : ''}"
+        <div class="obsidian-tree-item is-folder-file ${isViewingInChamber ? 'active' : ''}"
              id="tree-file-${file.id}"
              draggable="true"
              ondragstart="handleFileDragStart(event, '${parentFolderKey}', '${file.id}')"
@@ -4704,7 +4781,7 @@ function exportDocument(format) {
           <span class="obsidian-dot ${isFilled ? 'filled' : 'empty'}" title="${isFilled ? 'محتوى مكتوب' : 'فارغ'}"></span>
           <div class="obsidian-item-title-row" id="tree-title-row-file-${file.id}">
             <span class="obsidian-item-title" id="tree-title-file-${file.id}" title="${escapeHtml(file.title)}">${escapeHtml(file.title)}</span>
-            ${isViewingInChamber8 ? '<span class="obsidian-active-indicator" title="قيد العرض"></span>' : ''}
+            ${isViewingInChamber ? '<span class="obsidian-active-indicator" title="قيد العرض"></span>' : ''}
           </div>
           <div class="obsidian-item-actions">
             <button type="button" class="obsidian-action-btn" onclick="startFolderFileRename(event, '${parentFolderKey}', '${file.id}')" title="إعادة تسمية الملف">
