@@ -9594,15 +9594,13 @@ function exportDocument(format) {
   window.closeWordTranslationBubble = closeWordTranslationBubble;
 
   // 1. Chrome On-Device AI Translation (3)
-  async function translateOnDevice(word, sourceLang, targetLang) {
+  async function translateOnDevice(word, sourceLang) {
     try {
-      const isArabic = /[\u0600-\u06FF]/.test(word);
-      const src = sourceLang ? sourceLang.split('-')[0].toLowerCase() : (isArabic ? 'ar' : 'en');
-      const tgt = targetLang ? targetLang.split('-')[0].toLowerCase() : (isArabic ? (vienixSettings.targetLanguage && vienixSettings.targetLanguage !== 'auto' ? vienixSettings.targetLanguage.split('-')[0].toLowerCase() : 'en') : 'ar');
+      const src = sourceLang ? sourceLang.split('-')[0].toLowerCase() : 'en';
       if (typeof window !== 'undefined' && window.translation && typeof window.translation.createTranslator === 'function') {
-        const can = await window.translation.canTranslate({ sourceLanguage: src, targetLanguage: tgt });
+        const can = await window.translation.canTranslate({ sourceLanguage: src, targetLanguage: 'ar' });
         if (can === 'readily' || can === 'after-download') {
-          const translator = await window.translation.createTranslator({ sourceLanguage: src, targetLanguage: tgt });
+          const translator = await window.translation.createTranslator({ sourceLanguage: src, targetLanguage: 'ar' });
           const res = await translator.translate(word);
           if (res && res.trim() && res.trim().toLowerCase() !== word.toLowerCase()) {
             return { text: res.trim(), source: 'device' };
@@ -9612,7 +9610,7 @@ function exportDocument(format) {
       if (typeof window !== 'undefined' && window.ai && window.ai.translator) {
         const can = await window.ai.translator.capabilities();
         if (can && can.available !== 'no') {
-          const tr = await window.ai.translator.create({ sourceLanguage: src, targetLanguage: tgt });
+          const tr = await window.ai.translator.create({ sourceLanguage: src, targetLanguage: 'ar' });
           const res = await tr.translate(word);
           if (res && res.trim()) {
             return { text: res.trim(), source: 'device' };
@@ -9624,21 +9622,19 @@ function exportDocument(format) {
   }
 
   // 2. Free Public Translation Endpoint (1 - No API Key: Google GTX + Lingva + MyMemory)
-  async function translateViaFreeService(word, sourceLang, targetLang, signal) {
-    const isArabic = /[\u0600-\u06FF]/.test(word);
-    const src = sourceLang ? sourceLang.split('-')[0].toLowerCase() : (isArabic ? 'ar' : 'auto');
-    const tgt = targetLang ? targetLang.split('-')[0].toLowerCase() : (isArabic ? (vienixSettings.targetLanguage && vienixSettings.targetLanguage !== 'auto' ? vienixSettings.targetLanguage.split('-')[0].toLowerCase() : 'en') : 'ar');
+  async function translateViaFreeService(word, sourceLang, signal) {
+    const src = sourceLang ? sourceLang.split('-')[0].toLowerCase() : 'auto';
 
     // A. Google GTX Free Endpoint (High quality, no key)
     try {
-      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${src}&tl=${tgt}&dt=t&q=${encodeURIComponent(word)}`;
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${src}&tl=ar&dt=t&q=${encodeURIComponent(word)}`;
       const res = await fetch(url, { signal });
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && Array.isArray(data[0])) {
-          const fullText = data[0].map(item => (item && item[0]) ? item[0] : '').filter(Boolean).join('');
-          if (fullText && fullText.trim()) {
-            return { text: fullText.trim(), source: 'cloud-gtx' };
+        if (Array.isArray(data) && data[0] && data[0][0] && data[0][0][0]) {
+          const txt = data[0][0][0].trim();
+          if (txt && /[\u0600-\u06FF]/.test(txt)) {
+            return { text: txt, source: 'cloud' };
           }
         }
       }
@@ -9648,12 +9644,12 @@ function exportDocument(format) {
 
     // B. Lingva Open Mirror Fallback
     try {
-      const lingvaUrl = `https://lingva.ml/api/v1/${src}/${tgt}/${encodeURIComponent(word)}`;
+      const lingvaUrl = `https://lingva.ml/api/v1/${src}/ar/${encodeURIComponent(word)}`;
       const res = await fetch(lingvaUrl, { signal });
       if (res.ok) {
         const data = await res.json();
-        if (data && data.translation && data.translation.trim()) {
-          return { text: data.translation.trim(), source: 'cloud-lingva' };
+        if (data && data.translation && data.translation.trim() && /[\u0600-\u06FF]/.test(data.translation)) {
+          return { text: data.translation.trim(), source: 'cloud' };
         }
       }
     } catch (e) {
@@ -9662,11 +9658,12 @@ function exportDocument(format) {
 
     // C. MyMemory Open Translation Fallback
     try {
-      const myMemoryPair = `${src === 'auto' ? (isArabic ? 'ar' : 'en') : src}|${tgt}`;
+      const myMemoryPair = src === 'auto' ? 'en|ar' : `${src}|ar`;
       const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(word.slice(0, 500))}&langpair=${myMemoryPair}`;
       const res = await fetch(url, { signal });
       if (res.ok) {
         const data = await res.json();
+        const arabicRegex = /[\u0600-\u06FF]/;
         let candidates = [];
         if (data.responseData && data.responseData.translatedText) {
           candidates.push(data.responseData.translatedText);
@@ -9682,8 +9679,8 @@ function exportDocument(format) {
             .replace(/&amp;/g, '&')
             .replace(/&#\d+;/g, '')
             .trim();
-          if (clean && clean.toLowerCase() !== word.toLowerCase()) {
-            return { text: clean, source: 'cloud-mymemory' };
+          if (clean && arabicRegex.test(clean) && clean.toLowerCase() !== word.toLowerCase()) {
+            return { text: clean, source: 'cloud' };
           }
         }
       }
@@ -9695,13 +9692,11 @@ function exportDocument(format) {
   }
 
   // 3. Combined Hybrid Waterfall Translation
-  async function fetchWordTranslation(word, sourceLang, targetLang, signal) {
+  async function fetchWordTranslation(word, sourceLang, signal) {
     const cleanWord = (word || '').trim();
     if (!cleanWord) return null;
-    const isArabic = /[\u0600-\u06FF]/.test(cleanWord);
-    const src = sourceLang ? sourceLang.split('-')[0].toLowerCase() : (isArabic ? 'ar' : 'auto');
-    const tgt = targetLang ? targetLang.split('-')[0].toLowerCase() : (isArabic ? (vienixSettings.targetLanguage && vienixSettings.targetLanguage !== 'auto' ? vienixSettings.targetLanguage.split('-')[0].toLowerCase() : 'en') : 'ar');
-    const cacheKey = `vienix_trans_${src}_${tgt}_${cleanWord.toLowerCase().slice(0, 100)}`;
+    const src = sourceLang ? sourceLang.split('-')[0].toLowerCase() : 'auto';
+    const cacheKey = `vienix_trans_${src}_${cleanWord.toLowerCase().slice(0, 100)}`;
 
     // Step 1: Check localStorage Cache (0ms, 100% offline)
     try {
@@ -9712,14 +9707,14 @@ function exportDocument(format) {
     } catch (_) {}
 
     // Step 2: Chrome On-Device Local AI
-    const deviceRes = await translateOnDevice(cleanWord, src, tgt);
+    const deviceRes = await translateOnDevice(cleanWord, src);
     if (deviceRes && deviceRes.text) {
       try { localStorage.setItem(cacheKey, deviceRes.text); } catch (_) {}
       return deviceRes;
     }
 
     // Step 3: Free Public Cloud Service (No API Key)
-    const cloudRes = await translateViaFreeService(cleanWord, src, tgt, signal);
+    const cloudRes = await translateViaFreeService(cleanWord, src, signal);
     if (cloudRes && cloudRes.text) {
       try { localStorage.setItem(cacheKey, cloudRes.text); } catch (_) {}
       return cloudRes;
