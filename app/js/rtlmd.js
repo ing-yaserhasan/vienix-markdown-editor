@@ -3245,7 +3245,13 @@ function exportDocument(format) {
       const meta = getChamberMeta(ch);
       const chFolder = meta.folder || 'book';
       if (chFolder === folderKey && ch > maxNum) {
-        maxNum = ch;
+        const content = getChamberContent(ch).trim();
+        const hasTitle = meta.customTitle && meta.customTitle.trim().length > 0;
+        // الحجرات 1-7 هي حجرات النظام الأساسية
+        // الحجرات 8 فما فوق تُحسب فقط إذا كان بها محتوى مكتوب أو عنوان مخصص
+        if (ch <= 7 || content.length > 0 || hasTitle) {
+          maxNum = ch;
+        }
       }
     }
     files.forEach(f => {
@@ -3253,6 +3259,7 @@ function exportDocument(format) {
         maxNum = f.num;
       }
     });
+    if (maxNum < 7) maxNum = 7;
     return maxNum + 1;
   }
 
@@ -3530,6 +3537,22 @@ function exportDocument(format) {
       setChamberContent(activeChamber, currentVal);
       updateChamberMetaStats(activeChamber, currentVal);
 
+      // إذا كانت الحجرة النشطة الحالية فارغة تماماً، نلصق المحتوى فيها مباشرة دون الحاجة للقفز
+      if ((currentVal || '').trim().length === 0) {
+        setChamberContent(activeChamber, text);
+        updateChamberMetaStats(activeChamber, text);
+        if (editor) editor.value = text;
+        if (classicEditor) classicEditor.value = text;
+        if (isClassicMode) renderClassicMarkdown(); else renderMarkdown();
+        initHistoryWithContent(text);
+        updateChambersUI();
+        if (typeof renderChambersExplorerTree === 'function') {
+          renderChambersExplorerTree();
+        }
+        showToast(`تم لصق المحتوى في الحجرة الحالية (${activeChamber}) بنجاح! 📋✨`, 'success', 1600);
+        return;
+      }
+
       // 2. البحث عن أول حجرة فارغة من الحجرات 1 إلى 7
       let targetChamber = null;
 
@@ -3570,57 +3593,43 @@ function exportDocument(format) {
       }
 
       // 4. الحالة الثانية: الحجرات من 1 إلى 7 كلها ممتلئة
-      // اللصق في الحجرة 8 (حجرة المستكشف) كملف جديد في مجلد الكتاب
-      targetChamber = 8;
+      // إنشاء ملف جديد حقيقي برقم تسلسلي تصاعدي بعد كل الملفات والحجرات الحالية
+      // مع الحفاظ الكامل على الملف رقم 8 وكافة الملفات والحجرات الأخرى دون أي مساس بها
+      const targetFolderKey = (activeExplorerFile && activeExplorerFile.folderKey) ? activeExplorerFile.folderKey : 'book';
+      const files = getFolderFiles(targetFolderKey);
+      const nextNum = getNextFolderFileNum(targetFolderKey);
+      const fileTitle = `ملف ${nextNum}`;
 
-      const fileTitle = `ملف ${getNextFolderFileNum('book')}`;
-
-      // إنشاء ملف جديد في مجلد book
-      const folderKey = 'book';
-      const files = getFolderFiles(folderKey);
       const textWithoutDataUrls = text.replace(/data:image\/[^"')\s]+/g, '[صورة]');
       const trimmed = textWithoutDataUrls.trim();
       const wordsCount = trimmed ? (trimmed.match(/[\w\u0600-\u06FF]+/g) || []).length : 0;
 
       const fileRecord = {
-        id: 'file_ch_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5),
-        num: getNextFolderFileNum(folderKey),
+        id: 'file_' + targetFolderKey + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5),
+        num: nextNum,
         title: fileTitle,
         content: text,
         words: wordsCount,
         chars: trimmed.length,
         createdAt: Date.now(),
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
+        linkedChamber: nextNum
       };
+
       files.push(fileRecord);
-      saveFolderFiles(folderKey, files);
+      saveFolderFiles(targetFolderKey, files);
 
-      // تحميل المحتوى في الحجرة 8 وعرضه
-      setChamberContent(8, text);
-      setChamberCustomTitle(8, fileTitle);
-      const chMeta = getChamberMeta(8);
-      chMeta.folder = 'book';
-      saveChamberMeta(8, chMeta);
-      updateChamberMetaStats(8, text);
+      // نضمن فتح المجلد ليظهر الملف الجديد في الشجرة فوراً
+      collapsedFolders[targetFolderKey] = false;
 
-      // تسجيل الملف النشط في المستكشف
-      activeExplorerFile = {
-        folderKey: folderKey,
-        fileId: fileRecord.id,
-        title: fileTitle
-      };
-      try {
-        safeSaveToStorage('vienix_active_explorer_file', JSON.stringify(activeExplorerFile));
-      } catch (e) {}
-
-      // الانتقال فوراً للحجرة 8
-      window.switchChamber(8);
+      // فتح وعرض الملف الجديد عبر handleFolderFileClick الموحدة برقم حجرته الحقيقي (nextNum)
+      window.handleFolderFileClick(targetFolderKey, fileRecord.id);
 
       if (typeof renderChambersExplorerTree === 'function') {
         renderChambersExplorerTree();
       }
 
-      showToast(`تم إنشاء ولصق المحتوى في "${fileTitle}" (الحجرة ${targetChamber}) 📂✨`, 'success', 1800);
+      showToast(`تم إنشاء "${fileTitle}" (حجرة ${nextNum}) ولصق المحتوى فيها بنجاح! 📂✨`, 'success', 1800);
 
     } catch (err) {
       showToast('تعذر الوصول إلى الحافظة، يرجى السماح بصلاحيات المتصفح', 'error', 2000);
@@ -3648,13 +3657,20 @@ function exportDocument(format) {
     } catch (e) {}
 
     // 3. تحميل محتوى الملف في الحجرة دائماً
-    if (file.content) {
-      setChamberContent(targetCh, file.content);
-    }
+    setChamberContent(targetCh, file.content || '');
     setChamberCustomTitle(targetCh, file.title || ('ملف ' + targetCh));
 
-    // 4. التبديل إلى الحجرة المستهدفة مباشرة
-    window.switchChamber(targetCh);
+    // 4. التبديل إلى الحجرة المستهدفة مباشرة (أو تحديث المحرر إن كانت هي النشطة حالياً)
+    if (activeChamber === targetCh) {
+      const targetVal = file.content || '';
+      if (editor) editor.value = targetVal;
+      if (classicEditor) classicEditor.value = targetVal;
+      initHistoryWithContent(targetVal);
+      if (isClassicMode) renderClassicMarkdown(); else renderMarkdown();
+      updateChambersUI();
+    } else {
+      window.switchChamber(targetCh);
+    }
     showToast(`تم الانتقال إلى "${file.title}" (حجرة ${targetCh}) 🟢`, 'info', 1400);
   };
 
@@ -3717,8 +3733,8 @@ function exportDocument(format) {
       if (activeExplorerFile && activeExplorerFile.folderKey === folderKey && activeExplorerFile.fileId === fileId) {
         activeExplorerFile.title = file.title;
         try { safeSaveToStorage('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (err) {}
-        if (activeChamber === 8) {
-          setChamberCustomTitle(8, file.title);
+        if (activeChamber >= 8) {
+          setChamberCustomTitle(activeChamber, file.title);
         }
       }
       showToast(`تمت إعادة تسمية الملف إلى "${val}" ✏️`, 'success', 1200);
@@ -3760,8 +3776,8 @@ function exportDocument(format) {
       file.updatedAt = Date.now();
       saveFolderFiles(folderKey, files);
       if (activeExplorerFile && activeExplorerFile.folderKey === folderKey && activeExplorerFile.fileId === fileId) {
-        if (activeChamber === 8) {
-          setChamberContent(8, file.content);
+        if (activeChamber >= 8) {
+          setChamberContent(activeChamber, file.content);
           if (isClassicMode && classicEditor) classicEditor.value = file.content;
           else if (editor) editor.value = file.content;
           if (isClassicMode) renderClassicMarkdown(); else renderMarkdown();
@@ -3824,9 +3840,9 @@ function exportDocument(format) {
       if (activeExplorerFile && activeExplorerFile.folderKey === folderKey && activeExplorerFile.fileId === fileId) {
         activeExplorerFile = null;
         try { localStorage.removeItem('vienix_active_explorer_file'); } catch (err) {}
-        if (activeChamber === 8) {
-          setChamberContent(8, '');
-          setChamberCustomTitle(8, '');
+        if (activeChamber >= 8) {
+          setChamberContent(activeChamber, '');
+          setChamberCustomTitle(activeChamber, '');
           if (isClassicMode && classicEditor) classicEditor.value = '';
           else if (editor) editor.value = '';
           if (isClassicMode) renderClassicMarkdown(); else renderMarkdown();
@@ -4731,8 +4747,8 @@ function exportDocument(format) {
       if (activeExplorerFile && activeExplorerFile.title && activeExplorerFile.title.includes('ملف #')) {
         activeExplorerFile.title = activeExplorerFile.title.replace(/ملف\s*#(\d+)/g, 'ملف $1');
         try { safeSaveToStorage('vienix_active_explorer_file', JSON.stringify(activeExplorerFile)); } catch (e) {}
-        if (activeChamber === 8) {
-          setChamberCustomTitle(8, activeExplorerFile.title);
+        if (activeChamber >= 8) {
+          setChamberCustomTitle(activeChamber, activeExplorerFile.title);
         }
       }
     } catch (e) {}
