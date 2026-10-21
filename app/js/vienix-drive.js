@@ -103,14 +103,48 @@
 
               this.updateUI();
 
-              if (window.VienixStorage && typeof window.VienixStorage.showCustomModal === 'function') {
-                window.VienixStorage.showCustomModal({
-                  title: 'تم الاتصال بـ Google Drive بنجاح! ☁️',
-                  icon: '✅',
-                  content: `<p style="color:var(--text-secondary);">أهلاً بك <strong>${this.userProfile ? this.userProfile.name : ''}</strong>! تم ربط حسابك السحابي، وأصبح بإمكانك مزامنة نصوصك وحجراتك مع مجلد <strong>Vienix Notes</strong> على Google Drive بأمان تام.</p>`,
-                  confirmText: 'ابدأ المزامنة الآن',
-                  onConfirm: () => { this.syncAllToDrive(); }
-                });
+              // Smart workspace check on connection
+              const isLocalEmpty = this.isLocalWorkspaceEmpty();
+              const driveStatus = await this.getDriveWorkspaceStatus();
+
+              if (isLocalEmpty && driveStatus && driveStatus.hasRemoteData) {
+                // Device is empty (e.g. mobile entering for first time), but Drive has user files!
+                if (window.VienixStorage && typeof window.VienixStorage.showCustomModal === 'function') {
+                  window.VienixStorage.showCustomModal({
+                    title: 'تم العثور على ملفاتك في Google Drive! ☁️📥',
+                    icon: '📥',
+                    content: `<p style="color:var(--text-secondary);">أهلاً بك <strong>${this.userProfile ? this.userProfile.name : ''}</strong>!<br>تم ربط حسابك، ووجدنا ملفاتك وحجراتك السابقة في مجلد <strong>Vienix Notes</strong> على Google Drive.<br><br>هل ترغب في <strong>استيراد وتنزيل ملفاتك</strong> إلى هذا الجهاز الآن؟</p>`,
+                    confirmText: 'نعم، استيراد ملفاتي الآن',
+                    cancelText: 'تخطي والبدء بصفحة فارغة',
+                    onConfirm: () => { this.pullFromDrive({ force: true }); }
+                  });
+                } else {
+                  if (confirm('تم العثور على ملفاتك في Google Drive. هل ترغب في استيرادها وتنزيلها الآن؟')) {
+                    this.pullFromDrive({ force: true });
+                  }
+                }
+              } else if (!isLocalEmpty && (!driveStatus || !driveStatus.hasRemoteData)) {
+                // Local has data, Drive is fresh
+                if (window.VienixStorage && typeof window.VienixStorage.showCustomModal === 'function') {
+                  window.VienixStorage.showCustomModal({
+                    title: 'تم الاتصال بـ Google Drive بنجاح! ☁️',
+                    icon: '✅',
+                    content: `<p style="color:var(--text-secondary);">أهلاً بك <strong>${this.userProfile ? this.userProfile.name : ''}</strong>! تم ربط حسابك السحابي، وأصبح بإمكانك مزامنة نصوصك وحجراتك مع مجلد <strong>Vienix Notes</strong> على Google Drive بأمان تام.</p>`,
+                    confirmText: 'ابدأ المزامنة الآن',
+                    onConfirm: () => { this.syncAllToDrive(); }
+                  });
+                }
+              } else {
+                // Both have data or both are empty -> offer smart sync
+                if (window.VienixStorage && typeof window.VienixStorage.showCustomModal === 'function') {
+                  window.VienixStorage.showCustomModal({
+                    title: 'تم الاتصال بـ Google Drive بنجاح! ☁️',
+                    icon: '✅',
+                    content: `<p style="color:var(--text-secondary);">أهلاً بك <strong>${this.userProfile ? this.userProfile.name : ''}</strong>! تم ربط حسابك السحابي بنجاح.</p>`,
+                    confirmText: 'مزامنة ذكية الآن',
+                    onConfirm: () => { this.smartSync(); }
+                  });
+                }
               }
             }
           }
@@ -156,7 +190,7 @@
       if (!this.accessToken) {
         this.connect();
       } else {
-        this.syncAllToDrive();
+        this.smartSync();
       }
     },
 
@@ -423,15 +457,120 @@
     },
 
     // ─────────────────────────────────────────────────────────────
-    // 5. SYNC FROM DRIVE (PULL / RESTORE)
+    // 5. WORKSPACE INSPECTION HELPERS
     // ─────────────────────────────────────────────────────────────
-    pullFromDrive: async function () {
+    isLocalWorkspaceEmpty: function () {
+      const maxCh = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
+      let totalLength = 0;
+      for (let ch = 1; ch <= maxCh; ch++) {
+        let content = '';
+        if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
+          content = window.VienixIDB.getSync('vienix_chamber_' + ch, 'yaser_chamber_' + ch) || '';
+        } else {
+          content = localStorage.getItem('vienix_chamber_' + ch) || localStorage.getItem('yaser_chamber_' + ch) || '';
+        }
+        if (ch === 1 && !content) {
+          content = localStorage.getItem('vienix_md_content') || '';
+        }
+        totalLength += (content || '').trim().length;
+      }
+
+      // Check custom folders
+      try {
+        const rawFolders = localStorage.getItem('vienix_custom_folders');
+        if (rawFolders) {
+          const parsed = JSON.parse(rawFolders);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            totalLength += parsed.length * 10;
+          }
+        }
+      } catch (e) {}
+
+      return totalLength === 0;
+    },
+
+    getLocalLastModifiedTime: function () {
+      let maxTime = 0;
+      const maxCh = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
+      for (let ch = 1; ch <= maxCh; ch++) {
+        let raw = null;
+        if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
+          raw = window.VienixIDB.getSync('vienix_chamber_meta_' + ch, 'yaser_chamber_meta_' + ch);
+        } else {
+          raw = localStorage.getItem('vienix_chamber_meta_' + ch) || localStorage.getItem('yaser_chamber_meta_' + ch);
+        }
+        if (raw) {
+          try {
+            const meta = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            if (meta && meta.updatedAt) {
+              const t = Number(meta.updatedAt);
+              if (t > maxTime) maxTime = t;
+            }
+          } catch (e) {}
+        }
+      }
+      const lastSync = localStorage.getItem('vienix_drive_last_sync');
+      if (lastSync) {
+        const st = new Date(lastSync).getTime();
+        if (!isNaN(st) && st > maxTime) maxTime = st;
+      }
+      return maxTime;
+    },
+
+    getDriveWorkspaceStatus: async function () {
+      if (!this.accessToken) return null;
+      const folderId = await this.ensureAppFolder();
+      if (!folderId) return null;
+
+      try {
+        const q = `'${folderId}' in parents and trashed=false`;
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,modifiedTime,size)&pageSize=50`, {
+          headers: { Authorization: `Bearer ${this.accessToken}` }
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        const files = data.files || [];
+
+        const manifestFile = files.find(f => f.name === 'vienix_workspace_manifest.json');
+        const chamberFiles = files.filter(f => /^Chamber_\d+.*\.md$/i.test(f.name));
+
+        let remoteTime = 0;
+        if (manifestFile && manifestFile.modifiedTime) {
+          remoteTime = new Date(manifestFile.modifiedTime).getTime();
+        }
+        chamberFiles.forEach(f => {
+          if (f.modifiedTime) {
+            const mt = new Date(f.modifiedTime).getTime();
+            if (mt > remoteTime) remoteTime = mt;
+          }
+        });
+
+        const hasRemoteData = (manifestFile && Number(manifestFile.size || 0) > 20) || chamberFiles.length > 0;
+
+        return {
+          folderId,
+          files,
+          manifestFile,
+          chamberFiles,
+          remoteTime,
+          hasRemoteData
+        };
+      } catch (err) {
+        console.warn('[VienixDrive] Failed to get drive workspace status:', err);
+        return null;
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────
+    // 6. SYNC FROM DRIVE (PULL / RESTORE)
+    // ─────────────────────────────────────────────────────────────
+    pullFromDrive: async function (options = {}) {
       if (!this.accessToken) {
         this.connect();
         return;
       }
 
-      if (!confirm('هل ترغب باستيراد ملفاتك من Google Drive؟ سيتم دمج الحجرات المستلمة مع مساحة العمل الحالية.')) {
+      if (!options.force && !confirm('هل ترغب باستيراد ملفاتك من Google Drive؟ سيتم دمج وتحديث الحجرات مع مساحة العمل الحالية.')) {
         return;
       }
 
@@ -442,24 +581,189 @@
         const folderId = await this.ensureAppFolder();
         if (!folderId) throw new Error('App folder not found on Drive');
 
-        // Check for manifest file first
-        const manifestFile = await this.findFileInFolder('vienix_workspace_manifest.json');
-        if (manifestFile) {
-          const res = await fetch(`https://www.googleapis.com/drive/v3/files/${manifestFile.id}?alt=media`, {
-            headers: { Authorization: `Bearer ${this.accessToken}` }
-          });
-          if (res.ok) {
-            const manifest = await res.json();
-            if (manifest && manifest.rawKeys && window.VienixStorage && typeof window.VienixStorage.applyRestore === 'function') {
-              window.VienixStorage.applyRestore(manifest);
-              return;
+        const driveStatus = await this.getDriveWorkspaceStatus();
+        let manifest = null;
+
+        // 1. Try to read manifest if available
+        if (driveStatus && driveStatus.manifestFile) {
+          try {
+            const res = await fetch(`https://www.googleapis.com/drive/v3/files/${driveStatus.manifestFile.id}?alt=media`, {
+              headers: { Authorization: `Bearer ${this.accessToken}` }
+            });
+            if (res.ok) {
+              manifest = await res.json();
+            }
+          } catch (e) {
+            console.warn('[VienixDrive] Could not parse manifest:', e);
+          }
+        }
+
+        if (!manifest) {
+          manifest = { app: 'Vienix Markdown Editor', rawKeys: {} };
+        }
+        if (!manifest.rawKeys) manifest.rawKeys = {};
+
+        // 2. Check if manifest has any chambers with content
+        let hasChambers = false;
+        Object.keys(manifest.rawKeys).forEach(k => {
+          if (k.includes('chamber') && !k.includes('meta') && String(manifest.rawKeys[k]).trim().length > 0) {
+            hasChambers = true;
+          }
+        });
+
+        // 3. Fallback / Enhancement: read any Chamber_*.md files directly from Drive folder
+        if (driveStatus && driveStatus.chamberFiles && driveStatus.chamberFiles.length > 0) {
+          for (const file of driveStatus.chamberFiles) {
+            const match = file.name.match(/^Chamber_(\d+)(?:_(.*))?\.md$/i);
+            if (match) {
+              const chNum = parseInt(match[1], 10);
+              const title = match[2] ? match[2].replace(/_/g, ' ') : '';
+              const existingContent = manifest.rawKeys['vienix_chamber_' + chNum] || manifest.rawKeys['yaser_chamber_' + chNum];
+
+              // If missing or empty in manifest, fetch it directly
+              if (!existingContent || String(existingContent).trim().length === 0) {
+                try {
+                  const contentRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, {
+                    headers: { Authorization: `Bearer ${this.accessToken}` }
+                  });
+                  if (contentRes.ok) {
+                    const text = await contentRes.text();
+                    if (text && text.trim().length > 0) {
+                      manifest.rawKeys['vienix_chamber_' + chNum] = text;
+                      manifest.rawKeys['yaser_chamber_' + chNum] = text;
+                      if (chNum === 1) {
+                        manifest.rawKeys['vienix_md_content'] = text;
+                        manifest.rawKeys['yaser_md_content'] = text;
+                      }
+                      if (title && !manifest.rawKeys['vienix_chamber_meta_' + chNum]) {
+                        const metaObj = { customTitle: title, folder: 'book', updatedAt: Date.now() };
+                        manifest.rawKeys['vienix_chamber_meta_' + chNum] = JSON.stringify(metaObj);
+                        manifest.rawKeys['yaser_chamber_meta_' + chNum] = JSON.stringify(metaObj);
+                      }
+                      hasChambers = true;
+                    }
+                  }
+                } catch (e) {
+                  console.warn('[VienixDrive] Failed reading chamber file:', file.name, e);
+                }
+              } else {
+                hasChambers = true;
+              }
             }
           }
         }
 
-        alert('لم يتم العثور على ملفات سابقة في مجلد Vienix Notes على Drive.');
+        if (hasChambers && window.VienixStorage && typeof window.VienixStorage.applyRestore === 'function') {
+          window.VienixStorage.applyRestore(manifest);
+          return;
+        }
+
+        if (window.VienixStorage && typeof window.VienixStorage.showCustomModal === 'function') {
+          window.VienixStorage.showCustomModal({
+            title: 'تنبيه الاستيراد',
+            icon: '⚠️',
+            content: '<p style="color:var(--text-secondary);">لم يتم العثور على ملفات أو نصوص سابقة في مجلد Vienix Notes على Google Drive.</p>',
+            confirmText: 'حسناً'
+          });
+        } else {
+          alert('لم يتم العثور على ملفات سابقة في مجلد Vienix Notes على Google Drive.');
+        }
       } catch (err) {
         alert('حدث خطأ أثناء الاستيراد من Google Drive: ' + err.message);
+      } finally {
+        this.isSyncing = false;
+        this.updateUI();
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────
+    // 7. SMART BI-DIRECTIONAL SYNC
+    // ─────────────────────────────────────────────────────────────
+    smartSync: async function (options = {}) {
+      if (!this.accessToken) {
+        this.connect();
+        return;
+      }
+
+      if (this.isSyncing) return;
+      this.isSyncing = true;
+      this.updateUI();
+
+      try {
+        const isLocalEmpty = this.isLocalWorkspaceEmpty();
+        const driveStatus = await this.getDriveWorkspaceStatus();
+
+        // 1. Local is completely empty, and Drive has files -> Auto PULL
+        if (isLocalEmpty && driveStatus && driveStatus.hasRemoteData) {
+          console.log('[VienixDrive] SmartSync: Local is empty and Drive has files -> Pulling from Drive...');
+          this.isSyncing = false;
+          await this.pullFromDrive({ force: true });
+          return;
+        }
+
+        // 2. Drive has no data, Local has data -> Auto PUSH
+        if (!isLocalEmpty && (!driveStatus || !driveStatus.hasRemoteData)) {
+          console.log('[VienixDrive] SmartSync: Drive is empty and Local has files -> Pushing to Drive...');
+          this.isSyncing = false;
+          await this.syncAllToDrive();
+          return;
+        }
+
+        // 3. Both are empty
+        if (isLocalEmpty && (!driveStatus || !driveStatus.hasRemoteData)) {
+          console.log('[VienixDrive] SmartSync: Both local and Drive are empty.');
+          this.isSyncing = false;
+          this.updateUI();
+          if (window.VienixStorage && typeof window.VienixStorage.showCustomModal === 'function') {
+            window.VienixStorage.showCustomModal({
+              title: 'Google Drive متصل ☁️',
+              icon: 'ℹ️',
+              content: '<p style="color:var(--text-secondary);">مساحة العمل فارغة حالياً على هذا الجهاز وعلى Google Drive. ابدأ بكتابة نصوصك وسيتم حفظها ومزامنتها تلقائياً.</p>',
+              confirmText: 'حسناً'
+            });
+          }
+          return;
+        }
+
+        // 4. Both have data -> Compare timestamps
+        const localTime = this.getLocalLastModifiedTime();
+        const remoteTime = (driveStatus && driveStatus.remoteTime) ? driveStatus.remoteTime : 0;
+
+        // If remote is noticeably newer (more than 5 seconds newer than local)
+        if (remoteTime > (localTime + 5000)) {
+          this.isSyncing = false;
+          this.updateUI();
+          const dateStr = new Date(remoteTime).toLocaleTimeString('ar-SA') + ' (' + new Date(remoteTime).toLocaleDateString('ar-SA') + ')';
+          if (window.VienixStorage && typeof window.VienixStorage.showCustomModal === 'function') {
+            window.VienixStorage.showCustomModal({
+              title: 'تحديثات أحدث على Google Drive! 📥',
+              icon: '🔄',
+              content: `<p style="color:var(--text-secondary);">تم العثور على نسخة أحدث على Google Drive تم تعديلها بتاريخ <strong>${dateStr}</strong>.<br><br>هل ترغب في <strong>استيراد النسخة الأحدث من السحابة</strong> أم <strong>رفع نسختك الحالية</strong> واستبدال السحابة؟</p>`,
+              confirmText: 'استيراد الأحدث من السحابة (تنزيل)',
+              cancelText: 'رفع النسخة الحالية إلى السحابة',
+              onConfirm: () => {
+                this.pullFromDrive({ force: true });
+              },
+              onCancel: () => {
+                this.syncAllToDrive();
+              }
+            });
+          } else {
+            if (confirm(`توجد نسخة أحدث على Google Drive بتاريخ ${dateStr}. هل ترغب في تنزيلها؟`)) {
+              await this.pullFromDrive({ force: true });
+            } else {
+              await this.syncAllToDrive();
+            }
+          }
+          return;
+        }
+
+        // Local is newer or equal -> Push local changes to Drive
+        console.log('[VienixDrive] SmartSync: Local is up-to-date or newer -> Pushing to Drive...');
+        this.isSyncing = false;
+        await this.syncAllToDrive();
+      } catch (err) {
+        console.error('[VienixDrive] SmartSync error:', err);
       } finally {
         this.isSyncing = false;
         this.updateUI();
@@ -531,8 +835,8 @@
               </div>
             </div>
             <div class="cloud-card-actions">
-              <button type="button" class="btn btn-primary btn-sync-now ${this.isSyncing ? 'loading' : ''}" onclick="VienixDrive.syncAllToDrive()">
-                ${this.isSyncing ? '🔄 جارٍ المزامنة...' : '☁️ مزامنة الآن'}
+              <button type="button" class="btn btn-primary btn-sync-now ${this.isSyncing ? 'loading' : ''}" onclick="VienixDrive.smartSync()">
+                ${this.isSyncing ? '🔄 جارٍ المزامنة...' : '☁️ مزامنة ذكية الآن'}
               </button>
               <button type="button" class="btn btn-ghost btn-disconnect" onclick="VienixDrive.disconnect()">
                 فصل الحساب
