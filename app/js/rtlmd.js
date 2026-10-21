@@ -1975,10 +1975,12 @@ function exportDocument(format) {
     }
   };
 
-  // معالج سهم التقدم (<) للانتقال لحجرة المستكشف
+  // معالج سهم التقدم (<) للانتقال للحجرة التالية
   window.handleChamberNavNext = function () {
-    // ينتقل دائماً للحجرة 8 (حجرة المستكشف)
-    window.switchChamber(8);
+    const maxChambers = typeof TOTAL_CHAMBERS !== 'undefined' ? TOTAL_CHAMBERS : 8;
+    if (activeChamber < maxChambers) {
+      window.switchChamber(activeChamber + 1);
+    }
   };
 
   // مزامنة تلقائية لملفات المجلد الرئيسي book السابقة لضمان ربطها بالحجرات
@@ -2047,14 +2049,10 @@ function exportDocument(format) {
       listEl.appendChild(btn);
     }
 
-    // 2. سهم الفاصل (>) — ظاهر دائماً كفاصل بين الحجرات الأساسية وحجرة المستكشف
+    // 2. سهم العودة (>) — للرجوع للحجرة السابقة
     if (navPrevBtn) {
       navPrevBtn.style.display = 'inline-flex';
-      if (activeChamber === 8) {
-        navPrevBtn.title = 'الرجوع للحجرات الأساسية';
-      } else {
-        navPrevBtn.title = 'الانتقال لحجرة المستكشف (8)';
-      }
+      navPrevBtn.title = 'الرجوع للحجرة السابقة';
     }
 
     // 3. حجرة المستكشف (8) — ظاهرة دائماً
@@ -2070,10 +2068,10 @@ function exportDocument(format) {
       dashedSlot.style.display = 'none';
     }
 
-    // 5. سهم المستكشف (<) — ظاهر دائماً
+    // 5. سهم التقدم (<) — للانتقال للحجرة التالية
     if (navNextBtn) {
       navNextBtn.style.display = 'inline-flex';
-      navNextBtn.title = 'فتح المستكشف';
+      navNextBtn.title = 'الانتقال للحجرة التالية';
     }
 
     updateBookChambersList();
