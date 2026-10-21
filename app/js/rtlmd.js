@@ -184,6 +184,9 @@
     if (vienixSettings.accentColor) {
       document.documentElement.style.setProperty('--accent-color', vienixSettings.accentColor);
     }
+    if (typeof updateGlobalBilingualBtnVisibility === 'function') {
+      updateGlobalBilingualBtnVisibility();
+    }
   }
 
   // Theme & Settings
@@ -848,11 +851,6 @@ function exportDocument(format) {
     // مساعد التدرب على النطق — معالجة النصوص الأجنبية بعد الرندر إذا كان مفعلاً
     if (typeof vienixSettings !== 'undefined' && vienixSettings.pronunciationEnabled === true) {
       processPronunciationInPreview();
-    }
-
-    // الترجمة المزدوجة الشاملة — إذا كان وضع القراءة المزدوجة للمقال مفعلاً، يتم تحديث كروت الترجمة للفقرات تلقائياً
-    if (window._isGlobalBilingualActive === true && typeof applyGlobalBilingualTranslations === 'function') {
-      applyGlobalBilingualTranslations();
     }
   }
 
@@ -10248,9 +10246,11 @@ function exportDocument(format) {
   // BILINGUAL DUAL VIEW SYSTEM (السيناريوهان 1 و 2 للترجمة المزدوجة المنسدلة)
   // ==========================================================================
 
-  // تحديث إظهار أو إخفاء أيقونة الترجمة العامة حسب إعدادات المستخدم
+  // تحديث إظهار أو إخفاء أيقونة الترجمة العامة حسب إعدادات المستخدم (تظهر فقط عند تفعيل النطق الصوتي)
   function updateGlobalBilingualBtnVisibility() {
-    const show = vienixSettings.globalBilingualTranslation !== false;
+    const isPronOn = typeof vienixSettings !== 'undefined' && vienixSettings.pronunciationEnabled === true;
+    const isGlobalOn = typeof vienixSettings !== 'undefined' && vienixSettings.globalBilingualTranslation !== false;
+    const show = isPronOn && isGlobalOn;
     const btn = document.getElementById('btn-global-bilingual-trans');
     if (btn) btn.style.display = show ? 'inline-flex' : 'none';
   }
@@ -10323,141 +10323,6 @@ function exportDocument(format) {
   // السيناريو 2: تبديل وضع الترجمة المزدوجة لكامل المقال (Global Bilingual Dual View)
   window._isGlobalBilingualActive = false;
 
-  function applyGlobalBilingualTranslations() {
-    if (!previewContent) return false;
-
-    // المرشحون للترجمة: عناصر الفقرات، العناوين، القوائم، والاقتباسات
-    const candidateBlocks = previewContent.querySelectorAll('p, h1, h2, h3, h4, h5, h6, blockquote, li');
-    let hasAny = false;
-
-    candidateBlocks.forEach(block => {
-      // استثناء العناصر داخل الأكواد، المخططات، أشرطة الأدوات، أو كروت الترجمة نفسها
-      if (block.closest('pre, code, .mermaid, .mermaid-wrapper, .diagram-zoom-controls, .preview-tools, .image-resizer-wrapper, .inline-translation-box, .pronunciation-speaker-btn, .word-trans-bubble')) {
-        return;
-      }
-
-      // إذا كان العنصر نفسه داخل عنصر آخر تم اختياره (مثل li يحتوي p)، نعتمد الـ p لتفادي التكرار
-      if (block.tagName === 'LI' && block.querySelector('p')) {
-        return;
-      }
-
-      const text = block.textContent.trim();
-      if (!text || text.length < 2) return;
-
-      hasAny = true;
-
-      // تحقق مما إذا كان كارت الترجمة ملحقاً به بالفعل
-      let next = block.nextElementSibling;
-      if (next && next.classList.contains('inline-translation-box')) {
-        next.classList.add('is-open');
-        return;
-      }
-
-      const isAr = /[\u0600-\u06FF]/.test(text);
-      const tgtLang = isAr ? (vienixSettings.targetLanguage && vienixSettings.targetLanguage !== 'auto' ? vienixSettings.targetLanguage : 'en-US') : 'ar';
-      const tgtPrefix = tgtLang.split('-')[0].toLowerCase();
-
-      const box = document.createElement('div');
-      box.className = 'inline-translation-box is-open';
-      box.setAttribute('dir', isAr ? 'ltr' : 'rtl');
-
-      const flagMap = {
-        ar: '🇸🇦 العربية',
-        en: '🇬🇧 English',
-        de: '🇩🇪 Deutsch',
-        fr: '🇫🇷 Français',
-        es: '🇪🇸 Español',
-        it: '🇮🇹 Italiano',
-        tr: '🇹🇷 Türkçe',
-        ru: '🇷🇺 Русский',
-        ja: '🇯🇵 日本語',
-        zh: '🇨🇳 中文'
-      };
-      const badgeLabel = flagMap[tgtPrefix] || (isAr ? '🌐 English' : '🇸🇦 العربية');
-
-      box.innerHTML = `
-        <div class="itb-header">
-          <span class="itb-badge">${badgeLabel}</span>
-          <button type="button" class="itb-copy-btn" title="نسخ الترجمة">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-          </button>
-        </div>
-        <div class="itb-loading">
-          <span class="wtb-spinner"></span>
-          <span>جارٍ استحضار ترجمة الفقرة...</span>
-        </div>
-        <p class="itb-text" style="display:none;"></p>
-      `;
-
-      // زر نسخ الترجمة
-      const copyBtn = box.querySelector('.itb-copy-btn');
-      if (copyBtn) {
-        copyBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const p = box.querySelector('.itb-text');
-          if (p && p.textContent) {
-            navigator.clipboard.writeText(p.textContent).then(() => {
-              showToast('تم نسخ الترجمة إلى الحافظة ✓', 'success', 1400);
-            }).catch(() => {});
-          }
-        });
-      }
-
-      // إدراج كارت الترجمة مباشرة أسفل الفقرة
-      if (block.parentNode) {
-        block.parentNode.insertBefore(box, block.nextSibling);
-      }
-
-      // جلب الترجمة
-      fetchWordTranslation(text, isAr ? 'ar' : 'auto', tgtPrefix).then(res => {
-        if (!box.parentNode) return;
-        const loadEl = box.querySelector('.itb-loading');
-        const textEl = box.querySelector('.itb-text');
-        if (loadEl) loadEl.style.display = 'none';
-        if (res && res.text) {
-          if (textEl) {
-            textEl.textContent = res.text;
-            textEl.style.display = 'block';
-          }
-        } else {
-          if (textEl) {
-            textEl.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">تعذر جلب الترجمة للفقرة.</span>';
-            textEl.style.display = 'block';
-          }
-        }
-      }).catch(() => {
-        if (!box.parentNode) return;
-        const loadEl = box.querySelector('.itb-loading');
-        const textEl = box.querySelector('.itb-text');
-        if (loadEl) loadEl.style.display = 'none';
-        if (textEl) {
-          textEl.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">تعذر جلب الترجمة للفقرة.</span>';
-          textEl.style.display = 'block';
-        }
-      });
-    });
-
-    return hasAny;
-  }
-  window.applyGlobalBilingualTranslations = applyGlobalBilingualTranslations;
-
-  function removeGlobalBilingualTranslations() {
-    if (!previewContent) return;
-    const boxes = previewContent.querySelectorAll('.inline-translation-box');
-    boxes.forEach(b => {
-      b.classList.remove('is-open');
-      setTimeout(() => {
-        if (!window._isGlobalBilingualActive && b.parentNode) {
-          b.parentNode.removeChild(b);
-        }
-      }, 350);
-    });
-  }
-  window.removeGlobalBilingualTranslations = removeGlobalBilingualTranslations;
-
   window.toggleGlobalBilingualMode = function () {
     window._isGlobalBilingualActive = !window._isGlobalBilingualActive;
     const active = window._isGlobalBilingualActive;
@@ -10465,15 +10330,25 @@ function exportDocument(format) {
     const btn = document.getElementById('btn-global-bilingual-trans');
     if (btn) btn.classList.toggle('is-active', active);
 
-    if (active) {
-      const hasContent = applyGlobalBilingualTranslations();
-      if (!hasContent) {
-        showToast('لا توجد فقرات لترجمتها في المحرر الحالي', 'info', 2000);
-      } else {
-        showToast('تم تفعيل وضع القراءة المزدوجة لكامل المقال 🌐', 'success', 2200);
+    // البحث في كافة كروت الترجمة عبر المقال (تعمل دائماً سواء كانت أزرار الترجمة الفردية ظاهرة أو مخفية)
+    const allBoxes = document.querySelectorAll('.inline-translation-box');
+    allBoxes.forEach(box => {
+      const phrase = box._phrase;
+      const lang = (box._wrapper && box._wrapper.getAttribute('data-override-lang')) || box._lang;
+      const associatedBtn = box._associatedBtn;
+      const isOpen = box.classList.contains('is-open');
+
+      if (active && !isOpen) {
+        toggleInlinePhraseTranslation(associatedBtn, box, phrase, lang, true);
+      } else if (!active && isOpen) {
+        box.classList.remove('is-open');
+        if (associatedBtn) associatedBtn.classList.remove('is-active');
       }
+    });
+
+    if (active) {
+      showToast('تم تفعيل وضع القراءة المزدوجة لكامل المقال 🌐', 'success', 2000);
     } else {
-      removeGlobalBilingualTranslations();
       showToast('تم طي ترجمات المقال واستعادة العرض الأصلي ✓', 'info', 1800);
     }
   };
@@ -10667,24 +10542,41 @@ function exportDocument(format) {
             phraseWrapper.appendChild(speakerBtn);
           }
 
-          // Individual translation button (文A) - opens the instant floating translation bubble
+          // إنشاء كارت الترجمة المنزلق دائماً لكل عبارة (لدعم الترجمة الشاملة حتى لو تم إطفاء أزرار الترجمة الفردية)
+          const transBox = document.createElement('div');
+          transBox.className = 'inline-translation-box';
+          transBox.setAttribute('dir', 'rtl');
+          transBox.innerHTML = '<div class="itb-loading"><span class="wtb-spinner"></span><span>جارٍ استحضار ترجمة العبارة...</span></div><p class="itb-text" style="display:none;"></p>';
+          transBox._phrase = part.content;
+          transBox._lang = detectedLang;
+          transBox._wrapper = phraseWrapper;
+          transBox._associatedBtn = null;
+
+          // إضافة زر الترجمة الفردي لكل عبارة (文A) فقط إذا كانت الميزة مفعلة في الإعدادات
           if (vienixSettings.inlinePhraseTranslation !== false) {
             const transBtn = document.createElement('button');
             transBtn.type = 'button';
             transBtn.className = 'pronunciation-trans-btn';
-            transBtn.title = `🌐 ترجمة العبارة: ${part.content}`;
-            transBtn.setAttribute('aria-label', `Translate ${part.content}`);
-            transBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>';
+            transBtn.title = 'ترجمة العبارة وعرضها بالأسفل (دفع النص)';
+            transBtn.setAttribute('aria-label', 'Translate phrase inline');
+            transBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>';
+
+            transBtn._associatedBox = transBox;
+            transBtn._associatedPhrase = part.content;
+            transBtn._associatedLang = detectedLang;
+            transBox._associatedBtn = transBtn;
 
             transBtn.addEventListener('click', function (e) {
               e.stopPropagation();
               e.preventDefault();
-              const effectiveLang = phraseWrapper.getAttribute('data-override-lang') || phraseWrapper.getAttribute('data-lang') || detectedLang;
-              showWordTranslationBubble(phraseWrapper, part.content, effectiveLang);
+              const effectiveLang = phraseWrapper.getAttribute('data-override-lang') || detectedLang;
+              toggleInlinePhraseTranslation(transBtn, transBox, part.content, effectiveLang, false);
             });
 
             phraseWrapper.appendChild(transBtn);
           }
+
+          phraseWrapper.appendChild(transBox);
 
           fragment.appendChild(phraseWrapper);
         }
