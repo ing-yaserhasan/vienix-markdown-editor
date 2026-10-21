@@ -16,7 +16,7 @@
   'use strict';
 
   const DRIVE_FOLDER_NAME = 'Vienix Notes';
-  const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
+  const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
   const GIS_SDK_URL = 'https://accounts.google.com/gsi/client';
   const DEFAULT_CLIENT_ID = '910465707186-ku2139v0blb6m9pkomehfc1dmdnp9lv5.apps.googleusercontent.com';
 
@@ -146,7 +146,7 @@
       }
 
       if (tokenClient) {
-        tokenClient.requestAccessToken({ prompt: this.accessToken ? '' : 'select_account' });
+        tokenClient.requestAccessToken({ prompt: this.accessToken ? '' : 'consent' });
       } else {
         alert('تعذر تحميل واجهة Google Identity Services. تأكد من اتصالك بالإنترنت.');
       }
@@ -191,15 +191,22 @@
     fetchUserProfile: async function () {
       if (!this.accessToken) return;
       try {
-        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        const res = await fetch('https://www.googleapis.com/drive/v3/about?fields=user', {
           headers: { Authorization: `Bearer ${this.accessToken}` }
         });
         if (res.ok) {
-          this.userProfile = await res.json();
-          sessionStorage.setItem('vienix_drive_profile', JSON.stringify(this.userProfile));
+          const data = await res.json();
+          if (data && data.user) {
+            this.userProfile = {
+              name: data.user.displayName || 'مستخدم Google Drive',
+              email: data.user.emailAddress || '',
+              picture: data.user.photoLink || ''
+            };
+            sessionStorage.setItem('vienix_drive_profile', JSON.stringify(this.userProfile));
+          }
         }
       } catch (err) {
-        console.warn('[VienixDrive] Failed to fetch user profile:', err);
+        console.warn('[VienixDrive] Failed to fetch user profile via Drive about:', err);
       }
     },
 
