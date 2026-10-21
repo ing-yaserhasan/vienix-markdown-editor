@@ -2263,23 +2263,30 @@ function exportDocument(format) {
       navPrevBtn.title = 'الرجوع للحجرة أو الملف السابق';
     }
 
-    // 3. الحجرة 8 المخصصة لعرض ملفات المستكشف
+    // 3. الحجرة 8: تظهر برقم الملف الفعلي فقط عندما يوجد ملف نشط فيها
+    const hasActiveFileInChamber8 = (activeChamber === 8 && activeExplorerFile);
     if (overflowSlot) {
-      overflowSlot.style.display = 'inline-flex';
-      overflowSlot.innerHTML = '';
-      const dynamicBtn = createChamberButton(8);
-      dynamicBtn.classList.add('chamber-file-dedicated');
-      if (activeChamber === 8 && activeExplorerFile) {
+      if (hasActiveFileInChamber8) {
+        overflowSlot.style.display = 'inline-flex';
+        overflowSlot.innerHTML = '';
+        const dynamicBtn = createChamberButton(8);
+        dynamicBtn.classList.add('chamber-file-dedicated');
+        // عرض رقم الملف الفعلي (8، 9، 10...) بدلاً من 8 الثابت
+        const numSpan = dynamicBtn.querySelector('.chamber-num');
+        if (numSpan && activeExplorerFile.num) {
+          numSpan.textContent = activeExplorerFile.num;
+        }
         dynamicBtn.setAttribute('title', `عارض الملفات (ملف: ${activeExplorerFile.title}) 🟢`);
+        overflowSlot.appendChild(dynamicBtn);
       } else {
-        dynamicBtn.setAttribute('title', 'حجرة مخصصة لعرض وتحرير ملفات المستكشف 🟢');
+        overflowSlot.style.display = 'none';
+        overflowSlot.innerHTML = '';
       }
-      overflowSlot.appendChild(dynamicBtn);
     }
 
-    // 4. إخفاء الحجرة المتقطعة الزائدة
+    // 4. عرض الحجرة المتقطعة الفارغة (dashed) عندما لا يوجد ملف نشط في الحجرة 8
     if (dashedSlot) {
-      dashedSlot.style.display = 'none';
+      dashedSlot.style.display = hasActiveFileInChamber8 ? 'none' : 'inline-flex';
     }
 
     // 5. سهم التقدم (<) — للانتقال للحجرة أو الملف التالي
@@ -3639,7 +3646,19 @@ function exportDocument(format) {
       const targetFolderKey = (activeExplorerFile && activeExplorerFile.folderKey) ? activeExplorerFile.folderKey : 'book';
       const files = getFolderFiles(targetFolderKey);
       const nextNum = getNextFolderFileNum(targetFolderKey);
-      const fileTitle = `ملف ${nextNum}`;
+
+      // استخراج العنوان الذكي من أول سطر في المحتوى (مثل سلوك الملفات 1 إلى 7)
+      let fileTitle = `ملف ${nextNum}`;
+      const titleLines = text.trim().split('\n');
+      for (let tl of titleLines) {
+        tl = tl.trim();
+        if (!tl) continue;
+        const cleanTitle = tl.replace(/^[#\-*>]+\s*/, '').replace(/[*_~`]/g, '').trim();
+        if (cleanTitle) {
+          fileTitle = cleanTitle.length > 25 ? cleanTitle.substring(0, 25) + '...' : cleanTitle;
+          break;
+        }
+      }
 
       const textWithoutDataUrls = text.replace(/data:image\/[^"')\s]+/g, '[صورة]');
       const trimmed = textWithoutDataUrls.trim();
@@ -3654,7 +3673,7 @@ function exportDocument(format) {
         chars: trimmed.length,
         createdAt: Date.now(),
         updatedAt: Date.now(),
-        linkedChamber: nextNum
+        linkedChamber: null
       };
 
       files.push(fileRecord);
@@ -4910,7 +4929,7 @@ function exportDocument(format) {
 
     // رندرة ملفات المجلد المستنسخة أو المنقولة أو المنشأة (نمط الفهرس العصري: سطر واحد مدمج بدون # وبدون أسطر ثانوية)
     function renderFolderFileHTML(file, parentFolderKey) {
-      const isViewingInChamber = (activeChamber === file.num) || (activeExplorerFile && activeExplorerFile.folderKey === parentFolderKey && activeExplorerFile.fileId === file.id && activeChamber >= 8);
+      const isViewingInChamber = (activeExplorerFile && activeExplorerFile.folderKey === parentFolderKey && activeExplorerFile.fileId === file.id && activeChamber >= 8);
       const isFilled = !!(file.content && file.content.trim().length > 0);
 
       const editIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
