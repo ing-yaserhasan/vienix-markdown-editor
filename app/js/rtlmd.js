@@ -849,6 +849,11 @@ function exportDocument(format) {
     if (typeof vienixSettings !== 'undefined' && vienixSettings.pronunciationEnabled === true) {
       processPronunciationInPreview();
     }
+
+    // الترجمة المزدوجة الشاملة — إذا كان وضع القراءة المزدوجة للمقال مفعلاً، يتم تحديث كروت الترجمة للفقرات تلقائياً
+    if (window._isGlobalBilingualActive === true && typeof applyGlobalBilingualTranslations === 'function') {
+      applyGlobalBilingualTranslations();
+    }
   }
 
   // Extract Mermaid Blocks to prevent Marked from mangling syntax
@@ -9591,13 +9596,15 @@ function exportDocument(format) {
   window.closeWordTranslationBubble = closeWordTranslationBubble;
 
   // 1. Chrome On-Device AI Translation (3)
-  async function translateOnDevice(word, sourceLang) {
+  async function translateOnDevice(word, sourceLang, targetLang) {
     try {
-      const src = sourceLang ? sourceLang.split('-')[0].toLowerCase() : 'en';
+      const isArabic = /[\u0600-\u06FF]/.test(word);
+      const src = sourceLang ? sourceLang.split('-')[0].toLowerCase() : (isArabic ? 'ar' : 'en');
+      const tgt = targetLang ? targetLang.split('-')[0].toLowerCase() : (isArabic ? (vienixSettings.targetLanguage && vienixSettings.targetLanguage !== 'auto' ? vienixSettings.targetLanguage.split('-')[0].toLowerCase() : 'en') : 'ar');
       if (typeof window !== 'undefined' && window.translation && typeof window.translation.createTranslator === 'function') {
-        const can = await window.translation.canTranslate({ sourceLanguage: src, targetLanguage: 'ar' });
+        const can = await window.translation.canTranslate({ sourceLanguage: src, targetLanguage: tgt });
         if (can === 'readily' || can === 'after-download') {
-          const translator = await window.translation.createTranslator({ sourceLanguage: src, targetLanguage: 'ar' });
+          const translator = await window.translation.createTranslator({ sourceLanguage: src, targetLanguage: tgt });
           const res = await translator.translate(word);
           if (res && res.trim() && res.trim().toLowerCase() !== word.toLowerCase()) {
             return { text: res.trim(), source: 'device' };
@@ -9607,7 +9614,7 @@ function exportDocument(format) {
       if (typeof window !== 'undefined' && window.ai && window.ai.translator) {
         const can = await window.ai.translator.capabilities();
         if (can && can.available !== 'no') {
-          const tr = await window.ai.translator.create({ sourceLanguage: src, targetLanguage: 'ar' });
+          const tr = await window.ai.translator.create({ sourceLanguage: src, targetLanguage: tgt });
           const res = await tr.translate(word);
           if (res && res.trim()) {
             return { text: res.trim(), source: 'device' };
@@ -9618,35 +9625,50 @@ function exportDocument(format) {
     return null;
   }
 
-  // 2. Free Public Translation Endpoint (1 - No API Key: Google GTX + MyMemory)
-  async function translateViaFreeService(word, sourceLang, signal) {
-    const src = sourceLang ? sourceLang.split('-')[0].toLowerCase() : 'auto';
+  // 2. Free Public Translation Endpoint (1 - No API Key: Google GTX + Lingva + MyMemory)
+  async function translateViaFreeService(word, sourceLang, targetLang, signal) {
+    const isArabic = /[\u0600-\u06FF]/.test(word);
+    const src = sourceLang ? sourceLang.split('-')[0].toLowerCase() : (isArabic ? 'ar' : 'auto');
+    const tgt = targetLang ? targetLang.split('-')[0].toLowerCase() : (isArabic ? (vienixSettings.targetLanguage && vienixSettings.targetLanguage !== 'auto' ? vienixSettings.targetLanguage.split('-')[0].toLowerCase() : 'en') : 'ar');
 
     // A. Google GTX Free Endpoint (High quality, no key)
     try {
-      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${src}&tl=ar&dt=t&q=${encodeURIComponent(word)}`;
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${src}&tl=${tgt}&dt=t&q=${encodeURIComponent(word)}`;
       const res = await fetch(url, { signal });
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data[0] && data[0][0] && data[0][0][0]) {
-          const txt = data[0][0][0].trim();
-          if (txt && /[\u0600-\u06FF]/.test(txt)) {
-            return { text: txt, source: 'cloud' };
+        if (Array.isArray(data) && Array.isArray(data[0])) {
+          const fullText = data[0].map(item => (item && item[0]) ? item[0] : '').filter(Boolean).join('');
+          if (fullText && fullText.trim()) {
+            return { text: fullText.trim(), source: 'cloud-gtx' };
           }
         }
       }
     } catch (e) {
-      if (e.name === 'AbortError') throw e;
+      if (e && e.name === 'AbortError') throw e;
     }
 
-    // B. MyMemory Open Translation Fallback
+    // B. Lingva Open Mirror Fallback
     try {
-      const myMemoryPair = src === 'auto' ? 'en|ar' : `${src}|ar`;
-      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=${myMemoryPair}`;
+      const lingvaUrl = `https://lingva.ml/api/v1/${src}/${tgt}/${encodeURIComponent(word)}`;
+      const res = await fetch(lingvaUrl, { signal });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.translation && data.translation.trim()) {
+          return { text: data.translation.trim(), source: 'cloud-lingva' };
+        }
+      }
+    } catch (e) {
+      if (e && e.name === 'AbortError') throw e;
+    }
+
+    // C. MyMemory Open Translation Fallback
+    try {
+      const myMemoryPair = `${src === 'auto' ? (isArabic ? 'ar' : 'en') : src}|${tgt}`;
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(word.slice(0, 500))}&langpair=${myMemoryPair}`;
       const res = await fetch(url, { signal });
       if (res.ok) {
         const data = await res.json();
-        const arabicRegex = /[\u0600-\u06FF]/;
         let candidates = [];
         if (data.responseData && data.responseData.translatedText) {
           candidates.push(data.responseData.translatedText);
@@ -9662,24 +9684,26 @@ function exportDocument(format) {
             .replace(/&amp;/g, '&')
             .replace(/&#\d+;/g, '')
             .trim();
-          if (clean && arabicRegex.test(clean) && clean.toLowerCase() !== word.toLowerCase()) {
-            return { text: clean, source: 'cloud' };
+          if (clean && clean.toLowerCase() !== word.toLowerCase()) {
+            return { text: clean, source: 'cloud-mymemory' };
           }
         }
       }
     } catch (e) {
-      if (e.name === 'AbortError') throw e;
+      if (e && e.name === 'AbortError') throw e;
     }
 
     return null;
   }
 
   // 3. Combined Hybrid Waterfall Translation
-  async function fetchWordTranslation(word, sourceLang, signal) {
-    const cleanWord = word.trim();
+  async function fetchWordTranslation(word, sourceLang, targetLang, signal) {
+    const cleanWord = (word || '').trim();
     if (!cleanWord) return null;
-    const src = sourceLang ? sourceLang.split('-')[0].toLowerCase() : 'auto';
-    const cacheKey = `vienix_trans_${src}_${cleanWord.toLowerCase()}`;
+    const isArabic = /[\u0600-\u06FF]/.test(cleanWord);
+    const src = sourceLang ? sourceLang.split('-')[0].toLowerCase() : (isArabic ? 'ar' : 'auto');
+    const tgt = targetLang ? targetLang.split('-')[0].toLowerCase() : (isArabic ? (vienixSettings.targetLanguage && vienixSettings.targetLanguage !== 'auto' ? vienixSettings.targetLanguage.split('-')[0].toLowerCase() : 'en') : 'ar');
+    const cacheKey = `vienix_trans_${src}_${tgt}_${cleanWord.toLowerCase().slice(0, 100)}`;
 
     // Step 1: Check localStorage Cache (0ms, 100% offline)
     try {
@@ -9690,14 +9714,14 @@ function exportDocument(format) {
     } catch (_) {}
 
     // Step 2: Chrome On-Device Local AI
-    const deviceRes = await translateOnDevice(cleanWord, src);
+    const deviceRes = await translateOnDevice(cleanWord, src, tgt);
     if (deviceRes && deviceRes.text) {
       try { localStorage.setItem(cacheKey, deviceRes.text); } catch (_) {}
       return deviceRes;
     }
 
     // Step 3: Free Public Cloud Service (No API Key)
-    const cloudRes = await translateViaFreeService(cleanWord, src, signal);
+    const cloudRes = await translateViaFreeService(cleanWord, src, tgt, signal);
     if (cloudRes && cloudRes.text) {
       try { localStorage.setItem(cacheKey, cloudRes.text); } catch (_) {}
       return cloudRes;
@@ -10299,6 +10323,141 @@ function exportDocument(format) {
   // السيناريو 2: تبديل وضع الترجمة المزدوجة لكامل المقال (Global Bilingual Dual View)
   window._isGlobalBilingualActive = false;
 
+  function applyGlobalBilingualTranslations() {
+    if (!previewContent) return false;
+
+    // المرشحون للترجمة: عناصر الفقرات، العناوين، القوائم، والاقتباسات
+    const candidateBlocks = previewContent.querySelectorAll('p, h1, h2, h3, h4, h5, h6, blockquote, li');
+    let hasAny = false;
+
+    candidateBlocks.forEach(block => {
+      // استثناء العناصر داخل الأكواد، المخططات، أشرطة الأدوات، أو كروت الترجمة نفسها
+      if (block.closest('pre, code, .mermaid, .mermaid-wrapper, .diagram-zoom-controls, .preview-tools, .image-resizer-wrapper, .inline-translation-box, .pronunciation-speaker-btn, .word-trans-bubble')) {
+        return;
+      }
+
+      // إذا كان العنصر نفسه داخل عنصر آخر تم اختياره (مثل li يحتوي p)، نعتمد الـ p لتفادي التكرار
+      if (block.tagName === 'LI' && block.querySelector('p')) {
+        return;
+      }
+
+      const text = block.textContent.trim();
+      if (!text || text.length < 2) return;
+
+      hasAny = true;
+
+      // تحقق مما إذا كان كارت الترجمة ملحقاً به بالفعل
+      let next = block.nextElementSibling;
+      if (next && next.classList.contains('inline-translation-box')) {
+        next.classList.add('is-open');
+        return;
+      }
+
+      const isAr = /[\u0600-\u06FF]/.test(text);
+      const tgtLang = isAr ? (vienixSettings.targetLanguage && vienixSettings.targetLanguage !== 'auto' ? vienixSettings.targetLanguage : 'en-US') : 'ar';
+      const tgtPrefix = tgtLang.split('-')[0].toLowerCase();
+
+      const box = document.createElement('div');
+      box.className = 'inline-translation-box is-open';
+      box.setAttribute('dir', isAr ? 'ltr' : 'rtl');
+
+      const flagMap = {
+        ar: '🇸🇦 العربية',
+        en: '🇬🇧 English',
+        de: '🇩🇪 Deutsch',
+        fr: '🇫🇷 Français',
+        es: '🇪🇸 Español',
+        it: '🇮🇹 Italiano',
+        tr: '🇹🇷 Türkçe',
+        ru: '🇷🇺 Русский',
+        ja: '🇯🇵 日本語',
+        zh: '🇨🇳 中文'
+      };
+      const badgeLabel = flagMap[tgtPrefix] || (isAr ? '🌐 English' : '🇸🇦 العربية');
+
+      box.innerHTML = `
+        <div class="itb-header">
+          <span class="itb-badge">${badgeLabel}</span>
+          <button type="button" class="itb-copy-btn" title="نسخ الترجمة">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="itb-loading">
+          <span class="wtb-spinner"></span>
+          <span>جارٍ استحضار ترجمة الفقرة...</span>
+        </div>
+        <p class="itb-text" style="display:none;"></p>
+      `;
+
+      // زر نسخ الترجمة
+      const copyBtn = box.querySelector('.itb-copy-btn');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const p = box.querySelector('.itb-text');
+          if (p && p.textContent) {
+            navigator.clipboard.writeText(p.textContent).then(() => {
+              showToast('تم نسخ الترجمة إلى الحافظة ✓', 'success', 1400);
+            }).catch(() => {});
+          }
+        });
+      }
+
+      // إدراج كارت الترجمة مباشرة أسفل الفقرة
+      if (block.parentNode) {
+        block.parentNode.insertBefore(box, block.nextSibling);
+      }
+
+      // جلب الترجمة
+      fetchWordTranslation(text, isAr ? 'ar' : 'auto', tgtPrefix).then(res => {
+        if (!box.parentNode) return;
+        const loadEl = box.querySelector('.itb-loading');
+        const textEl = box.querySelector('.itb-text');
+        if (loadEl) loadEl.style.display = 'none';
+        if (res && res.text) {
+          if (textEl) {
+            textEl.textContent = res.text;
+            textEl.style.display = 'block';
+          }
+        } else {
+          if (textEl) {
+            textEl.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">تعذر جلب الترجمة للفقرة.</span>';
+            textEl.style.display = 'block';
+          }
+        }
+      }).catch(() => {
+        if (!box.parentNode) return;
+        const loadEl = box.querySelector('.itb-loading');
+        const textEl = box.querySelector('.itb-text');
+        if (loadEl) loadEl.style.display = 'none';
+        if (textEl) {
+          textEl.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">تعذر جلب الترجمة للفقرة.</span>';
+          textEl.style.display = 'block';
+        }
+      });
+    });
+
+    return hasAny;
+  }
+  window.applyGlobalBilingualTranslations = applyGlobalBilingualTranslations;
+
+  function removeGlobalBilingualTranslations() {
+    if (!previewContent) return;
+    const boxes = previewContent.querySelectorAll('.inline-translation-box');
+    boxes.forEach(b => {
+      b.classList.remove('is-open');
+      setTimeout(() => {
+        if (!window._isGlobalBilingualActive && b.parentNode) {
+          b.parentNode.removeChild(b);
+        }
+      }, 350);
+    });
+  }
+  window.removeGlobalBilingualTranslations = removeGlobalBilingualTranslations;
+
   window.toggleGlobalBilingualMode = function () {
     window._isGlobalBilingualActive = !window._isGlobalBilingualActive;
     const active = window._isGlobalBilingualActive;
@@ -10306,25 +10465,15 @@ function exportDocument(format) {
     const btn = document.getElementById('btn-global-bilingual-trans');
     if (btn) btn.classList.toggle('is-active', active);
 
-    // البحث في كافة كروت الترجمة عبر المقال (تعمل دائماً سواء كانت أزرار الترجمة الفردية ظاهرة أو مخفية)
-    const allBoxes = document.querySelectorAll('.inline-translation-box');
-    allBoxes.forEach(box => {
-      const phrase = box._phrase;
-      const lang = (box._wrapper && box._wrapper.getAttribute('data-override-lang')) || box._lang;
-      const associatedBtn = box._associatedBtn;
-      const isOpen = box.classList.contains('is-open');
-
-      if (active && !isOpen) {
-        toggleInlinePhraseTranslation(associatedBtn, box, phrase, lang, true);
-      } else if (!active && isOpen) {
-        box.classList.remove('is-open');
-        if (associatedBtn) associatedBtn.classList.remove('is-active');
-      }
-    });
-
     if (active) {
-      showToast('تم تفعيل وضع القراءة المزدوجة لكامل المقال 🌐', 'success', 2000);
+      const hasContent = applyGlobalBilingualTranslations();
+      if (!hasContent) {
+        showToast('لا توجد فقرات لترجمتها في المحرر الحالي', 'info', 2000);
+      } else {
+        showToast('تم تفعيل وضع القراءة المزدوجة لكامل المقال 🌐', 'success', 2200);
+      }
     } else {
+      removeGlobalBilingualTranslations();
       showToast('تم طي ترجمات المقال واستعادة العرض الأصلي ✓', 'info', 1800);
     }
   };

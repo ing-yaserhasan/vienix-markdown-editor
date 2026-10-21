@@ -7191,6 +7191,7 @@ body.is-resizing-workspace .workspace-resizer {
   background: #dcfce7 !important;
   border-color: #86efac !important;
   color: #16a34a !important;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25) !important;
 }
 
 [data-theme="dark"] .global-trans-tool-btn.active,
@@ -7198,6 +7199,150 @@ body.is-resizing-workspace .workspace-resizer {
   background: rgba(16, 185, 129, 0.22) !important;
   border-color: rgba(16, 185, 129, 0.5) !important;
   color: #4ade80 !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25) !important;
+}
+
+/* =========================================================
+   كارت الترجمة المنزلق المزدوج للمقال (Bilingual Inline Translation Box)
+   ========================================================= */
+
+.inline-translation-box {
+  display: block;
+  width: 100%;
+  clear: both;
+  box-sizing: border-box;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.25s ease,
+              transform 0.28s ease,
+              margin 0.28s ease,
+              padding 0.28s ease;
+  margin: 0;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #1e293b;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  font-size: 0.94rem;
+  line-height: 1.65;
+  user-select: text;
+}
+
+.inline-translation-box[dir="rtl"] {
+  border-right: 3.5px solid #10b981;
+  text-align: right;
+  font-family: 'Tajawal', sans-serif;
+}
+
+.inline-translation-box[dir="ltr"] {
+  border-left: 3.5px solid #3b82f6;
+  text-align: left;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+[data-theme="dark"] .inline-translation-box {
+  background: rgba(30, 41, 59, 0.92);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #f1f5f9;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .inline-translation-box[dir="rtl"] {
+  border-right: 3.5px solid #10b981;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .inline-translation-box[dir="ltr"] {
+  border-left: 3.5px solid #6366f1;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.inline-translation-box.is-open {
+  max-height: 500px;
+  opacity: 1;
+  transform: translateY(0);
+  margin: 8px 0 14px 0;
+  padding: 10px 14px;
+}
+
+.inline-translation-box .itb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.08);
+  font-size: 0.76rem;
+}
+
+[data-theme="dark"] .inline-translation-box .itb-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.inline-translation-box .itb-badge {
+  font-weight: 700;
+  font-size: 0.73rem;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+[data-theme="dark"] .inline-translation-box .itb-badge {
+  background: rgba(16, 185, 129, 0.22);
+  color: #34d399;
+}
+
+.inline-translation-box[dir="ltr"] .itb-badge {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+}
+
+[data-theme="dark"] .inline-translation-box[dir="ltr"] .itb-badge {
+  background: rgba(99, 102, 241, 0.22);
+  color: #818cf8;
+}
+
+.inline-translation-box .itb-copy-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 4px;
+  color: var(--text-muted, #64748b);
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.15s ease;
+}
+
+.inline-translation-box .itb-copy-btn:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.06));
+  color: var(--text-primary, #0f172a);
+}
+
+.inline-translation-box .itb-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-muted, #64748b);
+  font-weight: 500;
+  padding: 4px 0;
+}
+
+.inline-translation-box .itb-text {
+  font-weight: 500;
+  color: inherit;
+  margin: 0;
+  padding: 2px 0;
+  word-break: break-word;
 }
 
 
