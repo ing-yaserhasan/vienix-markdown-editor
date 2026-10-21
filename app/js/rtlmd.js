@@ -471,7 +471,7 @@
     if (!meta || typeof meta !== 'object') {
       meta = {
         customTitle: '',
-        folder: chNum <= 7 ? 'book' : 'drafts',
+        folder: 'book',
         updatedAt: Date.now() - (TOTAL_CHAMBERS - chNum) * 120000,
         words: 0,
         chars: 0
@@ -1969,23 +1969,49 @@ function exportDocument(format) {
     showToast(`تم حذف الحجرة ${lastCh}`, 'info', 1500);
   };
 
-  // الحصول على أعلى رقم حجرة/ملف متاح في النظام للتنقل
-  function getMaxAvailableChamber() {
-    let max = typeof TOTAL_CHAMBERS !== 'undefined' ? TOTAL_CHAMBERS : 8;
-    try {
-      const allFolders = getAppFolders();
-      allFolders.forEach(folder => {
-        const files = getFolderFiles(folder.key);
-        if (Array.isArray(files)) {
-          files.forEach(f => {
-            if (typeof f.num === 'number' && f.num > max) {
-              max = f.num;
-            }
-          });
+  // قائمة الحجرات المتاحة للتنقل بالأسهم (محصورة افتراضياً بملفات المجلد الرئيسي فقط)
+  function getCurrentNavigationChambers() {
+    // إذا كان المستخدم قد حدد ملفاً صراحة من مجلد آخر (مثل المسودات أو الأرشيف)
+    if (activeExplorerFile && activeExplorerFile.folderKey && activeExplorerFile.folderKey !== 'book' && activeChamber >= 8) {
+      const folderFiles = getFolderFiles(activeExplorerFile.folderKey);
+      const chList = [];
+      if (Array.isArray(folderFiles) && folderFiles.length > 0) {
+        folderFiles.forEach(f => {
+          if (typeof f.num === 'number') chList.push(f.num);
+        });
+      }
+      if (chList.length > 0) {
+        chList.sort((a, b) => a - b);
+        return chList;
+      }
+    }
+
+    // افتراضياً: التنقل محصور حصراً بين ملفات المجلد الرئيسي (book)
+    const mainChambers = [];
+    for (let i = 1; i <= 7; i++) {
+      mainChambers.push(i);
+    }
+    for (let i = 8; i <= TOTAL_CHAMBERS; i++) {
+      const meta = getChamberMeta(i);
+      const folder = meta.folder || 'book';
+      if (folder === 'book') {
+        const content = getChamberContent(i);
+        const hasCustomTitle = meta.customTitle && meta.customTitle.trim().length > 0;
+        if (i === 8 || content.trim().length > 0 || hasCustomTitle) {
+          mainChambers.push(i);
+        }
+      }
+    }
+    const bookFiles = getFolderFiles('book');
+    if (Array.isArray(bookFiles)) {
+      bookFiles.forEach(f => {
+        if (typeof f.num === 'number' && f.num >= 1 && !mainChambers.includes(f.num)) {
+          mainChambers.push(f.num);
         }
       });
-    } catch (e) {}
-    return Math.max(max, 8);
+    }
+    mainChambers.sort((a, b) => a - b);
+    return mainChambers;
   }
 
   // البحث عن ملف المجلد المرتبط برقم الحجرة المعطى
@@ -1993,8 +2019,15 @@ function exportDocument(format) {
     chNum = parseInt(chNum, 10);
     if (isNaN(chNum)) return null;
     try {
+      const preferredKey = (activeExplorerFile && activeExplorerFile.folderKey) ? activeExplorerFile.folderKey : 'book';
+      const prefFiles = getFolderFiles(preferredKey);
+      if (Array.isArray(prefFiles)) {
+        const m = prefFiles.find(f => f.num === chNum || f.linkedChamber === chNum);
+        if (m) return { folderKey: preferredKey, file: m };
+      }
       const allFolders = getAppFolders();
       for (const folder of allFolders) {
+        if (folder.key === preferredKey) continue;
         const files = getFolderFiles(folder.key);
         if (Array.isArray(files)) {
           const match = files.find(f => f.num === chNum || f.linkedChamber === chNum);
@@ -2007,6 +2040,65 @@ function exportDocument(format) {
     return null;
   }
 
+  // تنظيف الحجرات الزائدة الفارغة وضمان أن المسودات فارغة افتراضياً
+  function cleanupDraftsAndExcessChambers() {
+    try {
+      // 1. أعلى حجرة تابعة للمجلد الرئيسي مستخدمة فعلياً
+      const bookFiles = getFolderFiles('book');
+      let maxMainChamber = 8;
+      if (Array.isArray(bookFiles)) {
+        bookFiles.forEach(f => {
+          if (typeof f.num === 'number' && f.num > maxMainChamber) {
+            maxMainChamber = f.num;
+          }
+        });
+      }
+      for (let ch = 1; ch <= TOTAL_CHAMBERS; ch++) {
+        const content = getChamberContent(ch).trim();
+        const meta = getChamberMeta(ch);
+        if (content.length > 0 && (meta.folder === 'book' || !meta.folder) && ch > maxMainChamber) {
+          maxMainChamber = ch;
+        }
+      }
+
+      // 2. إزالة أي حجرات زائدة فارغة كانت قد فُتحت بالخطأ فوق أعلى حجرة رئيسية (مثل 10 و 11)
+      if (TOTAL_CHAMBERS > maxMainChamber) {
+        for (let ch = TOTAL_CHAMBERS; ch > maxMainChamber; ch--) {
+          const content = getChamberContent(ch).trim();
+          if (content.length === 0) {
+            safeSaveToStorage('vienix_chamber_' + ch, '');
+            safeSaveToStorage('yaser_chamber_' + ch, '');
+            safeSaveToStorage('vienix_chamber_meta_' + ch, '');
+            safeSaveToStorage('yaser_chamber_meta_' + ch, '');
+          }
+        }
+        TOTAL_CHAMBERS = maxMainChamber;
+        safeSaveToStorage('vienix_total_chambers', TOTAL_CHAMBERS);
+        safeSaveToStorage('yaser_total_chambers', TOTAL_CHAMBERS);
+      }
+
+      // 3. إزالة أي ملفات فارغة في drafts وُضعت تلقائياً
+      const draftFiles = getFolderFiles('drafts');
+      if (Array.isArray(draftFiles) && draftFiles.length > 0) {
+        const filledDrafts = draftFiles.filter(f => f.content && f.content.trim().length > 0);
+        saveFolderFiles('drafts', filledDrafts);
+      }
+
+      // 4. ضبط الحجرة النشطة إن كانت تتجاوز المسموح (مثل 10 أو 11)
+      if (activeChamber > TOTAL_CHAMBERS) {
+        activeChamber = TOTAL_CHAMBERS;
+        safeSaveToStorage('vienix_active_chamber', activeChamber);
+        safeSaveToStorage('yaser_active_chamber', activeChamber);
+      }
+      if (lastActiveOverflowChamber > TOTAL_CHAMBERS) {
+        lastActiveOverflowChamber = TOTAL_CHAMBERS;
+        safeSaveToStorage('vienix_last_overflow_chamber', lastActiveOverflowChamber);
+      }
+    } catch (e) {
+      console.warn('cleanupDraftsAndExcessChambers failed:', e);
+    }
+  }
+
   // معالج النقر على الحجرة المتقطعة الفارغة
   window.handleDashedSlotClick = function () {
     const nextCh = (lastActiveOverflowChamber || 8);
@@ -2015,41 +2107,51 @@ function exportDocument(format) {
 
   // معالج سهم العودة (>) للرجوع للحجرة السابقة
   window.handleChamberNavPrev = function () {
-    if (activeChamber > 1) {
-      window.switchChamber(activeChamber - 1);
+    const navList = getCurrentNavigationChambers();
+    const curIdx = navList.indexOf(activeChamber);
+    if (curIdx > 0) {
+      window.switchChamber(navList[curIdx - 1]);
+    } else if (curIdx === -1) {
+      const prevList = navList.filter(ch => ch < activeChamber);
+      if (prevList.length > 0) {
+        window.switchChamber(prevList[prevList.length - 1]);
+      } else if (activeChamber > 1) {
+        window.switchChamber(activeChamber - 1);
+      }
     }
   };
 
-  // معالج سهم التقدم (<) للانتقال للحجرة التالية
+  // معالج سهم التقدم (<) للانتقال للحجرة التالية (محصور بملفات المجلد النشط)
   window.handleChamberNavNext = function () {
-    const maxChambers = getMaxAvailableChamber();
-    if (activeChamber < maxChambers) {
-      window.switchChamber(activeChamber + 1);
+    const navList = getCurrentNavigationChambers();
+    const curIdx = navList.indexOf(activeChamber);
+    if (curIdx !== -1 && curIdx < navList.length - 1) {
+      window.switchChamber(navList[curIdx + 1]);
+    } else if (curIdx === -1) {
+      const next = navList.find(ch => ch > activeChamber);
+      if (next) window.switchChamber(next);
     }
   };
 
-  // مزامنة تلقائية لملفات المجلدات (8 فما فوق) لضمان ربطها بالحجرات
+  // مزامنة تلقائية لملفات المجلد الرئيسي book السابقة لضمان ربطها بالحجرات
   function autoSyncBookFilesToChambers() {
     try {
-      const allFolders = getAppFolders();
-      allFolders.forEach(folder => {
-        const files = getFolderFiles(folder.key);
-        if (Array.isArray(files)) {
-          files.forEach(f => {
-            const fileNum = typeof f.num === 'number' ? f.num : null;
-            if (fileNum && fileNum >= 8) {
-              ensureChamberExists(fileNum);
-              const existingContent = getChamberContent(fileNum);
-              if ((!existingContent || existingContent.trim().length === 0) && f.content && f.content.trim().length > 0) {
-                setChamberContent(fileNum, f.content);
-                setChamberCustomTitle(fileNum, f.title || ('ملف ' + fileNum));
-              }
+      const bookFiles = getFolderFiles('book');
+      if (Array.isArray(bookFiles)) {
+        bookFiles.forEach(f => {
+          const fileNum = typeof f.num === 'number' ? f.num : null;
+          if (fileNum && fileNum >= 8) {
+            ensureChamberExists(fileNum);
+            const existingContent = getChamberContent(fileNum);
+            if ((!existingContent || existingContent.trim().length === 0) && f.content && f.content.trim().length > 0) {
+              setChamberContent(fileNum, f.content);
+              setChamberCustomTitle(fileNum, f.title || ('ملف ' + fileNum));
             }
-          });
-        }
-      });
+          }
+        });
+      }
     } catch (e) {
-      console.warn('Auto-sync folder files to chambers failed:', e);
+      console.warn('Auto-sync book files to chambers failed:', e);
     }
   }
 
@@ -2072,6 +2174,7 @@ function exportDocument(format) {
       });
     }
 
+    cleanupDraftsAndExcessChambers();
     autoSyncBookFilesToChambers();
     updateChambersUI();
     setupChamberContextMenu();
@@ -2147,8 +2250,13 @@ function exportDocument(format) {
       lastActiveOverflowChamber = activeChamber;
       safeSaveToStorage('vienix_last_overflow_chamber', lastActiveOverflowChamber);
     }
-    safeSaveToStorage('vienix_active_chamber', activeChamber);
-    safeSaveToStorage('yaser_active_chamber', activeChamber);
+    // إذا كانت الحجرة ضمن 1 إلى 7، نعيد ضبط الملف النشط ليكون من المجلد الرئيسي
+    if (activeChamber <= 7) {
+      if (activeExplorerFile && activeExplorerFile.folderKey && activeExplorerFile.folderKey !== 'book') {
+        activeExplorerFile = null;
+        try { localStorage.removeItem('vienix_active_explorer_file'); } catch (e) {}
+      }
+    }
 
     // إذا كانت الحجرة >= 8، نتحقق إن كان هناك ملف مطابق في المجلدات لمزامنته
     if (activeChamber >= 8 && typeof findFolderFileByChamberNum === 'function') {
@@ -2295,7 +2403,7 @@ function exportDocument(format) {
 
   window.openNewFileModal = function (folderKey) {
     const curMeta = getChamberMeta(activeChamber);
-    const fallbackFolder = curMeta.folder || (activeChamber <= 7 ? 'book' : 'drafts');
+    const fallbackFolder = curMeta.folder || 'book';
     pendingNewFileFolderKey = folderKey || contextTargetFolderKey || fallbackFolder;
 
     const modal = document.getElementById('new-file-modal');
@@ -2453,7 +2561,7 @@ function exportDocument(format) {
         // 2. تفريغ الحجرات التابعة لهذا المجلد
         for (let i = 1; i <= TOTAL_CHAMBERS; i++) {
           const meta = getChamberMeta(i);
-          const assigned = meta.folder || (i <= 7 ? 'book' : 'drafts');
+          const assigned = meta.folder || 'book';
           if (assigned === contextTargetFolderKey) {
             detachChamberFromLinkedFiles(i);
             setChamberContent(i, '');
@@ -2466,7 +2574,7 @@ function exportDocument(format) {
 
         // إذا كانت الحجرة النشطة الحالية تنتمي لهذا المجلد، نفرغ المحرر
         const curMeta = getChamberMeta(activeChamber);
-        const curAssigned = curMeta.folder || (activeChamber <= 7 ? 'book' : 'drafts');
+        const curAssigned = curMeta.folder || 'book';
         if (curAssigned === contextTargetFolderKey) {
           editor.value = '';
           if (classicEditor) classicEditor.value = '';
@@ -3132,7 +3240,7 @@ function exportDocument(format) {
     let maxNum = 0;
     for (let ch = 1; ch <= TOTAL_CHAMBERS; ch++) {
       const meta = getChamberMeta(ch);
-      const chFolder = meta.folder || (ch <= 7 ? 'book' : 'drafts');
+      const chFolder = meta.folder || 'book';
       if (chFolder === folderKey && ch > maxNum) {
         maxNum = ch;
       }
@@ -3151,7 +3259,7 @@ function exportDocument(format) {
     let maxChamberNum = 0;
     for (let ch = 1; ch <= TOTAL_CHAMBERS; ch++) {
       const meta = getChamberMeta(ch);
-      const chFolder = meta.folder || (ch <= 7 ? 'book' : 'drafts');
+      const chFolder = meta.folder || 'book';
       if (chFolder === folderKey && ch > maxChamberNum) {
         maxChamberNum = ch;
       }
@@ -3950,7 +4058,7 @@ function exportDocument(format) {
         // إعادة أي حجرات كانت تابعة لهذا المجلد إلى المجلد البديل
         for (let i = 1; i <= TOTAL_CHAMBERS; i++) {
           const meta = getChamberMeta(i);
-          const assigned = meta.folder || (i <= 7 ? 'book' : 'drafts');
+          const assigned = meta.folder || 'book';
           if (assigned === folderKey) {
             meta.folder = fallbackKey;
             saveChamberMeta(i, meta);
@@ -4121,7 +4229,7 @@ function exportDocument(format) {
 
     // 1. نقل إلى المجلد في حال كان مختلفاً
     const meta = getChamberMeta(draggedChamberNum);
-    const prevFolder = meta.folder || (draggedChamberNum <= 7 ? 'book' : 'drafts');
+    const prevFolder = meta.folder || 'book';
     if (prevFolder !== targetFolderKey) {
       meta.folder = targetFolderKey;
       saveChamberMeta(draggedChamberNum, meta);
@@ -4189,7 +4297,7 @@ function exportDocument(format) {
     // 1. إذا كان المسحوب هو حجرة تم إفلاتها فوق ملف
     if (draggedChamberNum) {
       const meta = getChamberMeta(draggedChamberNum);
-      const prevFolder = meta.folder || (draggedChamberNum <= 7 ? 'book' : 'drafts');
+      const prevFolder = meta.folder || 'book';
       if (prevFolder !== targetFolderKey) {
         meta.folder = targetFolderKey;
         saveChamberMeta(draggedChamberNum, meta);
@@ -4354,7 +4462,7 @@ function exportDocument(format) {
     // 3. معالجة سحب وإفلات حجرة داخل مجلد
     if (!draggedChamberNum) return;
     const meta = getChamberMeta(draggedChamberNum);
-    const prevFolder = meta.folder || (draggedChamberNum <= 7 ? 'book' : 'drafts');
+    const prevFolder = meta.folder || 'book';
     if (prevFolder !== targetFolderKey) {
       meta.folder = targetFolderKey;
       saveChamberMeta(draggedChamberNum, meta);
@@ -4450,7 +4558,7 @@ function exportDocument(format) {
 
     const title = getChamberTitle(ch);
     const meta = getChamberMeta(ch);
-    const currentFolderKey = meta.folder || (ch <= 7 ? 'book' : 'drafts');
+    const currentFolderKey = meta.folder || 'book';
 
     if (desc) {
       desc.innerHTML = `اختر المجلد الذي ترغب بنقل <strong>(حجرة #${ch}: ${escapeHtml(title)})</strong> إليه:`;
@@ -4523,7 +4631,7 @@ function exportDocument(format) {
     const targetChamber = (moveFolderTarget && moveFolderTarget.chamberNum) || moveFolderTargetChamber;
     if (targetChamber) {
       const meta = getChamberMeta(targetChamber);
-      const curFolder = meta.folder || (targetChamber <= 7 ? 'book' : 'drafts');
+      const curFolder = meta.folder || 'book';
       if (curFolder === targetFolder) {
         showToast('الحجرة موجودة بالفعل داخل هذا المجلد!', 'info', 1500);
         if (modal) modal.style.display = 'none';
@@ -4592,7 +4700,7 @@ function exportDocument(format) {
         let maxChamberNum = 0;
         for (let ch = 1; ch <= TOTAL_CHAMBERS; ch++) {
           const meta = getChamberMeta(ch);
-          const chFolder = meta.folder || (ch <= 7 ? 'book' : 'drafts');
+          const chFolder = meta.folder || 'book';
           if (chFolder === folder.key && ch > maxChamberNum) {
             maxChamberNum = ch;
           }
@@ -4655,9 +4763,11 @@ function exportDocument(format) {
         }
       }
 
-      let assignedFolder = meta.folder || (i <= 7 ? 'book' : 'drafts');
-      if (!folderBuckets[assignedFolder]) assignedFolder = 'drafts';
-      if (!folderBuckets[assignedFolder]) folderBuckets[assignedFolder] = [];
+      let assignedFolder = meta.folder || 'book';
+      if (!folderBuckets[assignedFolder]) assignedFolder = 'book';
+      if (assignedFolder === 'drafts' && !isFilled && !(meta.customTitle && meta.customTitle.trim())) {
+        assignedFolder = 'book';
+      }
 
       folderBuckets[assignedFolder].push({
         num: i,
@@ -5097,7 +5207,7 @@ function exportDocument(format) {
       setChamberContent(chNum, '');
       const curMeta = getChamberMeta(chNum);
       curMeta.customTitle = '';
-      curMeta.folder = (chNum <= 7 ? 'book' : 'drafts');
+      curMeta.folder = 'book';
       curMeta.words = 0;
       curMeta.chars = 0;
       curMeta.updatedAt = Date.now();
