@@ -1923,15 +1923,10 @@ function exportDocument(format) {
     }
   }
 
-  // إضافة حجرة جديدة ديناميكياً
+  // إضافة حجرة جديدة — تنتقل للحجرة 8 (حجرة المستكشف)
   window.addNewChamber = function () {
-    const newTotal = TOTAL_CHAMBERS + 1;
-    TOTAL_CHAMBERS = newTotal;
-    safeSaveToStorage('vienix_total_chambers', newTotal);
-    safeSaveToStorage('yaser_total_chambers', newTotal);
-
-    window.switchChamber(newTotal);
-    showToast(`تمت إضافة الحجرة ${newTotal} بنجاح! ✨`, 'success', 1500);
+    window.switchChamber(8);
+    showToast('انتقلت لحجرة المستكشف (8) — يمكنك إنشاء ملفات جديدة من المستكشف ✨', 'info', 2000);
   };
 
   // حذف الحجرة الأخيرة إن كانت زائدة عن 8
@@ -1969,20 +1964,8 @@ function exportDocument(format) {
 
   // معالج النقر على الحجرة المتقطعة الفارغة
   window.handleDashedSlotClick = function () {
-    const dashedSlot = document.getElementById('chamber-dashed-slot');
-    let targetCh = 8;
-    if (dashedSlot && dashedSlot.getAttribute('data-chamber')) {
-      targetCh = parseInt(dashedSlot.getAttribute('data-chamber'), 10) || 8;
-    } else {
-      targetCh = activeChamber <= 7 ? 8 : (activeChamber + 1);
-    }
-
-    if (targetCh > TOTAL_CHAMBERS) {
-      TOTAL_CHAMBERS = targetCh;
-      safeSaveToStorage('vienix_total_chambers', TOTAL_CHAMBERS);
-      safeSaveToStorage('yaser_total_chambers', TOTAL_CHAMBERS);
-    }
-    window.switchChamber(targetCh);
+    // الحجرة المتقطعة تنتقل دائماً للحجرة 8 (حجرة المستكشف)
+    window.switchChamber(8);
   };
 
   // معالج سهم العودة (>) للرجوع للحجرة السابقة
@@ -1992,15 +1975,10 @@ function exportDocument(format) {
     }
   };
 
-  // معالج سهم التقدم (<) للانتقال للحجرة التالية
+  // معالج سهم التقدم (<) للانتقال لحجرة المستكشف
   window.handleChamberNavNext = function () {
-    const target = activeChamber <= 7 ? 8 : (activeChamber + 1);
-    if (target > TOTAL_CHAMBERS) {
-      TOTAL_CHAMBERS = target;
-      safeSaveToStorage('vienix_total_chambers', TOTAL_CHAMBERS);
-      safeSaveToStorage('yaser_total_chambers', TOTAL_CHAMBERS);
-    }
-    window.switchChamber(target);
+    // ينتقل دائماً للحجرة 8 (حجرة المستكشف)
+    window.switchChamber(8);
   };
 
   // مزامنة تلقائية لملفات المجلد الرئيسي book السابقة لضمان ربطها بالحجرات
@@ -2008,20 +1986,15 @@ function exportDocument(format) {
     try {
       const bookFiles = getFolderFiles('book');
       if (Array.isArray(bookFiles) && bookFiles.length > 0) {
-        bookFiles.forEach(f => {
-          const fileNum = typeof f.num === 'number' ? f.num : parseInt(f.num, 10);
-          if (!isNaN(fileNum) && fileNum >= 8) {
-            if (fileNum > TOTAL_CHAMBERS) {
-              TOTAL_CHAMBERS = fileNum;
-              safeSaveToStorage('vienix_total_chambers', TOTAL_CHAMBERS);
-            }
-            const existingContent = getChamberContent(fileNum);
-            if ((!existingContent || existingContent.trim().length === 0) && f.content && f.content.trim().length > 0) {
-              setChamberContent(fileNum, f.content);
-              setChamberCustomTitle(fileNum, f.title || ('ملف ' + fileNum));
-            }
+        // مزامنة آخر ملف في مجلد الكتاب مع الحجرة 8 فقط (لا حجرات 9+)
+        const lastFile = bookFiles[bookFiles.length - 1];
+        if (lastFile && lastFile.content && lastFile.content.trim().length > 0) {
+          const existingContent = getChamberContent(8);
+          if (!existingContent || existingContent.trim().length === 0) {
+            setChamberContent(8, lastFile.content);
+            setChamberCustomTitle(8, lastFile.title || 'ملف 8');
           }
-        });
+        }
       }
     } catch (e) {
       console.warn('Auto-sync book files to chambers failed:', e);
@@ -2062,112 +2035,45 @@ function exportDocument(format) {
 
     if (!listEl) return;
 
-    if (activeChamber <= 7) {
-      // ══════════════════════════════════════════════════════════════
-      // القالب الأساسي: الحجرات من 1 إلى 7 ثم الحجرة الفارغة المتقطعة وسهم <
-      // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════
+    // القالب الثابت دائماً: [1][2][3][4][5][6][7] [>] [8] [<]
+    // الحجرة 8 = عارض ملفات المستكشف (أو الحجرة الإضافية)
+    // ══════════════════════════════════════════════════════════════
 
-      // 1. إخفاء سهم العودة (>)
-      if (navPrevBtn) navPrevBtn.style.display = 'none';
+    // 1. رندرة الحجرات 1 إلى 7 بالترتيب الصحيح
+    listEl.innerHTML = '';
+    for (let i = 1; i <= 7; i++) {
+      const btn = createChamberButton(i);
+      listEl.appendChild(btn);
+    }
 
-      // 2. رندرة الحجرات 1 إلى 7 بالترتيب الصحيح دائماً
-      listEl.innerHTML = '';
-      for (let i = 1; i <= 7; i++) {
-        const btn = createChamberButton(i);
-        listEl.appendChild(btn);
-      }
-
-      // 3. فحص الحجرة رقم 8: هل تحتوي على نصوص سابقة؟
-      const ch8Content = getChamberContent(8).trim();
-      const ch8HasContent = ch8Content.length > 0;
-
-      if (ch8HasContent) {
-        // في حال صار في محتوى لاحقاً بالحجرة 8:
-        // يتبدل شكل الحجرة وتظهر كزر ممتلئ برقمها 8
-        if (overflowSlot) {
-          overflowSlot.style.display = 'inline-flex';
-          overflowSlot.innerHTML = '';
-          const btn8 = createChamberButton(8);
-          overflowSlot.appendChild(btn8);
-        }
-        // والحجرة المتقطعة تصبح للحجرة 9
-        if (dashedSlot) {
-          dashedSlot.style.display = 'inline-flex';
-          dashedSlot.setAttribute('data-chamber', '9');
-          dashedSlot.title = 'حجرة 9 (فارغة - اضغط للبدء فيها)';
-        }
+    // 2. سهم الفاصل (>) — ظاهر دائماً كفاصل بين الحجرات الأساسية وحجرة المستكشف
+    if (navPrevBtn) {
+      navPrevBtn.style.display = 'inline-flex';
+      if (activeChamber === 8) {
+        navPrevBtn.title = 'الرجوع للحجرات الأساسية';
       } else {
-        // الحجرة 8 فارغة: القالب الأصلي تماماً كما بالصورة:
-        // 1 2 3 4 5 6 7 [  متقطعة  ] < المستكشف
-        if (overflowSlot) {
-          overflowSlot.style.display = 'none';
-          overflowSlot.innerHTML = '';
-        }
-        if (dashedSlot) {
-          dashedSlot.style.display = 'inline-flex';
-          dashedSlot.setAttribute('data-chamber', '8');
-          dashedSlot.title = 'حجرة 8 (فارغة - اضغط للبدء فيها)';
-        }
+        navPrevBtn.title = 'الانتقال لحجرة المستكشف (8)';
       }
+    }
 
-      // 4. سهم التقدم (<) ظاهر دائماً
-      if (navNextBtn) {
-        navNextBtn.style.display = 'inline-flex';
-        navNextBtn.title = ch8HasContent ? 'الانتقال للحجرة 8 (أو الحجرات التالية)' : 'الانتقال للحجرة 8 ✨';
-      }
+    // 3. حجرة المستكشف (8) — ظاهرة دائماً
+    if (overflowSlot) {
+      overflowSlot.style.display = 'inline-flex';
+      overflowSlot.innerHTML = '';
+      const btn8 = createChamberButton(8);
+      overflowSlot.appendChild(btn8);
+    }
 
-    } else {
-      // ══════════════════════════════════════════════════════════════
-      // وضع التواجد في حجرة متجاوزة لـ 7 (مثلاً 8، 9، 10...)
-      // "يتبدل شكل الحجرة الفارغة ويظهر بعدها سهم العودة"
-      // ══════════════════════════════════════════════════════════════
+    // 4. لا توجد حجرة 9 — إخفاء الحجرة المتقطعة
+    if (dashedSlot) {
+      dashedSlot.style.display = 'none';
+    }
 
-      // 1. عرض الحجرات السابقة (حتى 6 حجرات لتتسع في الشريط)
-      const prevChambers = [];
-      for (let i = 1; i < activeChamber; i++) {
-        prevChambers.push(i);
-      }
-      let chambersToShow = [];
-      if (prevChambers.length <= 6) {
-        chambersToShow = prevChambers;
-      } else {
-        chambersToShow = [1].concat(prevChambers.slice(-5));
-      }
-
-      listEl.innerHTML = '';
-      chambersToShow.forEach(num => {
-        const btn = createChamberButton(num);
-        listEl.appendChild(btn);
-      });
-
-      // 2. إظهار سهم العودة (>) للرجوع للحجرة السابقة
-      if (navPrevBtn) {
-        navPrevBtn.style.display = 'inline-flex';
-        navPrevBtn.title = `الرجوع للحجرة السابقة (${activeChamber - 1})`;
-      }
-
-      // 3. تبديل شكل الحجرة الفارغة لتصبح الحجرة النشطة المحددة برقمها الترتيبي ومظهرها النشط
-      if (overflowSlot) {
-        overflowSlot.style.display = 'inline-flex';
-        overflowSlot.innerHTML = '';
-        const activeBtn = createChamberButton(activeChamber);
-        overflowSlot.appendChild(activeBtn);
-      }
-
-      // 4. الحجرة المتقطعة التالية (تمثل activeChamber + 1)
-      const nextCh = activeChamber + 1;
-      const nextContent = getChamberContent(nextCh).trim();
-      if (dashedSlot) {
-        dashedSlot.style.display = 'inline-flex';
-        dashedSlot.setAttribute('data-chamber', String(nextCh));
-        dashedSlot.title = `حجرة ${nextCh} (${nextContent ? 'ممتلئة' : 'فارغة - اضغط للبدء فيها'})`;
-      }
-
-      // 5. سهم التقدم (<) للانتقال للحجرة التالية
-      if (navNextBtn) {
-        navNextBtn.style.display = 'inline-flex';
-        navNextBtn.title = `الانتقال للحجرة التالية (${nextCh}) ✨`;
-      }
+    // 5. سهم المستكشف (<) — ظاهر دائماً
+    if (navNextBtn) {
+      navNextBtn.style.display = 'inline-flex';
+      navNextBtn.title = 'فتح المستكشف';
     }
 
     updateBookChambersList();
@@ -3478,28 +3384,12 @@ function exportDocument(format) {
       }
 
       // 4. الحالة الثانية: الحجرات من 1 إلى 7 كلها ممتلئة
-      // البحث عن أول حجرة فارغة بدءاً من 8 فصاعداً
-      let ch = 8;
-      while (getChamberContent(ch).trim().length > 0) {
-        ch++;
-      }
-      targetChamber = ch;
+      // اللصق في الحجرة 8 (حجرة المستكشف) كملف جديد في مجلد الكتاب
+      targetChamber = 8;
 
-      if (targetChamber > TOTAL_CHAMBERS) {
-        TOTAL_CHAMBERS = targetChamber;
-        safeSaveToStorage('vienix_total_chambers', TOTAL_CHAMBERS);
-        safeSaveToStorage('yaser_total_chambers', TOTAL_CHAMBERS);
-      }
+      const fileTitle = `ملف ${getNextFolderFileNum('book')}`;
 
-      const fileTitle = `ملف ${targetChamber}`;
-      setChamberContent(targetChamber, text);
-      setChamberCustomTitle(targetChamber, fileTitle);
-      const chMeta = getChamberMeta(targetChamber);
-      chMeta.folder = 'book';
-      saveChamberMeta(targetChamber, chMeta);
-      updateChamberMetaStats(targetChamber, text);
-
-      // مزامنة الملف مع مجلد book في المستكشف
+      // إنشاء ملف جديد في مجلد book
       const folderKey = 'book';
       const files = getFolderFiles(folderKey);
       const textWithoutDataUrls = text.replace(/data:image\/[^"')\s]+/g, '[صورة]');
@@ -3507,8 +3397,8 @@ function exportDocument(format) {
       const wordsCount = trimmed ? (trimmed.match(/[\w\u0600-\u06FF]+/g) || []).length : 0;
 
       const fileRecord = {
-        id: 'file_ch_' + targetChamber,
-        num: targetChamber,
+        id: 'file_ch_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5),
+        num: getNextFolderFileNum(folderKey),
         title: fileTitle,
         content: text,
         words: wordsCount,
@@ -3516,17 +3406,29 @@ function exportDocument(format) {
         createdAt: Date.now(),
         updatedAt: Date.now()
       };
-
-      const existingIdx = files.findIndex(f => f.num === targetChamber);
-      if (existingIdx >= 0) {
-        files[existingIdx] = fileRecord;
-      } else {
-        files.push(fileRecord);
-      }
+      files.push(fileRecord);
       saveFolderFiles(folderKey, files);
 
-      // الانتقال فوراً للحجرة الجديدة
-      window.switchChamber(targetChamber);
+      // تحميل المحتوى في الحجرة 8 وعرضه
+      setChamberContent(8, text);
+      setChamberCustomTitle(8, fileTitle);
+      const chMeta = getChamberMeta(8);
+      chMeta.folder = 'book';
+      saveChamberMeta(8, chMeta);
+      updateChamberMetaStats(8, text);
+
+      // تسجيل الملف النشط في المستكشف
+      activeExplorerFile = {
+        folderKey: folderKey,
+        fileId: fileRecord.id,
+        title: fileTitle
+      };
+      try {
+        safeSaveToStorage('vienix_active_explorer_file', JSON.stringify(activeExplorerFile));
+      } catch (e) {}
+
+      // الانتقال فوراً للحجرة 8
+      window.switchChamber(8);
 
       if (typeof renderChambersExplorerTree === 'function') {
         renderChambersExplorerTree();
