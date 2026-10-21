@@ -207,39 +207,33 @@
   const classicEditor = document.getElementById('classic-markdown-input');
   const classicOutput = document.getElementById('classic-output');
 
-  // Chambers System (نظام الحجرات التخزينية والمطابقة الديناميكي)
-  const MIN_CHAMBERS = 8;
-  function getTotalChambers() {
-    let count = parseInt(getStored('vienix_total_chambers', 'yaser_total_chambers') || '8', 10);
-    if (isNaN(count) || count < MIN_CHAMBERS) count = MIN_CHAMBERS;
-    return count;
-  }
-  let TOTAL_CHAMBERS = getTotalChambers();
+  // Chambers System (نظام الحجرات: 7 حجرات أساسية + الحجرة الثامنة المخصصة لعرض الملفات فقط)
+  const TOTAL_CHAMBERS = 8;
   window.VienixGetTotalChambers = () => TOTAL_CHAMBERS;
 
-  // ضمان وجود الحجرة في نطاق العدد الكلي — تُستدعى قبل أي switchChamber
+  // تنظيف أي حجرات قديمة غير صالحة تتجاوز 8 وحذف الترقيم العشوائي من الذاكرة
+  try {
+    localStorage.removeItem('vienix_total_chambers');
+    localStorage.removeItem('yaser_total_chambers');
+    for (let ch = 9; ch <= 100; ch++) {
+      localStorage.removeItem('vienix_chamber_' + ch);
+      localStorage.removeItem('yaser_chamber_' + ch);
+      localStorage.removeItem('vienix_chamber_meta_' + ch);
+      localStorage.removeItem('yaser_chamber_meta_' + ch);
+    }
+  } catch (e) {}
+
+  // ضمان أن الحجرة ضمن النطاق الثابت (1 إلى 8)
   function ensureChamberExists(chNum) {
     chNum = parseInt(chNum, 10);
-    if (isNaN(chNum) || chNum < 1) return false;
-    if (chNum > TOTAL_CHAMBERS) {
-      TOTAL_CHAMBERS = chNum;
-      safeSaveToStorage('vienix_total_chambers', TOTAL_CHAMBERS);
-      safeSaveToStorage('yaser_total_chambers', TOTAL_CHAMBERS);
-    }
-    return true;
+    return !isNaN(chNum) && chNum >= 1 && chNum <= TOTAL_CHAMBERS;
   }
 
   let activeChamber = parseInt(getStored('vienix_active_chamber', 'yaser_active_chamber') || '1', 10);
   if (isNaN(activeChamber) || activeChamber < 1 || activeChamber > TOTAL_CHAMBERS) {
     activeChamber = 1;
   }
-  let lastActiveOverflowChamber = parseInt(getStored('vienix_last_overflow_chamber') || '8', 10);
-  if (isNaN(lastActiveOverflowChamber) || lastActiveOverflowChamber < 8) {
-    lastActiveOverflowChamber = 8;
-  }
-  if (activeChamber >= 8) {
-    lastActiveOverflowChamber = activeChamber;
-  }
+  let lastActiveOverflowChamber = 8;
 
   // Initialize Application
   async function initApplication() {
@@ -2090,8 +2084,8 @@ function exportDocument(format) {
           activeExplorerFile.num = currentFile.num;
           activeExplorerFile.title = currentFile.title;
           if (activeChamber >= 8) {
-            activeChamber = currentFile.num;
-            lastActiveOverflowChamber = currentFile.num;
+            activeChamber = 8;
+            lastActiveOverflowChamber = 8;
           }
         } else if (cleanFiles.length > 0) {
           const lastF = cleanFiles[cleanFiles.length - 1];
@@ -2101,8 +2095,8 @@ function exportDocument(format) {
             title: lastF.title
           };
           if (activeChamber >= 8) {
-            activeChamber = lastF.num;
-            lastActiveOverflowChamber = lastF.num;
+            activeChamber = 8;
+            lastActiveOverflowChamber = 8;
           }
         }
         safeSaveToStorage('vienix_active_explorer_file', JSON.stringify(activeExplorerFile));
@@ -2169,55 +2163,53 @@ function exportDocument(format) {
     window.switchChamber(nextCh);
   };
 
-  // معالج سهم العودة (>) للرجوع للحجرة السابقة
+  // معالج سهم العودة (>) للرجوع للحجرة السابقة أو الملف السابق
   window.handleChamberNavPrev = function () {
-    const navList = getCurrentNavigationChambers();
-    const curIdx = navList.indexOf(activeChamber);
-    if (curIdx > 0) {
-      window.switchChamber(navList[curIdx - 1]);
-    } else if (curIdx === -1) {
-      const prevList = navList.filter(ch => ch < activeChamber);
-      if (prevList.length > 0) {
-        window.switchChamber(prevList[prevList.length - 1]);
-      } else if (activeChamber > 1) {
-        window.switchChamber(activeChamber - 1);
+    if (activeChamber === 8 && activeExplorerFile) {
+      const folderKey = activeExplorerFile.folderKey || 'book';
+      const files = getFolderFiles(folderKey);
+      const curIdx = files.findIndex(f => f.id === activeExplorerFile.fileId);
+      if (curIdx > 0) {
+        window.handleFolderFileClick(folderKey, files[curIdx - 1].id);
+        return;
+      } else {
+        // عند الوصول لأول ملف في المجلد، نرجع للحجرة 7
+        window.switchChamber(7);
+        return;
       }
+    }
+    if (activeChamber > 1 && activeChamber <= 7) {
+      window.switchChamber(activeChamber - 1);
     }
   };
 
-  // معالج سهم التقدم (<) للانتقال للحجرة التالية (محصور بملفات المجلد النشط)
+  // معالج سهم التقدم (<) للانتقال للحجرة التالية أو الملف التالي
   window.handleChamberNavNext = function () {
-    const navList = getCurrentNavigationChambers();
-    const curIdx = navList.indexOf(activeChamber);
-    if (curIdx !== -1 && curIdx < navList.length - 1) {
-      window.switchChamber(navList[curIdx + 1]);
-    } else if (curIdx === -1) {
-      const next = navList.find(ch => ch > activeChamber);
-      if (next) window.switchChamber(next);
+    if (activeChamber < 7) {
+      window.switchChamber(activeChamber + 1);
+      return;
+    }
+    if (activeChamber === 7) {
+      // الانتقال من الحجرة 7 لأول ملف في المجلد الرئيسي إن وُجد
+      const bookFiles = getFolderFiles('book');
+      if (bookFiles && bookFiles.length > 0) {
+        window.handleFolderFileClick('book', bookFiles[0].id);
+        return;
+      } else {
+        window.switchChamber(8);
+        return;
+      }
+    }
+    if (activeChamber === 8 && activeExplorerFile) {
+      const folderKey = activeExplorerFile.folderKey || 'book';
+      const files = getFolderFiles(folderKey);
+      const curIdx = files.findIndex(f => f.id === activeExplorerFile.fileId);
+      if (curIdx >= 0 && curIdx < files.length - 1) {
+        window.handleFolderFileClick(folderKey, files[curIdx + 1].id);
+        return;
+      }
     }
   };
-
-  // مزامنة تلقائية لملفات المجلد الرئيسي book السابقة لضمان ربطها بالحجرات
-  function autoSyncBookFilesToChambers() {
-    try {
-      const bookFiles = getFolderFiles('book');
-      if (Array.isArray(bookFiles)) {
-        bookFiles.forEach(f => {
-          const fileNum = typeof f.num === 'number' ? f.num : null;
-          if (fileNum && fileNum >= 8) {
-            ensureChamberExists(fileNum);
-            const existingContent = getChamberContent(fileNum);
-            if ((!existingContent || existingContent.trim().length === 0) && f.content && f.content.trim().length > 0) {
-              setChamberContent(fileNum, f.content);
-              setChamberCustomTitle(fileNum, f.title || ('ملف ' + fileNum));
-            }
-          }
-        });
-      }
-    } catch (e) {
-      console.warn('Auto-sync book files to chambers failed:', e);
-    }
-  }
 
   // بناء عناصر شريط الحجرات وتفعيل التفويض بالنقرة الواحدة
   function initChambersSystem() {
@@ -2232,14 +2224,13 @@ function exportDocument(format) {
           return;
         }
         const ch = parseInt(btn.getAttribute('data-chamber'), 10);
-        if (!isNaN(ch) && ch >= 1) {
+        if (!isNaN(ch) && ch >= 1 && ch <= TOTAL_CHAMBERS) {
           window.switchChamber(ch);
         }
       });
     }
 
     cleanupDraftsAndExcessChambers();
-    autoSyncBookFilesToChambers();
     updateChambersUI();
     setupChamberContextMenu();
   }
@@ -2256,7 +2247,7 @@ function exportDocument(format) {
 
     // ══════════════════════════════════════════════════════════════
     // القالب الثابت دائماً: [1][2][3][4][5][6][7] [>] [8] [<]
-    // الحجرة 8 = عارض ملفات المستكشف (أو الحجرة الإضافية)
+    // الحجرة 8 = الحجرة المخصصة لعرض ملفات المستكشف فقط
     // ══════════════════════════════════════════════════════════════
 
     // 1. رندرة الحجرات 1 إلى 7 بالترتيب الصحيح
@@ -2269,27 +2260,32 @@ function exportDocument(format) {
     // 2. سهم العودة (>) — للرجوع للحجرة السابقة
     if (navPrevBtn) {
       navPrevBtn.style.display = 'inline-flex';
-      navPrevBtn.title = 'الرجوع للحجرة السابقة';
+      navPrevBtn.title = 'الرجوع للحجرة أو الملف السابق';
     }
 
-    // 3. الحجرة الديناميكية (حجرة المستكشف أو الحجرة المتجاوزة لـ 7)
+    // 3. الحجرة 8 المخصصة لعرض ملفات المستكشف
     if (overflowSlot) {
       overflowSlot.style.display = 'inline-flex';
       overflowSlot.innerHTML = '';
-      const overflowCh = activeChamber >= 8 ? activeChamber : (lastActiveOverflowChamber || 8);
-      const dynamicBtn = createChamberButton(overflowCh);
+      const dynamicBtn = createChamberButton(8);
+      dynamicBtn.classList.add('chamber-file-dedicated');
+      if (activeChamber === 8 && activeExplorerFile) {
+        dynamicBtn.setAttribute('title', `عارض الملفات (ملف: ${activeExplorerFile.title}) 🟢`);
+      } else {
+        dynamicBtn.setAttribute('title', 'حجرة مخصصة لعرض وتحرير ملفات المستكشف 🟢');
+      }
       overflowSlot.appendChild(dynamicBtn);
     }
 
-    // 4. لا توجد حجرة 9 — إخفاء الحجرة المتقطعة
+    // 4. إخفاء الحجرة المتقطعة الزائدة
     if (dashedSlot) {
       dashedSlot.style.display = 'none';
     }
 
-    // 5. سهم التقدم (<) — للانتقال للحجرة التالية
+    // 5. سهم التقدم (<) — للانتقال للحجرة أو الملف التالي
     if (navNextBtn) {
       navNextBtn.style.display = 'inline-flex';
-      navNextBtn.title = 'الانتقال للحجرة التالية';
+      navNextBtn.title = 'الانتقال للحجرة أو الملف التالي';
     }
 
     updateBookChambersList();
@@ -3674,55 +3670,50 @@ function exportDocument(format) {
         renderChambersExplorerTree();
       }
 
-      showToast(`تم إنشاء "${fileTitle}" (حجرة ${nextNum}) ولصق المحتوى فيها بنجاح! 📂✨`, 'success', 1800);
+      showToast(`تم إنشاء "${fileTitle}" بنجاح وعرضه في الحجرة 8! 📄✨`, 'success', 1800);
 
     } catch (err) {
       showToast('تعذر الوصول إلى الحافظة، يرجى السماح بصلاحيات المتصفح', 'error', 2000);
     }
   };
 
-  // تفاعل النقر على ملف داخل مجلد: التبديل للحجرة المرتبطة به مباشرة
+  // تفاعل النقر على ملف داخل مجلد: عرضه في الحجرة رقم 8 المخصصة لعرض ملفات المستكشف
   window.handleFolderFileClick = function (folderKey, fileId) {
     const files = getFolderFiles(folderKey);
     const file = files.find(f => f.id === fileId);
     if (!file) return;
 
-    const targetCh = (typeof file.num === 'number' && file.num >= 1) ? file.num : 8;
-    ensureChamberExists(targetCh);
-
     // 1. حفظ المحتوى الحالي في الحجرة المغادرة أولاً قبل تبديل activeExplorerFile
     const currentVal = isClassicMode ? (classicEditor?.value || editor.value) : editor.value;
     if (activeChamber <= 7) {
       setChamberContent(activeChamber, currentVal);
-    } else if (activeExplorerFile) {
+    } else if (activeChamber === 8 && activeExplorerFile) {
       syncActiveExplorerFile(currentVal);
-      safeSaveToStorage('vienix_chamber_' + activeChamber, currentVal);
+      safeSaveToStorage('vienix_chamber_8', currentVal);
     }
 
-    // 2. تحديد بيانات الملف المعروض حالياً
+    // 2. تعيين بيانات الملف المعروض حالياً
     activeExplorerFile = {
       folderKey: folderKey,
       fileId: file.id,
-      title: file.title
+      title: file.title,
+      num: file.num
     };
     try {
       safeSaveToStorage('vienix_active_explorer_file', JSON.stringify(activeExplorerFile));
     } catch (e) {}
 
-    // 3. تحميل محتوى الملف في الحجرة الهدف
+    // 3. تحميل محتوى الملف في الحجرة 8 دائماً (الحجرة المخصصة لعرض ملفات المستكشف)
+    activeChamber = 8;
+    lastActiveOverflowChamber = 8;
+    safeSaveToStorage('vienix_active_chamber', 8);
+    safeSaveToStorage('yaser_active_chamber', 8);
+
     const fileContent = file.content || '';
-    setChamberContent(targetCh, fileContent);
-    setChamberCustomTitle(targetCh, file.title || ('ملف ' + targetCh));
+    setChamberContent(8, fileContent);
+    setChamberCustomTitle(8, file.title || ('ملف ' + (file.num || '8')));
 
-    // 4. التبديل إلى الحجرة المستهدفة وتحديث الواجهة
-    activeChamber = targetCh;
-    if (activeChamber >= 8) {
-      lastActiveOverflowChamber = activeChamber;
-      safeSaveToStorage('vienix_last_overflow_chamber', lastActiveOverflowChamber);
-    }
-    safeSaveToStorage('vienix_active_chamber', activeChamber);
-    safeSaveToStorage('yaser_active_chamber', activeChamber);
-
+    // 4. تحميل النص في المحرر وتحديث الواجهة
     if (editor) editor.value = fileContent;
     if (classicEditor) classicEditor.value = fileContent;
     initHistoryWithContent(fileContent);
@@ -3732,7 +3723,7 @@ function exportDocument(format) {
     if (typeof renderChambersExplorerTree === 'function') {
       renderChambersExplorerTree();
     }
-    showToast(`تم الانتقال إلى "${file.title}" (حجرة ${targetCh}) 🟢`, 'info', 1400);
+    showToast(`تم عرض "${file.title}" في حجرة الملفات 🟢`, 'info', 1400);
   };
 
   window.startFolderFileRename = function (e, folderKey, fileId) {
@@ -4856,7 +4847,7 @@ function exportDocument(format) {
     // استخدام الأرقام اللاتينية بشكل صارم (Western Latin Numerals 1, 2, 3...)
     if (foldersCountEl) foldersCountEl.textContent = `${totalFoldersCount} مجلدات`;
     if (filesCountEl) filesCountEl.textContent = `${totalFilesCount} ملف`;
-    if (activeNumEl) activeNumEl.textContent = activeChamber >= 8 ? `المستعرض: 🟢 ملف ${activeChamber}` : `النشطة: #${activeChamber}`;
+    if (activeNumEl) activeNumEl.textContent = activeChamber >= 8 ? (activeExplorerFile ? `المستعرض: 🟢 ملف ${activeExplorerFile.num}` : 'المستعرض: 🟢 ملف 8') : `النشطة: #${activeChamber}`;
 
     // حساب عدد الحجرات التراكمي للمجلد والمجلدات المتفرعة منه
     function getFolderTotalCount(folderKey) {
@@ -4869,7 +4860,7 @@ function exportDocument(format) {
       return count;
     }
 
-    // رندرة عنصر الحجرة الشجري (نمط الفهرس العصري: سطر واحد مدمج بدون # وبدون أسطر ثانوية)
+    // رندرة عنصر الملف في الشجرة (الملفات 1 إلى 7 المعروضة في الحجرات 1 إلى 7)
     function renderItemHTML(item, parentFolderKey) {
       const editIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
       const moveIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
@@ -4890,14 +4881,14 @@ function exportDocument(format) {
              ondragend="handleItemDragEnd(event)"
              onclick="handleTreeItemClick(event, ${item.num})"
              oncontextmenu="handleTreeItemContextMenu(event, ${item.num})">
-          <span class="obsidian-item-num" title="حجرة رقم ${item.num}">${formattedNum}</span>
-          <span class="obsidian-dot ${item.isFilled ? 'filled' : 'empty'}" title="${item.isFilled ? 'محتوى مكتوب' : 'فارغة'}"></span>
+          <span class="obsidian-item-num" title="ملف رقم ${item.num}">${formattedNum}</span>
+          <span class="obsidian-dot ${item.isFilled ? 'filled' : 'empty'}" title="${item.isFilled ? 'محتوى مكتوب' : 'فارغ'}"></span>
           <div class="obsidian-item-title-row" id="tree-title-row-${item.num}">
             <span class="obsidian-item-title" id="tree-title-${item.num}" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</span>
-            ${item.isActive ? '<span class="obsidian-active-indicator" title="الحجرة النشطة"></span>' : ''}
+            ${item.isActive ? '<span class="obsidian-active-indicator" title="الملف النشط"></span>' : ''}
           </div>
           <div class="obsidian-item-actions">
-            <button type="button" class="obsidian-action-btn" onclick="startTreeInlineRename(event, ${item.num})" title="إعادة تسمية مخصصة">
+            <button type="button" class="obsidian-action-btn" onclick="startTreeInlineRename(event, ${item.num})" title="إعادة تسمية الملف">
               ${editIcon}
             </button>
             <button type="button" class="obsidian-action-btn" onclick="openMoveFolderModal(${item.num}, event)" title="نقل لمجلد">
@@ -4906,10 +4897,10 @@ function exportDocument(format) {
             <button type="button" class="obsidian-action-btn" onclick="copyChamberFromTree(event, ${item.num})" title="نسخ المحتوى">
               ${copyIcon}
             </button>
-            <button type="button" class="obsidian-action-btn" onclick="pasteToChamberFromTree(event, ${item.num})" title="لصق المحتوى للحجرة">
+            <button type="button" class="obsidian-action-btn" onclick="pasteToChamberFromTree(event, ${item.num})" title="لصق المحتوى للملف">
               ${pasteIcon}
             </button>
-            <button type="button" class="obsidian-action-btn danger" onclick="clearChamberFromTree(event, ${item.num})" title="حذف وإفراغ الحجرة">
+            <button type="button" class="obsidian-action-btn danger" onclick="clearChamberFromTree(event, ${item.num})" title="حذف الملف">
               ${clearIcon}
             </button>
           </div>
@@ -5245,12 +5236,12 @@ function exportDocument(format) {
     const hasContent = !!(val && val.trim().length > 0);
 
     if (!hasContent && !hasCustomTitle) {
-      showToast(`الحجرة ${chNum} فارغة وافتراضية بالفعل! ✨`, 'info', 1400);
+      showToast(`الملف ${chNum} فارغ بالفعل! ✨`, 'info', 1400);
       return;
     }
 
     const title = getChamberTitle(chNum);
-    const confirmMsg = `هل أنت متأكد من تفريغ الحجرة ${chNum} (${escapeHtml(title)}) وحذف التسمية المخصصة وإعادتها للوضع الافتراضي؟`;
+    const confirmMsg = `هل أنت متأكد تماماً من حذف محتوى الملف ${chNum} (${escapeHtml(title)})؟`;
 
     const doClear = () => {
       if (typeof detachChamberFromLinkedFiles === 'function') {
@@ -5279,14 +5270,14 @@ function exportDocument(format) {
 
       updateChambersUI();
       renderChambersExplorerTree();
-      showToast(`تم إفراغ الحجرة ${chNum} واستعادة وضعها الافتراضي 🗑️`, 'info', 1500);
+      showToast(`تم حذف محتوى الملف ${chNum} 🗑️`, 'info', 1500);
     };
 
     if (typeof window.openActionConfirmModal === 'function') {
       window.openActionConfirmModal(
-        '⚠️ تأكيد تفريغ الحجرة وحذف التخصيص',
-        `هل أنت متأكد تماماً من تفريغ الحجرة ${chNum} <strong>"${escapeHtml(title)}"</strong> وحذف تخصيصها بالكامل؟`,
-        'نعم، إفراغ الحجرة',
+        '⚠️ تأكيد حذف الملف',
+        `هل أنت متأكد تماماً من حذف الملف ${chNum} <strong>"${escapeHtml(title)}"</strong> وتفريغ محتواه؟`,
+        'نعم، احذف الملف',
         doClear
       );
     } else {
