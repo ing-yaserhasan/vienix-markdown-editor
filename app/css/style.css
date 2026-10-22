@@ -8029,4 +8029,290 @@ body.is-resizing-workspace .workspace-resizer {
   background: rgba(239, 68, 68, 0.1) !important;
 }
 
+/* ==========================================================================
+   منتقي الأسهم الموجهة التفاعلي (Rich Arrows Picker - 36 Directions)
+   ========================================================================== */
+.arrow-picker-popover {
+  width: 380px !important;
+  max-height: 480px !important;
+  z-index: 10065;
+}
+
+.arrow-picker-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #f1f5f9;
+  flex: 1;
+}
+
+.arrow-picker-title svg {
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.arrow-quick-color-palette {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 4px;
+}
+
+.arrow-color-dot {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+  padding: 0;
+}
+
+.arrow-color-dot:hover {
+  transform: scale(1.2);
+}
+
+.arrow-color-dot.active {
+  border-color: #ffffff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.7);
+  transform: scale(1.15);
+}
+
+.arrow-custom-color-label {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.72rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  transition: background 0.15s;
+}
+
+.arrow-custom-color-label:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.arrow-custom-color-label input[type="color"] {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.arrow-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  overflow-y: auto;
+  max-height: 330px;
+  padding: 4px 2px 8px;
+  scrollbar-width: thin;
+}
+
+.arrow-picker-grid::-webkit-scrollbar {
+  width: 5px;
+}
+
+.arrow-picker-grid::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+}
+
+.arrow-grid-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 4px 6px;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.arrow-grid-item:hover {
+  background: rgba(37, 99, 235, 0.2);
+  border-color: rgba(59, 130, 246, 0.5);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.arrow-grid-char {
+  font-size: 26px;
+  line-height: 1;
+  display: inline-block;
+  transition: transform 0.15s, color 0.15s;
+}
+
+.arrow-grid-label {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 70px;
+}
+
+/* ==========================================================================
+   حاوية السهم التفاعلية وشريط التحكم في شاشة العرض (Arrow Interactive Resizer)
+   ========================================================================== */
+.arrow-resizer-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  line-height: 1;
+  user-select: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  margin: 0 2px;
+  border-radius: 6px;
+  transition: filter 0.15s;
+  box-sizing: border-box;
+}
+
+.arrow-resizer-wrapper:hover {
+  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.5));
+}
+
+.arrow-resizer-wrapper.active {
+  outline: 2px dashed rgba(59, 130, 246, 0.8) !important;
+  outline-offset: 3px;
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.7));
+}
+
+.arrow-resizer-wrapper.is-floating {
+  position: relative !important;
+  z-index: 60 !important;
+  cursor: grab !important;
+  touch-action: none;
+}
+
+.arrow-resizer-wrapper.is-floating:active {
+  cursor: grabbing !important;
+}
+
+.arrow-resizer-wrapper[data-align="center"] {
+  display: flex !important;
+  margin: 12px auto !important;
+  justify-content: center;
+}
+
+.arrow-resizer-wrapper[data-align="right"] {
+  display: flex !important;
+  margin: 12px 0 12px auto !important;
+  justify-content: flex-end;
+}
+
+.arrow-resizer-wrapper[data-align="left"] {
+  display: flex !important;
+  margin: 12px auto 12px 0 !important;
+  justify-content: flex-start;
+}
+
+.arrow-resizer-wrapper[data-align="inline"] {
+  display: inline-flex !important;
+  margin: 0 3px !important;
+  vertical-align: middle !important;
+}
+
+.arrow-resizer-wrapper .vienix-arrow {
+  display: inline-block;
+  line-height: 1;
+  user-select: none;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.arrow-resizer-toolbar {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 30px;
+  padding: 4px 10px;
+  display: none;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  z-index: 1000;
+  white-space: nowrap;
+  direction: rtl;
+}
+
+.arrow-resizer-wrapper:hover .arrow-resizer-toolbar,
+.arrow-resizer-wrapper.active .arrow-resizer-toolbar {
+  display: flex;
+}
+
+.arrow-tb-colors {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.arrow-tb-color-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.12s;
+}
+
+.arrow-tb-color-dot:hover {
+  transform: scale(1.25);
+}
+
+.arrow-tb-color-dot.active {
+  border-color: #ffffff;
+  transform: scale(1.15);
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.6);
+}
+
+.arrow-tb-custom-color {
+  position: relative;
+  width: 17px;
+  height: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.65rem;
+}
+
+.arrow-tb-custom-color input[type="color"] {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.arrow-resizer-wrapper .resizer-handle {
+  display: none;
+}
+
+.arrow-resizer-wrapper:hover .resizer-handle,
+.arrow-resizer-wrapper.active .resizer-handle,
+.arrow-resizer-wrapper.active .resizer-corner-rotate-handle {
+  display: block;
+}
+
+
 

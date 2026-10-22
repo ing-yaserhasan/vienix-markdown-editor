@@ -247,6 +247,13 @@
             <line x1="15" y1="9" x2="15.01" y2="9"></line>
           </svg>
         </button>
+        <!-- Rich Arrow Picker (إدراج أسهم موجهة - 36 شكلاً واتجاهاً) -->
+        <button class="tool-btn" id="btn-insert-arrow" onclick="toggleArrowPicker(this, event)" title="إدراج أسهم موجهة (36 شكلاً واتجاهاً)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
 
         <div class="toolbar-divider"></div>
 
@@ -1404,6 +1411,13 @@
         <line x1="15" y1="9" x2="15.01" y2="9"></line>
       </svg>
     </button>
+    <!-- زر إدراج أسهم موجهة -->
+    <button type="button" class="wysiwyg-tool-btn" id="wysiwyg-btn-arrow" onclick="toggleArrowPicker(this, event)" title="إدراج أسهم موجهة (36 شكلاً واتجاهاً)">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+        <polyline points="12 5 19 12 12 19"></polyline>
+      </svg>
+    </button>
     <div class="wysiwyg-toolbar-divider"></div>
     <button type="button" class="wysiwyg-tool-btn" data-command="formatBlock" data-value="H1" title="عنوان رئيسي (H1)">H1</button>
     <button type="button" class="wysiwyg-tool-btn" data-command="formatBlock" data-value="H2" title="عنوان فرعي (H2)">H2</button>
@@ -1468,6 +1482,37 @@
       <button type="button" class="emoji-cat-btn" data-cat="flags" onclick="selectEmojiCategory('flags')">🚩 أعلام</button>
     </div>
     <div class="emoji-picker-grid" id="emoji-picker-grid"></div>
+  </div>
+
+  <!-- لوحة منتقي الأسهم الموجهة التفاعلية (Rich Directional Arrows Picker - 36 Models) -->
+  <div class="emoji-picker-popover arrow-picker-popover" id="arrow-picker-popover" style="display:none;" role="dialog" aria-label="منتقي الأسهم">
+    <div class="emoji-picker-header">
+      <div class="arrow-picker-title">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        <span>الأسهم الموجهة (36 شكلاً)</span>
+      </div>
+      <div class="arrow-quick-color-palette" title="اختر لون السهم">
+        <button type="button" class="arrow-color-dot active" data-color="#2563eb" style="background:#2563eb;" onclick="setArrowPickerColor('#2563eb', this)"></button>
+        <button type="button" class="arrow-color-dot" data-color="#ef4444" style="background:#ef4444;" onclick="setArrowPickerColor('#ef4444', this)"></button>
+        <button type="button" class="arrow-color-dot" data-color="#10b981" style="background:#10b981;" onclick="setArrowPickerColor('#10b981', this)"></button>
+        <button type="button" class="arrow-color-dot" data-color="#f59e0b" style="background:#f59e0b;" onclick="setArrowPickerColor('#f59e0b', this)"></button>
+        <button type="button" class="arrow-color-dot" data-color="#8b5cf6" style="background:#8b5cf6;" onclick="setArrowPickerColor('#8b5cf6', this)"></button>
+        <button type="button" class="arrow-color-dot" data-color="#f97316" style="background:#f97316;" onclick="setArrowPickerColor('#f97316', this)"></button>
+        <label class="arrow-custom-color-label" title="لون مخصص">
+          <input type="color" id="arrow-picker-custom-color" value="#2563eb" oninput="setArrowPickerColor(this.value, null)" />
+          <span>🎨</span>
+        </label>
+      </div>
+      <button type="button" class="emoji-picker-close-btn" onclick="closeArrowPicker()" title="إغلاق">&times;</button>
+    </div>
+    <div class="emoji-category-tabs arrow-direction-tabs">
+      <button type="button" class="emoji-cat-btn active" data-cat="all" onclick="selectArrowCategory('all')">🌟 الكل (36)</button>
+      <button type="button" class="emoji-cat-btn" data-cat="up" onclick="selectArrowCategory('up')">⬆️ للأعلى (9)</button>
+      <button type="button" class="emoji-cat-btn" data-cat="down" onclick="selectArrowCategory('down')">⬇️ للأسفل (9)</button>
+      <button type="button" class="emoji-cat-btn" data-cat="right" onclick="selectArrowCategory('right')">➡️ لليمين (9)</button>
+      <button type="button" class="emoji-cat-btn" data-cat="left" onclick="selectArrowCategory('left')">⬅️ لليسار (9)</button>
+    </div>
+    <div class="arrow-picker-grid" id="arrow-picker-grid"></div>
   </div>
 
   <!-- Hidden File Input for Image Uploading -->

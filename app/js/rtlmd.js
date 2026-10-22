@@ -1009,6 +1009,8 @@ function exportDocument(format) {
 
     // تفعيل مقابض تحجيم وتكبير/تصغير الصور التفاعلية
     setupImageResizers(previewContent);
+    // تفعيل الأسهم الموجهة التفاعلية مع شريط الأدوات والمقابض
+    setupArrowResizers(previewContent);
 
     // إذا كان وضع التحرير المباشر مفعلاً، نحافظ على خصائص التحرير وحماية العناصر
     if (typeof isWysiwygActive !== 'undefined' && isWysiwygActive) {
@@ -1875,6 +1877,17 @@ function exportDocument(format) {
         cleanContainer.appendChild(img);
 
         wrapper.parentNode.replaceChild(cleanContainer, wrapper);
+      }
+    });
+
+    // 4. تطهير حاويات الأسهم التفاعلية من الأشرطة والمقابض عند الطباعة والتصدير
+    clone.querySelectorAll('.arrow-resizer-wrapper').forEach((wrapper) => {
+      wrapper.querySelectorAll('.arrow-resizer-toolbar, .resizer-handle, .resizer-corner-rotate-handle').forEach((el) => el.remove());
+      const arrow = wrapper.querySelector('.vienix-arrow');
+      if (arrow) {
+        wrapper.parentNode.replaceChild(arrow, wrapper);
+      } else {
+        wrapper.remove();
       }
     });
 
@@ -7078,6 +7091,7 @@ function exportDocument(format) {
       classicOutput.textContent = rawText;
     }
     setupImageResizers(classicOutput);
+    setupArrowResizers(classicOutput);
     setChamberContent(activeChamber, rawText);
     updateActiveChamberDotState();
   }
@@ -8636,6 +8650,45 @@ function exportDocument(format) {
       }
     });
 
+    // قاعدة الحفاظ على الأسهم الموجهة التفاعلية
+    turndownService.addRule('preserveVienixArrows', {
+      filter: function (node) {
+        return (
+          node.nodeName === 'SPAN' &&
+          (node.classList.contains('vienix-arrow') ||
+           node.hasAttribute('data-arrow-id') ||
+           node.hasAttribute('data-arrow-model'))
+        );
+      },
+      replacement: function (content, node) {
+        const arrowSpan = node.classList.contains('vienix-arrow') ? node : (node.querySelector('.vienix-arrow') || node);
+        const arrowId = arrowSpan.getAttribute('data-arrow-id') || `arrow-${Date.now()}`;
+        const model = arrowSpan.getAttribute('data-arrow-model') || '1';
+        const dir = arrowSpan.getAttribute('data-arrow-dir') || 'right';
+        const color = arrowSpan.getAttribute('data-arrow-color') || arrowSpan.style.color || '#2563eb';
+        const size = arrowSpan.getAttribute('data-arrow-size') || arrowSpan.style.fontSize || '28px';
+        const rot = arrowSpan.getAttribute('data-arrow-rotation') || '0';
+        const align = arrowSpan.getAttribute('data-arrow-align') || 'inline';
+        const char = arrowSpan.getAttribute('data-arrow-char') || arrowSpan.textContent || '→';
+        const isFloat = arrowSpan.getAttribute('data-is-floating') === 'true';
+        const floatX = arrowSpan.getAttribute('data-float-x') || '';
+        const floatY = arrowSpan.getAttribute('data-float-y') || '';
+
+        let styles = ['display: inline-block', 'line-height: 1', 'vertical-align: middle'];
+        if (color) styles.push(`color: ${color}`);
+        if (size) styles.push(`font-size: ${size}`);
+        if (rot && rot !== '0') styles.push(`transform: rotate(${rot}deg)`);
+        if (isFloat) {
+          styles.push('position: relative');
+          if (floatX) styles.push(`left: ${floatX}px`);
+          if (floatY) styles.push(`top: ${floatY}px`);
+          styles.push('z-index: 50');
+        }
+
+        return `<span class="vienix-arrow" data-arrow-id="${arrowId}" data-arrow-model="${model}" data-arrow-dir="${dir}" data-arrow-color="${color}" data-arrow-size="${size}" data-arrow-rotation="${rot}" data-arrow-align="${align}"${isFloat ? ` data-is-floating="true" data-float-x="${floatX}" data-float-y="${floatY}"` : ''} style="${styles.join('; ')}">${char}</span>`;
+      }
+    });
+
     // قاعدة الحفاظ على مرفقات صور فينيكس النظيفة ومنع تحويلها إلى شفرات Base64 ضخمة في المحرر
     turndownService.addRule('preserveVienixImages', {
       filter: function (node) {
@@ -9311,6 +9364,15 @@ function exportDocument(format) {
         window.closeEmojiPicker();
       }
     }
+    const arrowPop = document.getElementById('arrow-picker-popover');
+    if (arrowPop && arrowPop.style.display !== 'none') {
+      if (!arrowPop.contains(e.target) && !e.target.closest('#btn-insert-arrow') && !e.target.closest('#wysiwyg-btn-arrow')) {
+        window.closeArrowPicker();
+      }
+    }
+    if (!e.target.closest('.arrow-resizer-wrapper')) {
+      document.querySelectorAll('.arrow-resizer-wrapper.active').forEach((w) => w.classList.remove('active'));
+    }
   });
 
   // =========================================================================
@@ -9546,6 +9608,879 @@ function exportDocument(format) {
     window.closeEmojiPicker();
     showToast(`تم إدراج أيقونة ${iconItem.name} ✓`, 'success');
   };
+
+  // =========================================================================
+  // نظام الأسهم الموجهة التفاعلية (36 سهم - 9 موديلات × 4 اتجاهات)
+  // =========================================================================
+  const ARROW_MODELS = [
+    {
+      id: 1,
+      name: 'سهم خطي بسيط',
+      sample: '↓',
+      dirs: {
+        up: { char: '↑', rot: 0, name: 'أعلى' },
+        down: { char: '↓', rot: 0, name: 'أسفل' },
+        left: { char: '←', rot: 0, name: 'يسار' },
+        right: { char: '→', rot: 0, name: 'يمين' }
+      }
+    },
+    {
+      id: 2,
+      name: 'سهم مزدوج مجوف',
+      sample: '⇐',
+      dirs: {
+        up: { char: '⇑', rot: 0, name: 'أعلى' },
+        down: { char: '⇓', rot: 0, name: 'أسفل' },
+        left: { char: '⇐', rot: 0, name: 'يسار' },
+        right: { char: '⇒', rot: 0, name: 'يمين' }
+      }
+    },
+    {
+      id: 3,
+      name: 'سهم عريض سميك',
+      sample: '➔',
+      dirs: {
+        up: { char: '➔', rot: 270, name: 'أعلى' },
+        down: { char: '➔', rot: 90, name: 'أسفل' },
+        left: { char: '➔', rot: 180, name: 'يسار' },
+        right: { char: '➔', rot: 0, name: 'يمين' }
+      }
+    },
+    {
+      id: 4,
+      name: 'سهم رأس دائري سميك',
+      sample: '➜',
+      dirs: {
+        up: { char: '➜', rot: 270, name: 'أعلى' },
+        down: { char: '➜', rot: 90, name: 'أسفل' },
+        left: { char: '➜', rot: 180, name: 'يسار' },
+        right: { char: '➜', rot: 0, name: 'يمين' }
+      }
+    },
+    {
+      id: 5,
+      name: 'سهم مدبب هندسي',
+      sample: '➛',
+      dirs: {
+        up: { char: '➛', rot: 270, name: 'أعلى' },
+        down: { char: '➛', rot: 90, name: 'أسفل' },
+        left: { char: '➛', rot: 180, name: 'يسار' },
+        right: { char: '➛', rot: 0, name: 'يمين' }
+      }
+    },
+    {
+      id: 6,
+      name: 'سهم مؤشر صاعد',
+      sample: '➚',
+      dirs: {
+        up: { char: '➚', rot: -45, name: 'أعلى' },
+        down: { char: '➚', rot: 135, name: 'أسفل' },
+        left: { char: '➚', rot: 225, name: 'يسار' },
+        right: { char: '➚', rot: 0, name: 'يمين / أعلى يمين' }
+      }
+    },
+    {
+      id: 7,
+      name: 'سهم رأس المثلث الأنيق',
+      sample: '➤',
+      dirs: {
+        up: { char: '➤', rot: 270, name: 'أعلى' },
+        down: { char: '➤', rot: 90, name: 'أسفل' },
+        left: { char: '➤', rot: 180, name: 'يسار' },
+        right: { char: '➤', rot: 0, name: 'يمين' }
+      }
+    },
+    {
+      id: 8,
+      name: 'سهم عريض معبأ',
+      sample: '⬅',
+      dirs: {
+        up: { char: '⬆\uFE0E', rot: 0, name: 'أعلى' },
+        down: { char: '⬇\uFE0E', rot: 0, name: 'أسفل' },
+        left: { char: '⬅\uFE0E', rot: 0, name: 'يسار' },
+        right: { char: '➡\uFE0E', rot: 0, name: 'يمين' }
+      }
+    },
+    {
+      id: 9,
+      name: 'سهم مجوف عريض',
+      sample: '⇨',
+      dirs: {
+        up: { char: '⇧', rot: 0, name: 'أعلى' },
+        down: { char: '⇩', rot: 0, name: 'أسفل' },
+        left: { char: '⇦', rot: 0, name: 'يسار' },
+        right: { char: '⇨', rot: 0, name: 'يمين' }
+      }
+    }
+  ];
+
+  const ALL_ARROW_CHARS_MAP = {};
+  ARROW_MODELS.forEach((m) => {
+    Object.keys(m.dirs).forEach((dirKey) => {
+      const d = m.dirs[dirKey];
+      ALL_ARROW_CHARS_MAP[d.char] = { modelId: m.id, dir: dirKey, rot: d.rot || 0, char: d.char, name: m.name };
+      const cleanChar = d.char.replace(/\uFE0E/g, '');
+      if (cleanChar !== d.char) {
+        ALL_ARROW_CHARS_MAP[cleanChar] = { modelId: m.id, dir: dirKey, rot: d.rot || 0, char: d.char, name: m.name };
+      }
+    });
+  });
+
+  let currentArrowCategory = 'all';
+  let currentArrowPickerColor = '#2563eb';
+
+  window.setArrowPickerColor = function (color, dotEl) {
+    currentArrowPickerColor = color || '#2563eb';
+    document.querySelectorAll('.arrow-quick-color-palette .arrow-color-dot').forEach((d) => {
+      d.classList.toggle('active', d === dotEl);
+    });
+    const customInp = document.getElementById('arrow-picker-custom-color');
+    if (customInp && customInp.value !== currentArrowPickerColor) {
+      customInp.value = currentArrowPickerColor;
+    }
+    document.querySelectorAll('.arrow-grid-char').forEach((el) => {
+      el.style.color = currentArrowPickerColor;
+    });
+  };
+
+  window.selectArrowCategory = function (cat) {
+    currentArrowCategory = cat;
+    document.querySelectorAll('.arrow-direction-tabs .emoji-cat-btn').forEach((btn) => {
+      btn.classList.toggle('active', btn.getAttribute('data-cat') === cat);
+    });
+    window.renderArrowGrid(cat);
+  };
+
+  window.renderArrowGrid = function (filterCat = 'all') {
+    const grid = document.getElementById('arrow-picker-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    const fragment = document.createDocumentFragment();
+
+    ARROW_MODELS.forEach((model) => {
+      const dirKeys = ['up', 'down', 'right', 'left'];
+      dirKeys.forEach((dirKey) => {
+        if (filterCat !== 'all' && filterCat !== dirKey) return;
+        const dirData = model.dirs[dirKey];
+        if (!dirData) return;
+
+        const itemBtn = document.createElement('button');
+        itemBtn.type = 'button';
+        itemBtn.className = 'arrow-grid-item';
+        itemBtn.title = `${model.name} (${dirData.name})`;
+
+        const rot = dirData.rot || 0;
+        const transformStyle = rot !== 0 ? `transform: rotate(${rot}deg);` : '';
+
+        itemBtn.innerHTML = `
+          <span class="arrow-grid-char" style="color: ${currentArrowPickerColor}; ${transformStyle}">${dirData.char}</span>
+          <span class="arrow-grid-label">${dirData.name}</span>
+        `;
+
+        itemBtn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          window.insertArrowIcon(model.id, dirKey, dirData.char, rot);
+        };
+
+        fragment.appendChild(itemBtn);
+      });
+    });
+
+    grid.appendChild(fragment);
+  };
+
+  window.toggleArrowPicker = function (triggerBtn, event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    const popover = document.getElementById('arrow-picker-popover');
+    if (!popover) return;
+
+    if (popover.style.display !== 'none') {
+      window.closeArrowPicker();
+      return;
+    }
+
+    if (typeof window.closeEmojiPicker === 'function') {
+      window.closeEmojiPicker();
+    }
+
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      savedWysiwygSelectionRange = sel.getRangeAt(0).cloneRange();
+    }
+
+    currentArrowCategory = 'all';
+    document.querySelectorAll('.arrow-direction-tabs .emoji-cat-btn').forEach((b) => {
+      b.classList.toggle('active', b.getAttribute('data-cat') === 'all');
+    });
+
+    window.renderArrowGrid('all');
+    popover.style.display = 'flex';
+
+    const btnRect = (triggerBtn || document.getElementById('btn-insert-arrow')).getBoundingClientRect();
+    const popWidth = popover.offsetWidth || 380;
+    const popHeight = popover.offsetHeight || 420;
+
+    let left = btnRect.left + btnRect.width / 2 - popWidth / 2;
+    left = Math.max(12, Math.min(left, window.innerWidth - popWidth - 12));
+
+    let top = btnRect.bottom + 8;
+    if (top + popHeight > window.innerHeight - 10) {
+      top = btnRect.top - popHeight - 8;
+    }
+
+    popover.style.left = `${left}px`;
+    popover.style.top = `${top}px`;
+  };
+
+  window.closeArrowPicker = function () {
+    const popover = document.getElementById('arrow-picker-popover');
+    if (popover) popover.style.display = 'none';
+  };
+
+  window.insertArrowIcon = function (modelId, dirKey, arrowChar, baseRot = 0) {
+    const model = ARROW_MODELS.find((m) => m.id === modelId) || ARROW_MODELS[0];
+    const dirData = model.dirs[dirKey] || { char: arrowChar, rot: baseRot, name: dirKey };
+    const color = currentArrowPickerColor || '#2563eb';
+    const arrowId = `arrow-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const rot = typeof baseRot === 'number' ? baseRot : (dirData.rot || 0);
+
+    const rotStyle = rot !== 0 ? ` transform: rotate(${rot}deg);` : '';
+    const arrowHtml = `<span class="vienix-arrow" data-arrow-id="${arrowId}" data-arrow-model="${modelId}" data-arrow-dir="${dirKey}" data-arrow-color="${color}" data-arrow-size="28px" data-arrow-rotation="${rot}" data-arrow-align="inline" style="display: inline-block; font-size: 28px; color: ${color}; line-height: 1; vertical-align: middle;${rotStyle}">${arrowChar}</span>`;
+
+    if (isWysiwygActive && previewContent) {
+      if (savedWysiwygSelectionRange) {
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(savedWysiwygSelectionRange);
+      }
+      try {
+        document.execCommand('insertHTML', false, arrowHtml + '&nbsp;');
+      } catch (_) {
+        const span = document.createElement('span');
+        span.innerHTML = arrowHtml + '&nbsp;';
+        if (savedWysiwygSelectionRange) {
+          savedWysiwygSelectionRange.insertNode(span);
+        } else {
+          previewContent.appendChild(span);
+        }
+      }
+      syncPreviewToMarkdown(true);
+    } else {
+      window.insertFormat('', '', arrowHtml + ' ');
+    }
+
+    window.closeArrowPicker();
+    showToast(`تم إدراج ${model.name} (${dirData.name}) ✓`, 'success');
+  };
+
+  // =========================================================================
+  // شريط التحكم التفاعلي بالأسهم في شاشة العرض (Setup Arrow Resizers)
+  // =========================================================================
+  function setupArrowResizers(container) {
+    if (!container) return;
+
+    // 1. تحويل الرموز النصية العادية للأسهم المكتوبة بالمحرر إلى عناصر تفاعلية
+    try {
+      const walker = document.createTreeWalker(
+        container,
+        NodeFilter.SHOW_TEXT,
+        {
+          acceptNode: function (node) {
+            if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+            if (node.parentElement && node.parentElement.closest('pre, code, .mermaid, .diagram-zoom-controls, script, style, .arrow-resizer-wrapper, .vienix-arrow')) {
+              return NodeFilter.FILTER_REJECT;
+            }
+            return NodeFilter.FILTER_ACCEPT;
+          }
+        }
+      );
+
+      const textNodesToProcess = [];
+      let curTextNode;
+      while ((curTextNode = walker.nextNode())) {
+        textNodesToProcess.push(curTextNode);
+      }
+
+      textNodesToProcess.forEach((textNode) => {
+        const textVal = textNode.nodeValue;
+        let matched = false;
+        for (const ch of Object.keys(ALL_ARROW_CHARS_MAP)) {
+          if (textVal.includes(ch)) {
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) return;
+
+        const fragment = document.createDocumentFragment();
+        let remaining = textVal;
+
+        // مطابقة أي سهم من الأسهم الـ 36
+        const allCharsSorted = Object.keys(ALL_ARROW_CHARS_MAP).sort((a, b) => b.length - a.length);
+        const charPattern = new RegExp(`(${allCharsSorted.map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g');
+
+        const parts = remaining.split(charPattern);
+        parts.forEach((part) => {
+          if (ALL_ARROW_CHARS_MAP[part]) {
+            const info = ALL_ARROW_CHARS_MAP[part];
+            const arrowSpan = document.createElement('span');
+            arrowSpan.className = 'vienix-arrow';
+            arrowSpan.setAttribute('data-arrow-id', `arrow-${Date.now()}-${Math.floor(Math.random() * 10000)}`);
+            arrowSpan.setAttribute('data-arrow-model', info.modelId);
+            arrowSpan.setAttribute('data-arrow-dir', info.dir);
+            arrowSpan.setAttribute('data-arrow-color', '#2563eb');
+            arrowSpan.setAttribute('data-arrow-size', '28px');
+            arrowSpan.setAttribute('data-arrow-rotation', info.rot || 0);
+            arrowSpan.setAttribute('data-raw-char', part);
+            arrowSpan.style.display = 'inline-block';
+            arrowSpan.style.fontSize = '28px';
+            arrowSpan.style.color = '#2563eb';
+            arrowSpan.style.lineHeight = '1';
+            arrowSpan.style.verticalAlign = 'middle';
+            if (info.rot) arrowSpan.style.transform = `rotate(${info.rot}deg)`;
+            arrowSpan.textContent = part;
+            fragment.appendChild(arrowSpan);
+          } else if (part) {
+            fragment.appendChild(document.createTextNode(part));
+          }
+        });
+
+        textNode.parentNode.replaceChild(fragment, textNode);
+      });
+    } catch (_) {}
+
+    // 2. تغليف جميع الأسهم (.vienix-arrow) داخل حاويات تفاعلية مع شريط الأدوات والمقابض
+    const arrows = container.querySelectorAll('.vienix-arrow');
+
+    arrows.forEach((arrowEl) => {
+      if (arrowEl.parentElement && arrowEl.parentElement.classList.contains('arrow-resizer-wrapper')) {
+        return;
+      }
+
+      let arrowId = arrowEl.getAttribute('data-arrow-id') || `arrow-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      arrowEl.setAttribute('data-arrow-id', arrowId);
+
+      let currentModelId = parseInt(arrowEl.getAttribute('data-arrow-model') || '1', 10);
+      let currentDir = arrowEl.getAttribute('data-arrow-dir') || 'right';
+      let currentColor = arrowEl.getAttribute('data-arrow-color') || arrowEl.style.color || '#2563eb';
+      let currentSize = arrowEl.getAttribute('data-arrow-size') || arrowEl.style.fontSize || '28px';
+      let currentRotation = parseInt(arrowEl.getAttribute('data-arrow-rotation') || '0', 10);
+      let currentAlign = arrowEl.getAttribute('data-arrow-align') || 'inline';
+      const originalRawChar = arrowEl.getAttribute('data-raw-char') || '';
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'arrow-resizer-wrapper';
+      wrapper.setAttribute('data-arrow-id', arrowId);
+      wrapper.setAttribute('data-align', currentAlign);
+      if (arrowEl.getAttribute('data-is-floating') === 'true') {
+        wrapper.classList.add('is-floating');
+        wrapper.style.left = `${arrowEl.getAttribute('data-float-x') || 0}px`;
+        wrapper.style.top = `${arrowEl.getAttribute('data-float-y') || 0}px`;
+      }
+
+      // شريط الأدوات العائم المتكامل
+      const toolbar = document.createElement('div');
+      toolbar.className = 'arrow-resizer-toolbar';
+      toolbar.setAttribute('contenteditable', 'false');
+
+      toolbar.innerHTML = `
+        <!-- تغيير الاتجاه (4 اتجاهات) -->
+        <button type="button" class="resizer-btn btn-dir-up ${currentDir === 'up' ? 'active' : ''}" data-dir="up" title="للأعلى ⬆">⬆</button>
+        <button type="button" class="resizer-btn btn-dir-down ${currentDir === 'down' ? 'active' : ''}" data-dir="down" title="للأسفل ⬇">⬇</button>
+        <button type="button" class="resizer-btn btn-dir-right ${currentDir === 'right' ? 'active' : ''}" data-dir="right" title="لليمين ➡">➡</button>
+        <button type="button" class="resizer-btn btn-dir-left ${currentDir === 'left' ? 'active' : ''}" data-dir="left" title="لليسار ⬅">⬅</button>
+        <span class="resizer-divider"></span>
+
+        <!-- تبديل موديل السهم (1-9) -->
+        <button type="button" class="resizer-btn btn-prev-model" title="الموديل السابق">⟨</button>
+        <span class="resizer-btn model-badge-indicator" title="رقم موديل السهم الحالي" style="pointer-events:none; font-size:0.68rem;">م${currentModelId}</span>
+        <button type="button" class="resizer-btn btn-next-model" title="الموديل التالي">⟩</button>
+        <span class="resizer-divider"></span>
+
+        <!-- تغيير اللون (لوحة سريعة + محدد ألوان مخصص) -->
+        <div class="arrow-tb-colors">
+          <button type="button" class="arrow-tb-color-dot" data-color="#2563eb" style="background:#2563eb;" title="أزرق ملكي"></button>
+          <button type="button" class="arrow-tb-color-dot" data-color="#ef4444" style="background:#ef4444;" title="أحمر قرمزي"></button>
+          <button type="button" class="arrow-tb-color-dot" data-color="#10b981" style="background:#10b981;" title="أخضر زمردي"></button>
+          <button type="button" class="arrow-tb-color-dot" data-color="#f59e0b" style="background:#f59e0b;" title="ذهبي"></button>
+          <button type="button" class="arrow-tb-color-dot" data-color="#8b5cf6" style="background:#8b5cf6;" title="بنفسجي"></button>
+          <button type="button" class="arrow-tb-color-dot" data-color="#f97316" style="background:#f97316;" title="برتقالي"></button>
+          <label class="arrow-tb-custom-color" title="لون مخصص حر">
+            <input type="color" class="arrow-tb-color-picker-input" value="${currentColor.startsWith('#') ? currentColor : '#2563eb'}" />
+            <span>🎨</span>
+          </label>
+        </div>
+        <span class="resizer-divider"></span>
+
+        <!-- تغيير الحجم -->
+        <button type="button" class="resizer-btn btn-size-preset" data-size="20px" title="حجم صغير (20px)">20</button>
+        <button type="button" class="resizer-btn btn-size-preset" data-size="28px" title="حجم عادي (28px)">28</button>
+        <button type="button" class="resizer-btn btn-size-preset" data-size="40px" title="حجم كبير (40px)">40</button>
+        <button type="button" class="resizer-btn btn-size-preset" data-size="60px" title="حجم بارز (60px)">60</button>
+        <span class="resizer-divider"></span>
+
+        <!-- التدوير -->
+        <button type="button" class="resizer-btn btn-rotate-ccw" title="تدوير 90° عكس عقارب الساعة">↺</button>
+        <button type="button" class="resizer-btn btn-rotate-cw" title="تدوير 90° مع عقارب الساعة">↻</button>
+        <span class="resizer-divider"></span>
+
+        <!-- التحريك الحر فوق العناصر -->
+        <button type="button" class="resizer-btn btn-float-toggle" title="تحريك حر فوق العناصر (اسحب السهم بالماوس في أي مكان فوق النص)">
+          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
+          <span>حر</span>
+        </button>
+        <span class="resizer-divider"></span>
+
+        <!-- المحاذاة -->
+        <button type="button" class="resizer-btn ${currentAlign === 'inline' ? 'active' : ''}" data-align="inline" title="محاذاة منسابة مع السطر (Inline)">▤</button>
+        <button type="button" class="resizer-btn ${currentAlign === 'right' ? 'active' : ''}" data-align="right" title="محاذاة لليمين">▶</button>
+        <button type="button" class="resizer-btn ${currentAlign === 'center' ? 'active' : ''}" data-align="center" title="توسيط">■</button>
+        <button type="button" class="resizer-btn ${currentAlign === 'left' ? 'active' : ''}" data-align="left" title="محاذاة لليسار">◀</button>
+        <span class="resizer-divider"></span>
+
+        <!-- حذف السهم -->
+        <button type="button" class="resizer-btn btn-arrow-delete" title="حذف هذا السهم" style="color:#ef4444;">🗑️</button>
+        <span class="resizer-divider"></span>
+
+        <!-- شارة الحجم والمعلومات -->
+        <span class="resizer-size-badge" style="font-size:0.65rem; color:#94a3b8; font-family:monospace;">${currentSize}</span>
+      `;
+
+      // مقابض التحجيم والتدوير اليدوي
+      const handlesHtml = `
+        <div class="resizer-corner-rotate-handle" title="مقبض التدوير الحر: اسحب بالماوس للالتفاف بأي زاوية">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><polyline points="21 3 21 8 16 8"></polyline></svg>
+        </div>
+        <div class="resizer-handle handle-nw" data-dir="nw" title="اسحب للتكبير والتصغير"></div>
+        <div class="resizer-handle handle-ne" data-dir="ne" title="اسحب للتكبير والتصغير"></div>
+        <div class="resizer-handle handle-sw" data-dir="sw" title="اسحب للتكبير والتصغير"></div>
+        <div class="resizer-handle handle-se" data-dir="se" title="اسحب للتكبير والتصغير"></div>
+      `;
+
+      arrowEl.parentNode.insertBefore(wrapper, arrowEl);
+      wrapper.appendChild(toolbar);
+      wrapper.appendChild(arrowEl);
+      wrapper.insertAdjacentHTML('beforeend', handlesHtml);
+
+      // دالة التموضع الذكي لشريط الأدوات لمنع خروجه خارج الشاشة
+      const clampToolbar = () => {
+        if (!wrapper.classList.contains('active')) return;
+        const containerRect = container.getBoundingClientRect();
+        toolbar.style.left = '50%';
+        toolbar.style.transform = 'translateX(-50%)';
+
+        const tbRect = toolbar.getBoundingClientRect();
+        if (tbRect.left < containerRect.left + 10) {
+          const shiftX = Math.round((containerRect.left + 10) - tbRect.left);
+          toolbar.style.transform = `translateX(calc(-50% + ${shiftX}px))`;
+        } else if (tbRect.right > containerRect.right - 10) {
+          const shiftX = Math.round(tbRect.right - (containerRect.right - 10));
+          toolbar.style.transform = `translateX(calc(-50% - ${shiftX}px))`;
+        }
+
+        if (tbRect.top < containerRect.top + 10) {
+          toolbar.style.bottom = 'auto';
+          toolbar.style.top = 'calc(100% + 12px)';
+        } else {
+          toolbar.style.bottom = 'calc(100% + 12px)';
+          toolbar.style.top = 'auto';
+        }
+      };
+
+      const sizeBadge = toolbar.querySelector('.resizer-size-badge');
+      const modelBadge = toolbar.querySelector('.model-badge-indicator');
+
+      // دالة الحفظ والتزامن الفوري مع محرر الماركداون
+      const syncChangesToMarkdown = () => {
+        const model = ARROW_MODELS.find((m) => m.id === currentModelId) || ARROW_MODELS[0];
+        const dirData = model.dirs[currentDir] || { char: arrowEl.textContent, rot: 0, name: currentDir };
+        const baseRot = dirData.rot || 0;
+        const totalRot = ((baseRot + currentRotation) % 360 + 360) % 360;
+
+        arrowEl.textContent = dirData.char;
+        arrowEl.style.color = currentColor;
+        arrowEl.style.fontSize = currentSize;
+        arrowEl.style.transform = totalRot !== 0 ? `rotate(${totalRot}deg)` : '';
+
+        arrowEl.setAttribute('data-arrow-model', currentModelId);
+        arrowEl.setAttribute('data-arrow-dir', currentDir);
+        arrowEl.setAttribute('data-arrow-color', currentColor);
+        arrowEl.setAttribute('data-arrow-size', currentSize);
+        arrowEl.setAttribute('data-arrow-rotation', totalRot);
+        arrowEl.setAttribute('data-arrow-align', currentAlign);
+
+        if (sizeBadge) {
+          sizeBadge.textContent = `${currentSize}${totalRot !== 0 ? ` • ${totalRot}°` : ''}`;
+        }
+        if (modelBadge) {
+          modelBadge.textContent = `م${currentModelId}`;
+        }
+
+        updateArrowInMarkdown(arrowId, {
+          modelId: currentModelId,
+          dir: currentDir,
+          color: currentColor,
+          size: currentSize,
+          rotation: totalRot,
+          align: currentAlign,
+          char: dirData.char,
+          isFloating: wrapper.classList.contains('is-floating'),
+          floatX: floatOffsetX,
+          floatY: floatOffsetY,
+          originalChar: originalRawChar
+        });
+
+        if (typeof isWysiwygActive !== 'undefined' && isWysiwygActive) {
+          syncPreviewToMarkdown(true);
+        }
+        setTimeout(clampToolbar, 10);
+      };
+
+      // تفعيل السهم عند النقر عليه
+      wrapper.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.arrow-resizer-wrapper.active, .image-resizer-wrapper.active').forEach((w) => {
+          if (w !== wrapper) w.classList.remove('active');
+        });
+        wrapper.classList.add('active');
+        clampToolbar();
+      });
+
+      // 1. تغيير الاتجاه (Direction Buttons)
+      toolbar.querySelectorAll('[data-dir]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toolbar.querySelectorAll('[data-dir]').forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentDir = btn.getAttribute('data-dir');
+          currentRotation = 0; // إعادة ضبط التدوير الحر عند تغيير الاتجاه
+          syncChangesToMarkdown();
+        });
+      });
+
+      // 2. تبديل موديل السهم (Model Switcher)
+      const btnPrev = toolbar.querySelector('.btn-prev-model');
+      if (btnPrev) {
+        btnPrev.addEventListener('click', (e) => {
+          e.stopPropagation();
+          currentModelId = currentModelId > 1 ? currentModelId - 1 : ARROW_MODELS.length;
+          syncChangesToMarkdown();
+        });
+      }
+
+      const btnNext = toolbar.querySelector('.btn-next-model');
+      if (btnNext) {
+        btnNext.addEventListener('click', (e) => {
+          e.stopPropagation();
+          currentModelId = currentModelId < ARROW_MODELS.length ? currentModelId + 1 : 1;
+          syncChangesToMarkdown();
+        });
+      }
+
+      // 3. تغيير اللون (Color Selector)
+      toolbar.querySelectorAll('.arrow-tb-color-dot').forEach((dot) => {
+        dot.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toolbar.querySelectorAll('.arrow-tb-color-dot').forEach((d) => d.classList.remove('active'));
+          dot.classList.add('active');
+          currentColor = dot.getAttribute('data-color');
+          syncChangesToMarkdown();
+        });
+      });
+
+      const customColorPicker = toolbar.querySelector('.arrow-tb-color-picker-input');
+      if (customColorPicker) {
+        customColorPicker.addEventListener('input', (e) => {
+          currentColor = e.target.value;
+          toolbar.querySelectorAll('.arrow-tb-color-dot').forEach((d) => d.classList.remove('active'));
+          syncChangesToMarkdown();
+        });
+      }
+
+      // 4. تغيير الحجم بالقيم المسبقة (Size Presets)
+      toolbar.querySelectorAll('.btn-size-preset').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toolbar.querySelectorAll('.btn-size-preset').forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentSize = btn.getAttribute('data-size');
+          syncChangesToMarkdown();
+        });
+      });
+
+      // 5. ميزات التدوير (Rotation Buttons)
+      const btnCcw = toolbar.querySelector('.btn-rotate-ccw');
+      if (btnCcw) {
+        btnCcw.addEventListener('click', (e) => {
+          e.stopPropagation();
+          currentRotation = ((currentRotation - 90) % 360 + 360) % 360;
+          syncChangesToMarkdown();
+        });
+      }
+
+      const btnCw = toolbar.querySelector('.btn-rotate-cw');
+      if (btnCw) {
+        btnCw.addEventListener('click', (e) => {
+          e.stopPropagation();
+          currentRotation = ((currentRotation + 90) % 360 + 360) % 360;
+          syncChangesToMarkdown();
+        });
+      }
+
+      // 6. مقبض التدوير الحر بالماوس واللمس (Corner Rotate Drag Handle)
+      const cornerRotateHandle = wrapper.querySelector('.resizer-corner-rotate-handle');
+      if (cornerRotateHandle) {
+        const startRotateDrag = (startX, startY) => {
+          const rect = wrapper.getBoundingClientRect();
+          const centerX = rect.left + rect.width / 2;
+          const centerY = rect.top + rect.height / 2;
+
+          const startMouseAngle = Math.atan2(startY - centerY, startX - centerX) * (180 / Math.PI);
+          const initialRotation = currentRotation;
+
+          const onRotateMove = (moveEvt) => {
+            const currentX = moveEvt.clientX || (moveEvt.touches && moveEvt.touches[0].clientX);
+            const currentY = moveEvt.clientY || (moveEvt.touches && moveEvt.touches[0].clientY);
+            const currentMouseAngle = Math.atan2(currentY - centerY, currentX - centerX) * (180 / Math.PI);
+            const angleDiff = currentMouseAngle - startMouseAngle;
+            let newDeg = Math.round(initialRotation + angleDiff);
+            currentRotation = ((newDeg % 360) + 360) % 360;
+            syncChangesToMarkdown();
+          };
+
+          const onRotateEnd = () => {
+            document.removeEventListener('mousemove', onRotateMove);
+            document.removeEventListener('mouseup', onRotateEnd);
+            document.removeEventListener('touchmove', onRotateMove);
+            document.removeEventListener('touchend', onRotateEnd);
+          };
+
+          document.addEventListener('mousemove', onRotateMove);
+          document.addEventListener('mouseup', onRotateEnd);
+          document.addEventListener('touchmove', onRotateMove, { passive: false });
+          document.addEventListener('touchend', onRotateEnd);
+        };
+
+        cornerRotateHandle.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          startRotateDrag(e.clientX, e.clientY);
+        });
+
+        cornerRotateHandle.addEventListener('touchstart', (e) => {
+          if (e.touches && e.touches.length === 1) {
+            e.preventDefault();
+            e.stopPropagation();
+            startRotateDrag(e.touches[0].clientX, e.touches[0].clientY);
+          }
+        }, { passive: false });
+      }
+
+      // 7. ميزة التحريك الحر فوق العناصر (Free Floating Drag)
+      let isFloatingMode = wrapper.classList.contains('is-floating');
+      let floatOffsetX = parseFloat(wrapper.style.left) || 0;
+      let floatOffsetY = parseFloat(wrapper.style.top) || 0;
+
+      const floatBtn = toolbar.querySelector('.btn-float-toggle');
+      if (floatBtn) {
+        floatBtn.classList.toggle('active', isFloatingMode);
+        floatBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          isFloatingMode = !isFloatingMode;
+          wrapper.classList.toggle('is-floating', isFloatingMode);
+          floatBtn.classList.toggle('active', isFloatingMode);
+          if (isFloatingMode) {
+            showToast('تم تفعيل التحريك الحر للسهم ✥ — اسحبه بالماوس أو اللمس في أي مكان', 'info', 2500);
+          } else {
+            wrapper.style.left = '0px';
+            wrapper.style.top = '0px';
+            floatOffsetX = 0;
+            floatOffsetY = 0;
+            showToast('تم إرجاع السهم للمحاذاة المنسابة مع النص ✓', 'info', 2000);
+          }
+          syncChangesToMarkdown();
+        });
+      }
+
+      const startFloatDrag = (e) => {
+        if (!wrapper.classList.contains('is-floating')) return;
+        if (e.target.closest('.arrow-resizer-toolbar, .resizer-handle, .resizer-corner-rotate-handle')) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const startMouseX = clientX;
+        const startMouseY = clientY;
+        const initialLeft = floatOffsetX;
+        const initialTop = floatOffsetY;
+
+        const onDragMove = (moveEvt) => {
+          const curX = moveEvt.touches ? moveEvt.touches[0].clientX : moveEvt.clientX;
+          const curY = moveEvt.touches ? moveEvt.touches[0].clientY : moveEvt.clientY;
+          floatOffsetX = Math.round(initialLeft + (curX - startMouseX));
+          floatOffsetY = Math.round(initialTop + (curY - startMouseY));
+          wrapper.style.left = `${floatOffsetX}px`;
+          wrapper.style.top = `${floatOffsetY}px`;
+          clampToolbar();
+        };
+
+        const onDragEnd = () => {
+          document.removeEventListener('mousemove', onDragMove);
+          document.removeEventListener('mouseup', onDragEnd);
+          document.removeEventListener('touchmove', onDragMove);
+          document.removeEventListener('touchend', onDragEnd);
+          syncChangesToMarkdown();
+        };
+
+        document.addEventListener('mousemove', onDragMove);
+        document.addEventListener('mouseup', onDragEnd);
+        document.addEventListener('touchmove', onDragMove, { passive: false });
+        document.addEventListener('touchend', onDragEnd);
+      };
+
+      wrapper.addEventListener('mousedown', startFloatDrag);
+      wrapper.addEventListener('touchstart', startFloatDrag, { passive: false });
+
+      // 8. المحاذاة (Alignment)
+      toolbar.querySelectorAll('[data-align]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toolbar.querySelectorAll('[data-align]').forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentAlign = btn.getAttribute('data-align');
+          wrapper.setAttribute('data-align', currentAlign);
+          syncChangesToMarkdown();
+        });
+      });
+
+      // 9. مقابض التحجيم بالسحب (Resize Handles)
+      const handles = wrapper.querySelectorAll('.resizer-handle');
+      handles.forEach((handle) => {
+        const dir = handle.getAttribute('data-dir');
+        const onPointerDown = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          wrapper.classList.add('active');
+
+          const startX = e.clientX || (e.touches && e.touches[0].clientX);
+          const startSizeNum = parseInt(currentSize, 10) || 28;
+
+          const onPointerMove = (moveEvt) => {
+            const currentX = moveEvt.clientX || (moveEvt.touches && moveEvt.touches[0].clientX);
+            const deltaX = currentX - startX;
+            let newSize = startSizeNum;
+            if (dir === 'se' || dir === 'ne') {
+              newSize = startSizeNum + Math.round(deltaX / 2);
+            } else if (dir === 'sw' || dir === 'nw') {
+              newSize = startSizeNum - Math.round(deltaX / 2);
+            }
+            newSize = Math.max(16, Math.min(newSize, 120));
+            currentSize = `${newSize}px`;
+            arrowEl.style.fontSize = currentSize;
+            if (sizeBadge) sizeBadge.textContent = currentSize;
+          };
+
+          const onPointerUp = () => {
+            document.removeEventListener('mousemove', onPointerMove);
+            document.removeEventListener('mouseup', onPointerUp);
+            document.removeEventListener('touchmove', onPointerMove);
+            document.removeEventListener('touchend', onPointerUp);
+            syncChangesToMarkdown();
+          };
+
+          document.addEventListener('mousemove', onPointerMove);
+          document.addEventListener('mouseup', onPointerUp);
+          document.addEventListener('touchmove', onPointerMove);
+          document.addEventListener('touchend', onPointerUp);
+        };
+
+        handle.addEventListener('mousedown', onPointerDown);
+        handle.addEventListener('touchstart', onPointerDown, { passive: false });
+      });
+
+      // 10. حذف السهم (Delete)
+      const btnDelete = toolbar.querySelector('.btn-arrow-delete');
+      if (btnDelete) {
+        btnDelete.addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteArrowInMarkdown(arrowId, originalRawChar);
+          wrapper.remove();
+          showToast('تم حذف السهم ✓', 'info', 1500);
+        });
+      }
+    });
+  }
+
+  // تحديث كود السهم داخل نص الماركداون بالمحرر
+  function updateArrowInMarkdown(arrowId, attrs) {
+    if (!arrowId) return;
+    const activeEditor = isClassicMode ? (classicEditor || editor) : editor;
+    if (!activeEditor) return;
+
+    const currentText = activeEditor.value;
+    const rot = attrs.rotation || 0;
+    const rotStyle = rot !== 0 ? ` transform: rotate(${rot}deg);` : '';
+
+    let floatStyles = '';
+    let floatAttrs = '';
+    if (attrs.isFloating) {
+      floatStyles = ` position: relative; left: ${attrs.floatX || 0}px; top: ${attrs.floatY || 0}px; z-index: 50;`;
+      floatAttrs = ` data-is-floating="true" data-float-x="${attrs.floatX || 0}" data-float-y="${attrs.floatY || 0}"`;
+    }
+
+    const newSpan = `<span class="vienix-arrow" data-arrow-id="${arrowId}" data-arrow-model="${attrs.modelId}" data-arrow-dir="${attrs.dir}" data-arrow-color="${attrs.color}" data-arrow-size="${attrs.size}" data-arrow-rotation="${rot}" data-arrow-align="${attrs.align}"${floatAttrs} style="display: inline-block; font-size: ${attrs.size}; color: ${attrs.color}; line-height: 1; vertical-align: middle;${rotStyle}${floatStyles}">${attrs.char}</span>`;
+
+    let updatedText = currentText;
+    const regexById = new RegExp(`<span\\s+[^>]*data-arrow-id=["']${arrowId}["'][^>]*>[\\s\\S]*?<\\/span>`, 'i');
+
+    if (regexById.test(currentText)) {
+      updatedText = currentText.replace(regexById, newSpan);
+    } else if (attrs.originalChar && currentText.includes(attrs.originalChar)) {
+      // إذا كان سهماً مجرداً تمت كتابته يدوياً في المحرر، نستبدله بالسهم المخصص الجديد
+      updatedText = currentText.replace(attrs.originalChar, newSpan);
+    }
+
+    if (updatedText !== currentText) {
+      recordHistorySnapshot(true);
+      editor.value = updatedText;
+      if (classicEditor) classicEditor.value = updatedText;
+      setChamberContent(activeChamber, updatedText);
+      recordHistorySnapshot(true);
+    }
+  }
+
+  // حذف السهم من نص الماركداون بالمحرر
+  function deleteArrowInMarkdown(arrowId, originalChar) {
+    const activeEditor = isClassicMode ? (classicEditor || editor) : editor;
+    if (!activeEditor) return;
+
+    const currentText = activeEditor.value;
+    let updatedText = currentText;
+
+    if (arrowId) {
+      const regexById = new RegExp(`\\s*<span\\s+[^>]*data-arrow-id=["']${arrowId}["'][^>]*>[\\s\\S]*?<\\/span>\\s*`, 'i');
+      if (regexById.test(currentText)) {
+        updatedText = currentText.replace(regexById, ' ');
+      }
+    }
+    if (updatedText === currentText && originalChar && currentText.includes(originalChar)) {
+      updatedText = currentText.replace(originalChar, '');
+    }
+
+    if (updatedText !== currentText) {
+      recordHistorySnapshot(true);
+      editor.value = updatedText;
+      if (classicEditor) classicEditor.value = updatedText;
+      setChamberContent(activeChamber, updatedText);
+      recordHistorySnapshot(true);
+    }
+  }
 
   // ==========================================================================
   // INJECTED INSIDE MAIN IIFE: PRONUNCIATION & SETTINGS CONTROLLERS
