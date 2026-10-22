@@ -7546,6 +7546,19 @@ function exportDocument(format) {
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="15" y1="12" x2="3" y2="12"></line><line x1="19" y1="18" x2="3" y2="18"></line></svg>
           </button>
           <span class="resizer-divider"></span>
+          <!-- ميزة التحريك الحر فوق العناصر (Free Floating Move) -->
+          <button type="button" class="resizer-btn btn-float-toggle" data-action="toggle-float" title="تحريك حر فوق العناصر (انقر ثم اسحب الصورة بالماوس أو اللمس في أي مكان فوق النص)">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
+            <span>حر</span>
+          </button>
+          <!-- ميزات التدوير (Rotation) -->
+          <button type="button" class="resizer-btn btn-rotate-ccw" data-action="rotate-ccw" title="تدوير 90° عكس عقارب الساعة">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+          </button>
+          <button type="button" class="resizer-btn btn-rotate-cw" data-action="rotate-cw" title="تدوير 90° مع عقارب الساعة">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><polyline points="21 3 21 8 16 8"></polyline></svg>
+          </button>
+          <span class="resizer-divider"></span>
           <span class="resizer-size-badge"></span>
         `;
       }
@@ -7674,34 +7687,39 @@ function exportDocument(format) {
           isFloatingMode = !isFloatingMode;
           wrapper.classList.toggle('is-floating', isFloatingMode);
           floatBtn.classList.toggle('active-tool', isFloatingMode);
+          const entityName = isEmojiOrSticker ? 'الإيموجي' : 'الصورة';
           if (isFloatingMode) {
-            showToast('تم تفعيل التحريك الحر ✥ — اسحب الإيموجي بالماوس في أي مكان فوق العناصر', 'info', 2500);
+            showToast(`تم تفعيل التحريك الحر ✥ — اسحب ${entityName} بالماوس أو اللمس في أي مكان فوق العناصر`, 'info', 2500);
           } else {
             wrapper.style.left = '0px';
             wrapper.style.top = '0px';
             floatOffsetX = 0;
             floatOffsetY = 0;
-            showToast('تم إرجاع الإيموجي للمحاذاة المنسابة مع النص ✓', 'info', 2000);
+            showToast(`تم إرجاع ${entityName} للمحاذاة المنسابة مع النص ✓`, 'info', 2000);
           }
           updateBadge();
         });
       }
 
-      // سحب الإيموجي بالماوس عندما يكون التحريك الحر مفعلاً
-      wrapper.addEventListener('mousedown', (e) => {
+      // سحب الصورة أو الإيموجي بالماوس واللمس عندما يكون التحريك الحر مفعلاً
+      const startFloatDrag = (e) => {
         if (!isFloatingMode) return;
-        if (e.target.closest('.image-resizer-toolbar, .resizer-handle, .resizer-rotate-handle')) return;
+        if (e.target.closest('.image-resizer-toolbar, .resizer-handle, .resizer-rotate-handle, .resizer-corner-rotate-handle')) return;
         e.preventDefault();
         e.stopPropagation();
 
-        const startMouseX = e.clientX;
-        const startMouseY = e.clientY;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const startMouseX = clientX;
+        const startMouseY = clientY;
         const initialLeft = floatOffsetX;
         const initialTop = floatOffsetY;
 
         const onDragMove = (moveEvt) => {
-          floatOffsetX = initialLeft + (moveEvt.clientX - startMouseX);
-          floatOffsetY = initialTop + (moveEvt.clientY - startMouseY);
+          const curX = moveEvt.touches ? moveEvt.touches[0].clientX : moveEvt.clientX;
+          const curY = moveEvt.touches ? moveEvt.touches[0].clientY : moveEvt.clientY;
+          floatOffsetX = initialLeft + (curX - startMouseX);
+          floatOffsetY = initialTop + (curY - startMouseY);
           wrapper.style.left = `${floatOffsetX}px`;
           wrapper.style.top = `${floatOffsetY}px`;
           clampToolbar();
@@ -7710,11 +7728,18 @@ function exportDocument(format) {
         const onDragEnd = () => {
           document.removeEventListener('mousemove', onDragMove);
           document.removeEventListener('mouseup', onDragEnd);
+          document.removeEventListener('touchmove', onDragMove);
+          document.removeEventListener('touchend', onDragEnd);
         };
 
         document.addEventListener('mousemove', onDragMove);
         document.addEventListener('mouseup', onDragEnd);
-      });
+        document.addEventListener('touchmove', onDragMove, { passive: false });
+        document.addEventListener('touchend', onDragEnd);
+      };
+
+      wrapper.addEventListener('mousedown', startFloatDrag);
+      wrapper.addEventListener('touchstart', startFloatDrag, { passive: false });
 
       // 2. ميزات التدوير بأزرار الزوايا (Rotate Buttons)
       const applyRotation = (deg) => {
