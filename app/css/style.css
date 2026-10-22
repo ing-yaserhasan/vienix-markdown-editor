@@ -1074,6 +1074,18 @@ body.is-resizing-workspace .workspace-resizer {
   margin-bottom: 1.1em;
 }
 
+/* المحافظة على الأسطر والفواصل الفارغة في المعاينة المباشرة والتصدير */
+.markdown-body p.md-blank-line,
+#classic-output p.md-blank-line,
+.book-chapter-content p.md-blank-line {
+  min-height: 1.4em;
+  line-height: 1.4em;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  pointer-events: none;
+}
+
 .markdown-body a {
   color: var(--accent-color);
   text-decoration: none;

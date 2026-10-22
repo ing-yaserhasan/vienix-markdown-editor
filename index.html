@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/earlyaccess/droidarabicnaskh.css">
   <link rel="stylesheet" href="assets/fonts/tajawal.css">
-  <link rel="stylesheet" href="app/css/style.css?v=obsidian54">
+  <link rel="stylesheet" href="app/css/style.css?v=obsidian55">
   <link rel="stylesheet" href="app/css/classic.css?v=obsidian4">
 </head>
 <body>
@@ -1585,6 +1585,18 @@
               </div>
             </div>
 
+            <!-- Preserve Blank Lines (عكس الأسطر الفارغة في المعاينة) -->
+            <div class="settings-group">
+              <label class="settings-label">عكس الأسطر الفارغة في مساحة العرض</label>
+              <div class="settings-toggle-row">
+                <span class="settings-toggle-desc">تنزيل أسطر فارغة حقيقية في المعاينة والتصدير مطابقة تماماً للمسافات الرأسية في المحرر</span>
+                <label class="settings-toggle">
+                  <input type="checkbox" id="s-preserve-blank-lines" checked onchange="applySetting('preserveBlankLines', this.checked)">
+                  <span class="settings-toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
             <div class="settings-group">
               <label class="settings-label">الإكمال التلقائي للأقواس</label>
               <div class="settings-toggle-row">
@@ -2022,7 +2034,7 @@
   <script src="app/js/vienix-idb.js?v=1.3"></script>
 
   <!-- Application Main Script -->
-  <script src="app/js/rtlmd.js?v=obsidian61"></script>
+  <script src="app/js/rtlmd.js?v=obsidian62"></script>
 
   <!-- Storage Health Monitor & Full Workspace Backup Module (Phase 0) -->
   <script src="app/js/storage-backup.js?v=1.3"></script>

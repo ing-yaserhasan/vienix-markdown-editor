@@ -43,6 +43,7 @@
     accentColor: '#6366f1',
     // Editor
     wordWrap: true,
+    preserveBlankLines: true,
     autoBrackets: true,
     editorFont: "'Fira Code', monospace",
     textDirection: 'rtl',
@@ -142,6 +143,12 @@
 
       case 'wordWrap':
         if (editor) editor.style.whiteSpace = value ? 'pre-wrap' : 'pre';
+        break;
+
+      case 'preserveBlankLines':
+        const blankLinesChk = document.getElementById('s-preserve-blank-lines');
+        if (blankLinesChk) blankLinesChk.checked = !!value;
+        renderMarkdown();
         break;
 
       case 'editorFont':
@@ -955,7 +962,8 @@ function exportDocument(format) {
     }
 
     // Process Mermaid blocks before marked or parse with marked custom renderer
-    const { processedText, mermaidBlocks } = extractMermaidBlocks(rawText);
+    const { processedText: textWithoutMermaid, mermaidBlocks } = extractMermaidBlocks(rawText);
+    const processedText = preserveBlankLines(textWithoutMermaid);
 
     let html = marked.parse(processedText);
 
@@ -1015,6 +1023,68 @@ function exportDocument(format) {
     }
   }
 
+  // المحافظة الذكية على الأسطر والفواصل الفارغة في المعاينة كما يكتبها المستخدم في المحرر دون تخريب الأكواد
+  function preserveBlankLines(markdown) {
+    if (!markdown || typeof markdown !== 'string') return markdown;
+    if (typeof vienixSettings !== 'undefined' && vienixSettings.preserveBlankLines === false) {
+      return markdown;
+    }
+
+    // 1. عزل وحماية كتل الأكواد البرمجية (Code Blocks ``` أو ~~~)
+    const codeBlocks = [];
+    let text = markdown.replace(/(```[\s\S]*?```|~~~[\s\S]*?~~~)/g, (match) => {
+      codeBlocks.push(match);
+      return `%%CODE_BLOCK_PRESERVE_${codeBlocks.length - 1}%%`;
+    });
+
+    // 2. عزل وحماية صيغ الرياضيات واللاتكس ($$ ... $$)
+    const mathBlocks = [];
+    text = text.replace(/(\$\$[\s\S]*?\$\$)/g, (match) => {
+      mathBlocks.push(match);
+      return `%%MATH_BLOCK_PRESERVE_${mathBlocks.length - 1}%%`;
+    });
+
+    // توحيد فواصل الأسطر وتجريد أسطر المسافات البيضاء الخالية
+    text = text.replace(/\r\n/g, '\n');
+    text = text.replace(/^[ \t]+$/gm, '');
+
+    // 3. معالجة الأسطر الفارغة في بداية المستند (إذا بدأ المستند بأسطر فارغة)
+    text = text.replace(/^\n+/, (match) => {
+      const blankLines = [];
+      for (let i = 0; i < match.length; i++) {
+        blankLines.push('<p class="md-blank-line">&nbsp;</p>');
+      }
+      return blankLines.join('\n\n') + '\n\n';
+    });
+
+    // 4. معالجة تتابع الأسطر الفارغة بين الفقرات والعناوين والكتل:
+    // في الماركداون، \n\n يمثل فاصل فقرة عادي، وكل \n إضافية تمثل ضغطة Enter مقصودة لسطر فارغ
+    text = text.replace(/\n{3,}/g, (match) => {
+      const extraCount = match.length - 2;
+      const blankLines = [];
+      for (let i = 0; i < extraCount; i++) {
+        blankLines.push('<p class="md-blank-line">&nbsp;</p>');
+      }
+      return '\n\n' + blankLines.join('\n\n') + '\n\n';
+    });
+
+    // 5. معالجة القوائم التي يفصل بين عناصرها سطر فارغ (مثل 1. بند \n\n 2. بند أو - بند \n\n - بند):
+    const listItemPattern = /^(\s*(?:[*+-]|\d+[.)])\s+.*)\n\n(\s*(?:[*+-]|\d+[.)])\s+.*)$/gm;
+    let prev;
+    do {
+      prev = text;
+      text = text.replace(listItemPattern, (match, p1, p2) => {
+        return `${p1}\n\n<p class="md-blank-line">&nbsp;</p>\n\n${p2}`;
+      });
+    } while (text !== prev);
+
+    // 6. استعادة كتل الرياضيات والأكواد البرمجية سليمة 100%
+    text = text.replace(/%%MATH_BLOCK_PRESERVE_(\d+)%%/g, (_, i) => mathBlocks[i]);
+    text = text.replace(/%%CODE_BLOCK_PRESERVE_(\d+)%%/g, (_, i) => codeBlocks[i]);
+
+    return text;
+  }
+
   // Extract Mermaid Blocks to prevent Marked from mangling syntax
   function extractMermaidBlocks(text) {
     const mermaidBlocks = [];
@@ -1038,7 +1108,8 @@ function exportDocument(format) {
     if (!rawText) return '';
     if (typeof marked === 'undefined') return escapeHtml(rawText);
 
-    const { processedText, mermaidBlocks } = extractMermaidBlocks(rawText);
+    const { processedText: textWithoutMermaid, mermaidBlocks } = extractMermaidBlocks(rawText);
+    const processedText = preserveBlankLines(textWithoutMermaid);
     let html = marked.parse(processedText);
 
     mermaidBlocks.forEach((code, index) => {
@@ -5991,7 +6062,7 @@ function exportDocument(format) {
           if (!chText.trim()) return;
 
           const chTitle = getChamberTitle(chNum);
-          const chParsed = typeof marked !== 'undefined' ? marked.parse(chText) : escapeHtml(chText);
+          const chParsed = typeof marked !== 'undefined' ? marked.parse(preserveBlankLines(chText)) : escapeHtml(chText);
 
           const chSec = document.createElement('section');
           chSec.className = 'book-chapter-section';
@@ -7002,7 +7073,7 @@ function exportDocument(format) {
     if (!classicEditor || !classicOutput) return;
     const rawText = classicEditor.value;
     if (typeof marked !== 'undefined') {
-      classicOutput.innerHTML = marked.parse(rawText);
+      classicOutput.innerHTML = marked.parse(preserveBlankLines(rawText));
     } else {
       classicOutput.textContent = rawText;
     }
@@ -9680,6 +9751,8 @@ function exportDocument(format) {
     // Editor settings
     const wordWrap = document.getElementById('s-word-wrap');
     if (wordWrap) wordWrap.checked = s.wordWrap !== false;
+    const preserveBlankLines = document.getElementById('s-preserve-blank-lines');
+    if (preserveBlankLines) preserveBlankLines.checked = s.preserveBlankLines !== false;
     const autoBrackets = document.getElementById('s-auto-brackets');
     if (autoBrackets) autoBrackets.checked = s.autoBrackets !== false;
     const editorFont = document.getElementById('s-editor-font');
