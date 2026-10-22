@@ -465,8 +465,8 @@
             confirmText: 'نعم، استعادة الآن وإعادة التحميل',
             confirmColor: '#6366f1',
             cancelText: 'إلغاء',
-            onConfirm: () => {
-              this.applyRestore(payload);
+            onConfirm: async () => {
+              await this.applyRestore(payload);
             }
           });
         } catch (err) {
@@ -477,70 +477,204 @@
       reader.readAsText(file, 'utf-8');
     },
 
-    applyRestore: function (payload) {
+    applyRestore: async function (payload) {
       try {
+        const idbPromises = [];
+
         // Helper to set in both VienixIDB and localStorage
         const restoreSet = (k, v) => {
           if (v === null || v === undefined) return;
-          if (window.VienixIDB && typeof window.VienixIDB.setSync === 'function') {
-            window.VienixIDB.setSync(k, v);
+          const strVal = typeof v === 'string' ? v : JSON.stringify(v);
+          try { localStorage.setItem(k, strVal); } catch (e) {}
+          if (window.VienixIDB && typeof window.VienixIDB.set === 'function') {
+            idbPromises.push(window.VienixIDB.set(k, strVal));
+          } else if (window.VienixIDB && window.VienixIDB.memoryCache) {
+            window.VienixIDB.memoryCache[k] = strVal;
           }
-          try { localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)); } catch (e) {}
         };
 
-        // If rawKeys map exists, restore it directly for 100% loss-less accuracy
+        // Helper to delete from both VienixIDB and localStorage
+        const restoreDelete = (k) => {
+          try { localStorage.removeItem(k); } catch (e) {}
+          if (window.VienixIDB && typeof window.VienixIDB.remove === 'function') {
+            idbPromises.push(window.VienixIDB.remove(k));
+          } else if (window.VienixIDB && window.VienixIDB.memoryCache) {
+            delete window.VienixIDB.memoryCache[k];
+          }
+        };
+
+        // 1. Identify all chambers present and populated in incoming payload
+        const presentChambers = new Map(); // chNum -> { content, meta }
+
         if (payload.rawKeys && typeof payload.rawKeys === 'object') {
           Object.keys(payload.rawKeys).forEach(k => {
-            restoreSet(k, payload.rawKeys[k]);
+            const m = k.match(/^(?:vienix|yaser)_chamber_(\d+)$/);
+            if (m) {
+              const chNum = parseInt(m[1], 10);
+              const val = payload.rawKeys[k];
+              if (val !== null && val !== undefined && String(val).trim().length > 0) {
+                if (!presentChambers.has(chNum)) presentChambers.set(chNum, {});
+                presentChambers.get(chNum).content = String(val);
+              }
+            }
+            const mMeta = k.match(/^(?:vienix|yaser)_chamber_meta_(\d+)$/);
+            if (mMeta) {
+              const chNum = parseInt(mMeta[1], 10);
+              const val = payload.rawKeys[k];
+              if (val) {
+                if (!presentChambers.has(chNum)) presentChambers.set(chNum, {});
+                presentChambers.get(chNum).meta = val;
+              }
+            }
           });
+
+          // Check legacy Chamber 1 content keys
+          const legacyCh1 = payload.rawKeys['vienix_md_content'] || payload.rawKeys['yaser_md_content'];
+          if (legacyCh1 && String(legacyCh1).trim().length > 0) {
+            if (!presentChambers.has(1)) presentChambers.set(1, {});
+            if (!presentChambers.get(1).content) presentChambers.get(1).content = String(legacyCh1);
+          }
         }
 
-        // Restore chambers
         if (Array.isArray(payload.chambers)) {
           payload.chambers.forEach(ch => {
             if (ch && ch.chamberId) {
-              if (ch.content !== undefined) {
-                restoreSet('vienix_chamber_' + ch.chamberId, ch.content);
-                restoreSet('yaser_chamber_' + ch.chamberId, ch.content);
+              const chNum = parseInt(ch.chamberId, 10);
+              if (ch.content !== undefined && String(ch.content).trim().length > 0) {
+                if (!presentChambers.has(chNum)) presentChambers.set(chNum, {});
+                presentChambers.get(chNum).content = ch.content;
               }
               if (ch.meta) {
-                const metaStr = typeof ch.meta === 'string' ? ch.meta : JSON.stringify(ch.meta);
-                restoreSet('vienix_chamber_meta_' + ch.chamberId, metaStr);
-                restoreSet('yaser_chamber_meta_' + ch.chamberId, metaStr);
+                if (!presentChambers.has(chNum)) presentChambers.set(chNum, {});
+                presentChambers.get(chNum).meta = ch.meta;
               }
             }
           });
         }
 
-        // Restore custom folders
+        // 2. CLEAN FULL MIRRORING: Active scan from Chamber 1 up to maximum chambers
+        const maxChambers = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
+        const scanLimit = Math.max(16, maxChambers);
+
+        for (let ch = 1; ch <= scanLimit; ch++) {
+          if (presentChambers.has(ch)) {
+            const chData = presentChambers.get(ch);
+            if (chData.content !== undefined) {
+              restoreSet('vienix_chamber_' + ch, chData.content);
+              restoreSet('yaser_chamber_' + ch, chData.content);
+              if (ch === 1) {
+                restoreSet('vienix_md_content', chData.content);
+                restoreSet('yaser_md_content', chData.content);
+              }
+            }
+            if (chData.meta) {
+              const metaStr = typeof chData.meta === 'string' ? chData.meta : JSON.stringify(chData.meta);
+              restoreSet('vienix_chamber_meta_' + ch, metaStr);
+              restoreSet('yaser_chamber_meta_' + ch, metaStr);
+            } else {
+              restoreDelete('vienix_chamber_meta_' + ch);
+              restoreDelete('yaser_chamber_meta_' + ch);
+            }
+          } else {
+            // Chamber is NOT in cloud/incoming backup -> WIPE IT CLEAN so old accounts cannot bleed through
+            restoreSet('vienix_chamber_' + ch, '');
+            restoreSet('yaser_chamber_' + ch, '');
+            if (ch === 1) {
+              restoreSet('vienix_md_content', '');
+              restoreSet('yaser_md_content', '');
+            }
+            restoreDelete('vienix_chamber_meta_' + ch);
+            restoreDelete('yaser_chamber_meta_' + ch);
+          }
+        }
+
+        // 3. Clean up folder files (vienix_folder_files_*) to prevent cross-account pollution
+        const incomingFolderFilesKeys = new Set();
+        if (payload.rawKeys && typeof payload.rawKeys === 'object') {
+          Object.keys(payload.rawKeys).forEach(k => {
+            if (k.startsWith('vienix_folder_files_')) incomingFolderFilesKeys.add(k);
+          });
+        }
+        if (payload.folderFiles && typeof payload.folderFiles === 'object') {
+          Object.keys(payload.folderFiles).forEach(k => {
+            incomingFolderFilesKeys.add(k);
+          });
+        }
+
+        try {
+          const keysToCheck = new Set();
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('vienix_folder_files_')) keysToCheck.add(k);
+          }
+          if (window.VienixIDB && window.VienixIDB.memoryCache) {
+            Object.keys(window.VienixIDB.memoryCache).forEach(k => {
+              if (k && k.startsWith('vienix_folder_files_')) keysToCheck.add(k);
+            });
+          }
+          keysToCheck.forEach(k => {
+            if (!incomingFolderFilesKeys.has(k)) {
+              restoreDelete(k);
+            }
+          });
+        } catch (e) {}
+
+        // 4. Restore custom folders or reset to empty
         if (payload.customFolders) {
           const val = typeof payload.customFolders === 'string' ? payload.customFolders : JSON.stringify(payload.customFolders);
           restoreSet('vienix_custom_folders', val);
+        } else if (payload.rawKeys && payload.rawKeys['vienix_custom_folders'] !== undefined) {
+          restoreSet('vienix_custom_folders', payload.rawKeys['vienix_custom_folders']);
+        } else {
+          restoreSet('vienix_custom_folders', '[]');
         }
 
-        // Restore folder files
+        // 5. Restore folder files from explicit payload if provided
         if (payload.folderFiles && typeof payload.folderFiles === 'object') {
           Object.keys(payload.folderFiles).forEach(k => {
             restoreSet(k, payload.folderFiles[k]);
           });
         }
 
-        // Restore folder name overrides
+        // 6. Restore folder name overrides
         if (payload.folderNameOverrides) {
           const val = typeof payload.folderNameOverrides === 'string' ? payload.folderNameOverrides : JSON.stringify(payload.folderNameOverrides);
           restoreSet('vienix_folder_name_overrides', val);
+        } else if (payload.rawKeys && payload.rawKeys['vienix_folder_name_overrides'] !== undefined) {
+          restoreSet('vienix_folder_name_overrides', payload.rawKeys['vienix_folder_name_overrides']);
+        } else {
+          restoreDelete('vienix_folder_name_overrides');
         }
 
-        // Restore settings
+        // 7. Restore remaining non-chamber rawKeys (settings, theme, layout)
+        if (payload.rawKeys && typeof payload.rawKeys === 'object') {
+          Object.keys(payload.rawKeys).forEach(k => {
+            if (/^(?:vienix|yaser)_chamber_/.test(k) || k === 'vienix_md_content' || k === 'yaser_md_content' || k === 'vienix_custom_folders' || k.startsWith('vienix_folder_files_')) {
+              return;
+            }
+            restoreSet(k, payload.rawKeys[k]);
+          });
+        }
+
+        // 8. Restore explicit settings if present
         if (payload.settings) {
           const val = typeof payload.settings === 'string' ? payload.settings : JSON.stringify(payload.settings);
           restoreSet('vienix_settings', val);
         }
 
+        // 9. Reset active explorer file and default active chamber to 1
+        restoreDelete('vienix_active_explorer_file');
+        restoreSet('vienix_active_chamber', '1');
+
+        // 10. Await all pending IndexedDB asynchronous writes/deletes before reload
+        if (idbPromises.length > 0) {
+          await Promise.all(idbPromises);
+        }
+
         // Mark flash notification in sessionStorage for post-reload display
         sessionStorage.setItem('vienix_restore_success_flash', 'true');
 
-        // Reload to fresh state
+        // Reload to fresh, fully mirrored state
         window.location.reload();
       } catch (err) {
         alert('حدث خطأ أثناء استعادة البيانات: ' + err.message);

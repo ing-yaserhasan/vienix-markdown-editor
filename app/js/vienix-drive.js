@@ -206,6 +206,10 @@
       this.accessToken = null;
       this.tokenExpiresAt = 0;
       this.userProfile = null;
+      this.appFolderId = null;
+      localStorage.removeItem('vienix_drive_folder_id');
+      localStorage.removeItem('vienix_drive_last_sync');
+      localStorage.removeItem('vienix_drive_connected_email');
       sessionStorage.removeItem('vienix_drive_token');
       sessionStorage.removeItem('vienix_drive_token_expires');
       sessionStorage.removeItem('vienix_drive_profile');
@@ -237,6 +241,9 @@
               picture: data.user.photoLink || ''
             };
             sessionStorage.setItem('vienix_drive_profile', JSON.stringify(this.userProfile));
+            if (this.userProfile.email) {
+              localStorage.setItem('vienix_drive_connected_email', this.userProfile.email);
+            }
           }
         }
       } catch (err) {
@@ -462,6 +469,9 @@
     isLocalWorkspaceEmpty: function () {
       const maxCh = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
       let totalLength = 0;
+      let otherChambersLength = 0;
+      let ch1Text = '';
+
       for (let ch = 1; ch <= maxCh; ch++) {
         let content = '';
         if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
@@ -472,7 +482,13 @@
         if (ch === 1 && !content) {
           content = localStorage.getItem('vienix_md_content') || '';
         }
-        totalLength += (content || '').trim().length;
+        const len = (content || '').trim().length;
+        totalLength += len;
+        if (ch === 1) {
+          ch1Text = (content || '').trim();
+        } else {
+          otherChambersLength += len;
+        }
       }
 
       // Check custom folders
@@ -482,11 +498,19 @@
           const parsed = JSON.parse(rawFolders);
           if (Array.isArray(parsed) && parsed.length > 0) {
             totalLength += parsed.length * 10;
+            otherChambersLength += parsed.length * 10;
           }
         }
       } catch (e) {}
 
-      return totalLength === 0;
+      if (totalLength === 0) return true;
+
+      // If only chamber 1 has text, but it is the default welcome/intro template, treat as empty
+      if (otherChambersLength === 0 && (ch1Text.includes('مرحباً بك في محرر Vienix Markdown') || ch1Text.includes('محرر ماركداون عربي واعد'))) {
+        return true;
+      }
+
+      return false;
     },
 
     getLocalLastModifiedTime: function () {
@@ -570,7 +594,7 @@
         return;
       }
 
-      if (!options.force && !confirm('هل ترغب باستيراد ملفاتك من Google Drive؟ سيتم دمج وتحديث الحجرات مع مساحة العمل الحالية.')) {
+      if (!options.force && !confirm('هل ترغب في استيراد ومطابقة مساحة عملك من Google Drive؟ سيتم استبدال الحجرات لتطابق ملفات السحابة وتفريغ أي حجرات زائدة لضمان عدم تداخل الملفات.')) {
         return;
       }
 
@@ -654,7 +678,7 @@
         }
 
         if (hasChambers && window.VienixStorage && typeof window.VienixStorage.applyRestore === 'function') {
-          window.VienixStorage.applyRestore(manifest);
+          await window.VienixStorage.applyRestore(manifest);
           return;
         }
 
