@@ -195,11 +195,64 @@
   let renderDebounceTimer = null;
   let isUpdatingScroll = false;
 
-  // History Storage per Document / File (سجل حركات مستقل لكل ملف وحجرة بمعزل تام)
+  // History Storage per Document / File (سجل حركات مستقل ومستمر لكل ملف وحجرة)
   const documentHistories = {};
   const MAX_HISTORY = 60;
   let historyDebounceTimer = null;
   let isPerformingHistory = false;
+  const historyPersistTimers = {};
+
+  // Persistent History Engine (حفظ واسترجاع سجل الحركات من IndexedDB لضمان بقائه بعد إطفاء الجهاز)
+  function schedulePersistHistory(docKey = getActiveDocumentKey()) {
+    if (historyPersistTimers[docKey]) {
+      clearTimeout(historyPersistTimers[docKey]);
+    }
+    historyPersistTimers[docKey] = setTimeout(() => {
+      persistDocHistory(docKey);
+    }, 600);
+  }
+
+  function persistDocHistory(docKey = getActiveDocumentKey()) {
+    if (historyPersistTimers[docKey]) {
+      clearTimeout(historyPersistTimers[docKey]);
+      delete historyPersistTimers[docKey];
+    }
+    if (!window.VienixIDB || typeof window.VienixIDB.set !== 'function') return;
+    const history = documentHistories[docKey];
+    if (!history) return;
+
+    try {
+      const dataToSave = JSON.stringify({
+        undoStack: history.undoStack || [],
+        redoStack: history.redoStack || [],
+        updatedAt: Date.now()
+      });
+      window.VienixIDB.set('vienix_history_' + docKey, dataToSave);
+    } catch (e) {
+      console.warn('[VienixHistory] Failed to persist history for', docKey, e);
+    }
+  }
+
+  function loadPersistedDocHistory(docKey) {
+    try {
+      let raw = null;
+      if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
+        raw = window.VienixIDB.getSync('vienix_history_' + docKey);
+      }
+      if (raw && typeof raw === 'string') {
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.undoStack) && parsed.undoStack.length > 0) {
+          return {
+            undoStack: parsed.undoStack,
+            redoStack: Array.isArray(parsed.redoStack) ? parsed.redoStack : []
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('[VienixHistory] Failed loading persisted history for', docKey, e);
+    }
+    return null;
+  }
 
   // Document Scroll Positions per File / Chamber (حفظ موضع التمرير والمؤشر لكل مستند وملف)
   const documentScrollPositions = {};
@@ -214,10 +267,15 @@
 
   function getActiveDocHistory(docKey = getActiveDocumentKey()) {
     if (!documentHistories[docKey]) {
-      documentHistories[docKey] = {
-        undoStack: [],
-        redoStack: []
-      };
+      const persisted = loadPersistedDocHistory(docKey);
+      if (persisted) {
+        documentHistories[docKey] = persisted;
+      } else {
+        documentHistories[docKey] = {
+          undoStack: [],
+          redoStack: []
+        };
+      }
     }
     return documentHistories[docKey];
   }
@@ -811,7 +869,7 @@ function exportDocument(format) {
   function loadInitialContent() {
     const finishInit = () => {
       if (classicEditor) classicEditor.value = editor.value;
-      initHistoryWithContent(editor.value, true);
+      initHistoryWithContent(editor.value, false);
       if (isClassicMode) {
         applyUIMode();
       }
@@ -1197,6 +1255,7 @@ function exportDocument(format) {
       renderMarkdown();
       if (!isPerformingHistory) {
         recordHistorySnapshot(true);
+        persistDocHistory(getActiveDocumentKey());
       }
     });
 
@@ -1212,8 +1271,21 @@ function exportDocument(format) {
       classicEditor.addEventListener('blur', () => {
         if (!isPerformingHistory) {
           recordHistorySnapshot(true);
+          persistDocHistory(getActiveDocumentKey());
         }
       });
+    }
+
+    // Persist current history snapshot when tab closes, reloads, or device sleeps
+    const handleAppLeave = () => {
+      try {
+        const activeDocKey = getActiveDocumentKey();
+        recordHistorySnapshot(true);
+        persistDocHistory(activeDocKey);
+      } catch (e) {}
+    };
+    window.addEventListener('beforeunload', handleAppLeave);
+    window.addEventListener('pagehide', handleAppLeave);
 
       // Synchronized scroll between both classic boxes (سلس، دقيق، وبدون أي ارتداد أو تعليق)
       if (classicOutput) {
@@ -2390,12 +2462,14 @@ function exportDocument(format) {
     if (!ensureChamberExists(targetChamber)) return;
     if (targetChamber === activeChamber) return;
 
-    // 0. تصفير مؤقت التسجيل وحفظ لقطة فورية للحجرة المغادرة قبل التبديل
+    // 0. تصفير مؤقت التسجيل وحفظ لقطة فورية للحجرة المغادرة وحفظ سجلها دائمياً قبل التبديل
+    const leavingDocKey = getActiveDocumentKey();
     if (historyDebounceTimer) {
       clearTimeout(historyDebounceTimer);
       historyDebounceTimer = null;
     }
     recordHistorySnapshot(true);
+    persistDocHistory(leavingDocKey);
     saveCurrentDocScroll();
 
     // 1. حفظ المحتوى الحالي في الحجرة المغادرة
@@ -3804,12 +3878,14 @@ function exportDocument(format) {
     const file = files.find(f => f.id === fileId);
     if (!file) return;
 
-    // 0. تصفير مؤقت التسجيل وحفظ لقطة فورية للمستند المغادر قبل التبديل
+    // 0. تصفير مؤقت التسجيل وحفظ لقطة فورية للمستند المغادر وحفظ سجله دائمياً قبل التبديل
+    const leavingDocKey = getActiveDocumentKey();
     if (historyDebounceTimer) {
       clearTimeout(historyDebounceTimer);
       historyDebounceTimer = null;
     }
     recordHistorySnapshot(true);
+    persistDocHistory(leavingDocKey);
     saveCurrentDocScroll();
 
     // 1. حفظ المحتوى الحالي في الحجرة المغادرة أولاً قبل تبديل activeExplorerFile
@@ -4029,11 +4105,14 @@ function exportDocument(format) {
       resequenceFolderFiles(folderKey, files);
       saveFolderFiles(folderKey, files);
 
-      // تنظيف سجل تراجع وموضع سكرول الملف المحذوف من الذاكرة
+      // تنظيف سجل تراجع وموضع سكرول الملف المحذوف من الذاكرة ومن IndexedDB
       try {
         const deletedKey = 'file_' + folderKey + '_' + fileId;
         delete documentHistories[deletedKey];
         delete documentScrollPositions[deletedKey];
+        if (window.VienixIDB && typeof window.VienixIDB.remove === 'function') {
+          window.VienixIDB.remove('vienix_history_' + deletedKey);
+        }
       } catch (e) {}
 
       // إذا كان الملف المحذوف هو المعروض حالياً في حجرة 8، نفرغها
@@ -4246,6 +4325,9 @@ function exportDocument(format) {
           Object.keys(documentHistories).forEach(k => {
             if (k.startsWith('file_' + folderKey + '_')) {
               delete documentHistories[k];
+              if (window.VienixIDB && typeof window.VienixIDB.remove === 'function') {
+                window.VienixIDB.remove('vienix_history_' + k);
+              }
             }
           });
           Object.keys(documentScrollPositions).forEach(k => {
@@ -6521,7 +6603,19 @@ function exportDocument(format) {
   function initHistoryWithContent(text, forceReset = false, docKey = getActiveDocumentKey()) {
     const history = getActiveDocHistory(docKey);
     // إذا كان السجل موجوداً مسبقاً وغير فارغ ولم يُطلب تصفير قسري، نحافظ عليه ونحدث أزراره فقط
-    if (!forceReset && history.undoStack.length > 0) {
+    if (!forceReset && history.undoStack && history.undoStack.length > 0) {
+      const top = history.undoStack[history.undoStack.length - 1];
+      if (top && top.value !== text && typeof text === 'string') {
+        history.undoStack.push({
+          value: text,
+          start: (editor && editor.selectionStart) || 0,
+          end: (editor && editor.selectionEnd) || 0
+        });
+        if (history.undoStack.length > MAX_HISTORY) {
+          history.undoStack.shift();
+        }
+        schedulePersistHistory(docKey);
+      }
       updateHistoryButtonStates();
       return;
     }
@@ -6533,6 +6627,11 @@ function exportDocument(format) {
       end: (editor && editor.selectionEnd) || 0
     });
     updateHistoryButtonStates();
+    if (forceReset) {
+      persistDocHistory(docKey);
+    } else {
+      schedulePersistHistory(docKey);
+    }
   }
 
   function recordHistorySnapshot(immediate = false) {
@@ -6568,6 +6667,7 @@ function exportDocument(format) {
       if (docKey === getActiveDocumentKey()) {
         updateHistoryButtonStates();
       }
+      schedulePersistHistory(docKey);
     };
 
     if (immediate) {
@@ -6581,7 +6681,8 @@ function exportDocument(format) {
 
   // 1. التالي (Redo)
   window.redoAction = function () {
-    const history = getActiveDocHistory();
+    const docKey = getActiveDocumentKey();
+    const history = getActiveDocHistory(docKey);
     if (!history.redoStack || history.redoStack.length === 0) {
       showToast('لا توجد خطوات تالية للإعادة', 'info', 1200);
       return;
@@ -6645,12 +6746,14 @@ function exportDocument(format) {
     });
 
     updateHistoryButtonStates();
+    schedulePersistHistory(docKey);
     showToast('التالي ↻ (إعادة الخطوة)', 'info', 1000);
   };
 
   // 2. السابق (Undo)
   window.undoAction = function () {
-    const history = getActiveDocHistory();
+    const docKey = getActiveDocumentKey();
+    const history = getActiveDocHistory(docKey);
     if (!history.undoStack || history.undoStack.length <= 1) {
       showToast('لا توجد خطوات سابقة للتراجع عنها', 'info', 1200);
       return;
@@ -6716,6 +6819,7 @@ function exportDocument(format) {
     });
 
     updateHistoryButtonStates();
+    schedulePersistHistory(docKey);
     showToast('السابق ↺ (تراجع)', 'info', 1000);
   };
 
@@ -6733,7 +6837,8 @@ function exportDocument(format) {
     // حفظ النص الحالي أولاً في undoStack حتى يتمكن المستخدم من التراجع فوراً
     recordHistorySnapshot(true);
 
-    const history = getActiveDocHistory();
+    const docKey = getActiveDocumentKey();
+    const history = getActiveDocHistory(docKey);
     history.undoStack.push({
       value: '',
       start: 0,
@@ -6742,8 +6847,7 @@ function exportDocument(format) {
     history.redoStack.length = 0;
 
     // تصفير موضع السكرول للمستند المفرغ
-    const curDocKey = getActiveDocumentKey();
-    documentScrollPositions[curDocKey] = { editorScroll: 0, outputScroll: 0 };
+    documentScrollPositions[docKey] = { editorScroll: 0, outputScroll: 0 };
 
     isPerformingHistory = true;
     if (editor) editor.value = '';
@@ -6762,6 +6866,7 @@ function exportDocument(format) {
 
     updateHistoryButtonStates();
     updateChambersUI();
+    schedulePersistHistory(docKey);
     showToast(`تم إفراغ الحجرة ${activeChamber} (يمكنك التراجع ↺)`, 'info', 1500);
   };
 

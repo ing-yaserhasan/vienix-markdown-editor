@@ -434,14 +434,16 @@
 
           for (let i = 0; i < localStorage.length; i++) {
             const k = localStorage.key(i);
-            if (k && (k.startsWith('vienix_') || k.startsWith('yaser_'))) {
+            if (k && (k.startsWith('vienix_') || k.startsWith('yaser_')) && !k.startsWith('vienix_history_')) {
               manifest.rawKeys[k] = localStorage.getItem(k);
             }
           }
 
           if (window.VienixIDB && window.VienixIDB.memoryCache) {
             Object.keys(window.VienixIDB.memoryCache).forEach(k => {
-              manifest.rawKeys[k] = window.VienixIDB.memoryCache[k];
+              if (!k.startsWith('vienix_history_')) {
+                manifest.rawKeys[k] = window.VienixIDB.memoryCache[k];
+              }
             });
           }
 

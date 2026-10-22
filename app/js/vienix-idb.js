@@ -200,8 +200,12 @@
 
       // 2. Async persistent write into IndexedDB
       return new Promise((resolve) => {
+        const isHistoryKey = typeof key === 'string' && key.startsWith('vienix_history_');
+
         if (!this.db) {
-          try { localStorage.setItem(key, value); } catch (e) {}
+          if (!isHistoryKey) {
+            try { localStorage.setItem(key, value); } catch (e) {}
+          }
           return resolve(true);
         }
 
@@ -213,8 +217,9 @@
           tx.oncomplete = () => {
             // Also attempt to keep light items in localStorage for dual-layer safety
             // but ignore quota errors silently because IndexedDB has the true copy!
+            // IMPORTANT: Exclude large history snapshots from localStorage to prevent quota exhaustion
             try {
-              if (typeof value === 'string' && value.length < 50000) {
+              if (!isHistoryKey && typeof value === 'string' && value.length < 50000) {
                 localStorage.setItem(key, value);
               }
             } catch (quotaErr) {}
@@ -223,11 +228,15 @@
 
           tx.onerror = (e) => {
             console.warn('[VienixIDB] Write error:', e.target.error);
-            try { localStorage.setItem(key, value); } catch (q) {}
+            if (!isHistoryKey) {
+              try { localStorage.setItem(key, value); } catch (q) {}
+            }
             resolve(false);
           };
         } catch (e) {
-          try { localStorage.setItem(key, value); } catch (q) {}
+          if (!isHistoryKey) {
+            try { localStorage.setItem(key, value); } catch (q) {}
+          }
           resolve(false);
         }
       });

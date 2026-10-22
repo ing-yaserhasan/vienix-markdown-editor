@@ -337,7 +337,7 @@
       const rawVienixData = {};
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && (k.startsWith('vienix_') || k.startsWith('yaser_'))) {
+        if (k && (k.startsWith('vienix_') || k.startsWith('yaser_')) && !k.startsWith('vienix_history_')) {
           rawVienixData[k] = localStorage.getItem(k);
         }
       }
@@ -585,6 +585,7 @@
             }
             restoreDelete('vienix_chamber_meta_' + ch);
             restoreDelete('yaser_chamber_meta_' + ch);
+            restoreDelete('vienix_history_chamber_' + ch);
           }
         }
 
@@ -615,6 +616,7 @@
           keysToCheck.forEach(k => {
             if (!incomingFolderFilesKeys.has(k)) {
               restoreDelete(k);
+              restoreDelete('vienix_history_' + k);
             }
           });
         } catch (e) {}
