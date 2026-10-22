@@ -201,6 +201,10 @@
   let historyDebounceTimer = null;
   let isPerformingHistory = false;
 
+  // Document Scroll Positions per File / Chamber (حفظ موضع التمرير والمؤشر لكل مستند وملف)
+  const documentScrollPositions = {};
+  let isRestoringScroll = false;
+
   function getActiveDocumentKey() {
     if (activeChamber === 8 && activeExplorerFile && activeExplorerFile.fileId) {
       return 'file_' + (activeExplorerFile.folderKey || 'book') + '_' + activeExplorerFile.fileId;
@@ -216,6 +220,52 @@
       };
     }
     return documentHistories[docKey];
+  }
+
+  function saveCurrentDocScroll() {
+    try {
+      const docKey = getActiveDocumentKey();
+      const activeEl = isClassicMode ? (classicEditor || editor) : editor;
+      const outputEl = isClassicMode ? classicOutput : preview;
+      if (!activeEl) return;
+      documentScrollPositions[docKey] = {
+        editorScroll: activeEl.scrollTop || 0,
+        outputScroll: outputEl ? (outputEl.scrollTop || 0) : 0,
+        cursorStart: activeEl.selectionStart,
+        cursorEnd: activeEl.selectionEnd
+      };
+    } catch (e) {
+      console.warn('saveCurrentDocScroll error:', e);
+    }
+  }
+
+  function restoreDocScroll(docKey = getActiveDocumentKey()) {
+    try {
+      const saved = documentScrollPositions[docKey];
+      const activeEl = isClassicMode ? (classicEditor || editor) : editor;
+      const outputEl = isClassicMode ? classicOutput : preview;
+      if (!activeEl) return;
+
+      isRestoringScroll = true;
+      const targetEditorScroll = saved ? (saved.editorScroll || 0) : 0;
+      const targetOutputScroll = saved ? (saved.outputScroll || 0) : 0;
+
+      activeEl.scrollTop = targetEditorScroll;
+      if (outputEl) outputEl.scrollTop = targetOutputScroll;
+
+      if (saved && typeof saved.cursorStart === 'number') {
+        try { activeEl.setSelectionRange(saved.cursorStart, saved.cursorEnd); } catch (e) {}
+      }
+
+      requestAnimationFrame(() => {
+        if (activeEl) activeEl.scrollTop = targetEditorScroll;
+        if (outputEl) outputEl.scrollTop = targetOutputScroll;
+        setTimeout(() => { isRestoringScroll = false; }, 80);
+      });
+    } catch (e) {
+      console.warn('restoreDocScroll error:', e);
+      isRestoringScroll = false;
+    }
   }
 
   // Mode state: Modern vs Classic
@@ -986,7 +1036,7 @@ function exportDocument(format) {
 
   // Synchronized Scrolling
   function handleEditorScroll() {
-    if (!isSyncScroll || isUpdatingScroll) return;
+    if (!isSyncScroll || isUpdatingScroll || isPerformingHistory || isRestoringScroll) return;
     isUpdatingScroll = true;
 
     const editorScrollRatio = editor.scrollTop / (editor.scrollHeight - editor.clientHeight || 1);
@@ -996,7 +1046,7 @@ function exportDocument(format) {
   }
 
   function handlePreviewScroll() {
-    if (!isSyncScroll || isUpdatingScroll) return;
+    if (!isSyncScroll || isUpdatingScroll || isPerformingHistory || isRestoringScroll) return;
     isUpdatingScroll = true;
 
     const previewScrollRatio = preview.scrollTop / (preview.scrollHeight - preview.clientHeight || 1);
@@ -1162,7 +1212,7 @@ function exportDocument(format) {
         classicOutput.addEventListener('wheel', () => { activeScroller = 'output'; }, { passive: true });
 
         classicEditor.addEventListener('scroll', () => {
-          if (!isClassicMode || activeScroller !== 'editor') return;
+          if (!isClassicMode || activeScroller !== 'editor' || isRestoringScroll || isPerformingHistory) return;
           if (syncRaf) cancelAnimationFrame(syncRaf);
           syncRaf = requestAnimationFrame(() => {
             const maxEditor = classicEditor.scrollHeight - classicEditor.clientHeight;
@@ -1174,7 +1224,7 @@ function exportDocument(format) {
         }, { passive: true });
 
         classicOutput.addEventListener('scroll', () => {
-          if (!isClassicMode || activeScroller !== 'output') return;
+          if (!isClassicMode || activeScroller !== 'output' || isRestoringScroll || isPerformingHistory) return;
           if (syncRaf) cancelAnimationFrame(syncRaf);
           syncRaf = requestAnimationFrame(() => {
             const maxEditor = classicEditor.scrollHeight - classicEditor.clientHeight;
@@ -2329,6 +2379,7 @@ function exportDocument(format) {
       historyDebounceTimer = null;
     }
     recordHistorySnapshot(true);
+    saveCurrentDocScroll();
 
     // 1. حفظ المحتوى الحالي في الحجرة المغادرة
     const currentVal = isClassicMode ? (classicEditor?.value || editor.value) : editor.value;
@@ -2384,6 +2435,9 @@ function exportDocument(format) {
     } else {
       renderMarkdown();
     }
+
+    // استعادة موضع السكرول والمؤشر الخاص بالحجرة الهدف
+    restoreDocScroll();
 
     // 6. تحديث مظهر الأزرار
     updateChambersUI();
@@ -3731,6 +3785,7 @@ function exportDocument(format) {
       historyDebounceTimer = null;
     }
     recordHistorySnapshot(true);
+    saveCurrentDocScroll();
 
     // 1. حفظ المحتوى الحالي في الحجرة المغادرة أولاً قبل تبديل activeExplorerFile
     const currentVal = isClassicMode ? (classicEditor?.value || editor.value) : editor.value;
@@ -3768,6 +3823,9 @@ function exportDocument(format) {
     initHistoryWithContent(fileContent);
     if (isClassicMode) renderClassicMarkdown(); else renderMarkdown();
     updateChambersUI();
+
+    // استعادة موضع السكرول والمؤشر الخاص بالملف الهدف كما تركه المستخدم
+    restoreDocScroll();
 
     if (typeof renderChambersExplorerTree === 'function') {
       renderChambersExplorerTree();
@@ -3937,10 +3995,11 @@ function exportDocument(format) {
       resequenceFolderFiles(folderKey, files);
       saveFolderFiles(folderKey, files);
 
-      // تنظيف سجل تراجع الملف المحذوف من الذاكرة
+      // تنظيف سجل تراجع وموضع سكرول الملف المحذوف من الذاكرة
       try {
         const deletedKey = 'file_' + folderKey + '_' + fileId;
         delete documentHistories[deletedKey];
+        delete documentScrollPositions[deletedKey];
       } catch (e) {}
 
       // إذا كان الملف المحذوف هو المعروض حالياً في حجرة 8، نفرغها
@@ -4147,12 +4206,17 @@ function exportDocument(format) {
       `هل أنت متأكد تماماً من حذف مجلد <strong>"${escapeHtml(folderName)}"</strong> نهائياً؟<br><span style="color:#ef4444; font-size:0.82rem; margin-top:6px; display:inline-block;">سيتم حذف هذا المجلد وجميع الملفات المحفوظة بداخله وإعادة الحجرات للمجلد الرئيسي!</span>`,
       'نعم، احذف المجلد نهائياً',
       () => {
-        // 1. حذف ملفات المجلد من التخزين وتنظيف سجلات التراجع
+        // 1. حذف ملفات المجلد من التخزين وتنظيف سجلات التراجع ومواضع السكرول
         try {
           localStorage.removeItem('vienix_folder_files_' + folderKey);
           Object.keys(documentHistories).forEach(k => {
             if (k.startsWith('file_' + folderKey + '_')) {
               delete documentHistories[k];
+            }
+          });
+          Object.keys(documentScrollPositions).forEach(k => {
+            if (k.startsWith('file_' + folderKey + '_')) {
+              delete documentScrollPositions[k];
             }
           });
         } catch (e) {}
@@ -6492,13 +6556,20 @@ function exportDocument(format) {
     const nextState = history.redoStack.pop();
     history.undoStack.push(nextState);
 
+    const activeEl = isClassicMode ? (classicEditor || editor) : editor;
+    const outputEl = isClassicMode ? classicOutput : preview;
+    const savedEditorScroll = activeEl ? activeEl.scrollTop : 0;
+    const savedOutputScroll = outputEl ? outputEl.scrollTop : 0;
+
     isPerformingHistory = true;
+    isRestoringScroll = true;
+
     if (editor) editor.value = nextState.value;
     if (classicEditor) classicEditor.value = nextState.value;
 
     if (isClassicMode) {
       if (classicEditor) {
-        classicEditor.focus();
+        try { classicEditor.focus({ preventScroll: true }); } catch (e) { classicEditor.focus(); }
         if (typeof nextState.start === 'number' && typeof nextState.end === 'number') {
           try { classicEditor.setSelectionRange(nextState.start, nextState.end); } catch (e) {}
         }
@@ -6506,7 +6577,7 @@ function exportDocument(format) {
       renderClassicMarkdown();
     } else {
       if (editor) {
-        editor.focus();
+        try { editor.focus({ preventScroll: true }); } catch (e) { editor.focus(); }
         if (typeof nextState.start === 'number' && typeof nextState.end === 'number') {
           try { editor.setSelectionRange(nextState.start, nextState.end); } catch (e) {}
         }
@@ -6514,7 +6585,19 @@ function exportDocument(format) {
       renderMarkdown();
     }
 
-    isPerformingHistory = false;
+    // تثبيت السكرول فوراً ومنع القفز
+    if (activeEl) activeEl.scrollTop = savedEditorScroll;
+    if (outputEl) outputEl.scrollTop = savedOutputScroll;
+
+    requestAnimationFrame(() => {
+      if (activeEl) activeEl.scrollTop = savedEditorScroll;
+      if (outputEl) outputEl.scrollTop = savedOutputScroll;
+      setTimeout(() => {
+        isPerformingHistory = false;
+        isRestoringScroll = false;
+      }, 50);
+    });
+
     updateHistoryButtonStates();
     showToast('التالي ↻ (إعادة الخطوة)', 'info', 1000);
   };
@@ -6531,13 +6614,21 @@ function exportDocument(format) {
     history.redoStack.push(currentState);
 
     const prevState = history.undoStack[history.undoStack.length - 1];
+
+    const activeEl = isClassicMode ? (classicEditor || editor) : editor;
+    const outputEl = isClassicMode ? classicOutput : preview;
+    const savedEditorScroll = activeEl ? activeEl.scrollTop : 0;
+    const savedOutputScroll = outputEl ? outputEl.scrollTop : 0;
+
     isPerformingHistory = true;
+    isRestoringScroll = true;
+
     if (editor) editor.value = prevState.value;
     if (classicEditor) classicEditor.value = prevState.value;
 
     if (isClassicMode) {
       if (classicEditor) {
-        classicEditor.focus();
+        try { classicEditor.focus({ preventScroll: true }); } catch (e) { classicEditor.focus(); }
         if (typeof prevState.start === 'number' && typeof prevState.end === 'number') {
           try { classicEditor.setSelectionRange(prevState.start, prevState.end); } catch (e) {}
         }
@@ -6545,7 +6636,7 @@ function exportDocument(format) {
       renderClassicMarkdown();
     } else {
       if (editor) {
-        editor.focus();
+        try { editor.focus({ preventScroll: true }); } catch (e) { editor.focus(); }
         if (typeof prevState.start === 'number' && typeof prevState.end === 'number') {
           try { editor.setSelectionRange(prevState.start, prevState.end); } catch (e) {}
         }
@@ -6553,7 +6644,19 @@ function exportDocument(format) {
       renderMarkdown();
     }
 
-    isPerformingHistory = false;
+    // تثبيت السكرول فوراً ومنع القفز
+    if (activeEl) activeEl.scrollTop = savedEditorScroll;
+    if (outputEl) outputEl.scrollTop = savedOutputScroll;
+
+    requestAnimationFrame(() => {
+      if (activeEl) activeEl.scrollTop = savedEditorScroll;
+      if (outputEl) outputEl.scrollTop = savedOutputScroll;
+      setTimeout(() => {
+        isPerformingHistory = false;
+        isRestoringScroll = false;
+      }, 50);
+    });
+
     updateHistoryButtonStates();
     showToast('السابق ↺ (تراجع)', 'info', 1000);
   };
@@ -6579,6 +6682,10 @@ function exportDocument(format) {
       end: 0
     });
     history.redoStack.length = 0;
+
+    // تصفير موضع السكرول للمستند المفرغ
+    const curDocKey = getActiveDocumentKey();
+    documentScrollPositions[curDocKey] = { editorScroll: 0, outputScroll: 0 };
 
     isPerformingHistory = true;
     if (editor) editor.value = '';
