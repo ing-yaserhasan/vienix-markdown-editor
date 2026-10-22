@@ -2260,8 +2260,8 @@ function exportDocument(format) {
 
       saveFolderFiles('book', cleanFiles);
 
-      // 3. تحديث الحجرة النشطة وبيانات ملف المستكشف إن كان محدداً
-      if (activeExplorerFile && activeExplorerFile.folderKey === 'book') {
+      // 3. تحديث الحجرة النشطة وبيانات ملف المستكشف إن كان محدداً والحجرة النشطة >= 8
+      if (activeChamber >= 8 && activeExplorerFile && activeExplorerFile.folderKey === 'book') {
         const currentFile = cleanFiles.find(f => f.id === activeExplorerFile.fileId);
         if (currentFile) {
           activeExplorerFile.num = currentFile.num;
@@ -2504,17 +2504,21 @@ function exportDocument(format) {
     const currentVal = isClassicMode ? (classicEditor?.value || editor.value) : editor.value;
     setChamberContent(activeChamber, currentVal);
 
-    // 2. تحديث الحجرة النشطة
+    // 2. تحديث الحجرة النشطة وحفظها فورياً في الذاكرة لضمان ثباتها بعد إعادة التحميل
     activeChamber = targetChamber;
+    safeSaveToStorage('vienix_active_chamber', activeChamber);
+    safeSaveToStorage('yaser_active_chamber', activeChamber);
+
     if (activeChamber >= 8) {
       lastActiveOverflowChamber = activeChamber;
       safeSaveToStorage('vienix_last_overflow_chamber', lastActiveOverflowChamber);
     }
-    // إذا كانت الحجرة ضمن 1 إلى 7، نعيد ضبط الملف النشط ليكون من المجلد الرئيسي
+    // إذا كانت الحجرة ضمن 1 إلى 7، نلغي الملف النشط لعدم تداخل ملفات المستكشف مع الحجرات الأساسية
     if (activeChamber <= 7) {
-      if (activeExplorerFile && activeExplorerFile.folderKey && activeExplorerFile.folderKey !== 'book') {
-        activeExplorerFile = null;
-        try { localStorage.removeItem('vienix_active_explorer_file'); } catch (e) {}
+      activeExplorerFile = null;
+      try { localStorage.removeItem('vienix_active_explorer_file'); } catch (e) {}
+      if (window.VienixIDB && typeof window.VienixIDB.remove === 'function') {
+        window.VienixIDB.remove('vienix_active_explorer_file');
       }
     }
 
