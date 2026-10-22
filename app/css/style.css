@@ -998,7 +998,7 @@ body.is-resizing-workspace .workspace-resizer {
   overflow-y: auto;
   padding: 24px 32px;
   direction: rtl;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   background: var(--bg-surface);
 }
 

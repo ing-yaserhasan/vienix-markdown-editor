@@ -250,17 +250,34 @@
       const targetEditorScroll = saved ? (saved.editorScroll || 0) : 0;
       const targetOutputScroll = saved ? (saved.outputScroll || 0) : 0;
 
-      activeEl.scrollTop = targetEditorScroll;
-      if (outputEl) outputEl.scrollTop = targetOutputScroll;
-
-      if (saved && typeof saved.cursorStart === 'number') {
-        try { activeEl.setSelectionRange(saved.cursorStart, saved.cursorEnd); } catch (e) {}
+      // 1. التثبيت الفوري المتزامن الحاسم (Instant Jump 0ms) دون أي أنيميشن أو انزلاق
+      if (activeEl) {
+        try { activeEl.scrollTo({ top: targetEditorScroll, behavior: 'instant' }); } catch (e) {}
+        activeEl.scrollTop = targetEditorScroll;
+      }
+      if (outputEl) {
+        try { outputEl.scrollTo({ top: targetOutputScroll, behavior: 'instant' }); } catch (e) {}
+        outputEl.scrollTop = targetOutputScroll;
       }
 
+      if (saved && typeof saved.cursorStart === 'number') {
+        try {
+          if (activeEl.setSelectionRange) {
+            activeEl.setSelectionRange(saved.cursorStart, saved.cursorEnd);
+          }
+        } catch (e) {}
+        // إعادة التثبيت الفوري بعد ضبط المؤشر لمنع المتصفح من سحب الشاشة
+        activeEl.scrollTop = targetEditorScroll;
+      }
+
+      // 2. تأكيد التثبيت مع إطار الرندر لضمان ثبات المعاينة بعد اكتمال الماركداون
       requestAnimationFrame(() => {
         if (activeEl) activeEl.scrollTop = targetEditorScroll;
-        if (outputEl) outputEl.scrollTop = targetOutputScroll;
-        setTimeout(() => { isRestoringScroll = false; }, 80);
+        if (outputEl) {
+          try { outputEl.scrollTo({ top: targetOutputScroll, behavior: 'instant' }); } catch (e) {}
+          outputEl.scrollTop = targetOutputScroll;
+        }
+        setTimeout(() => { isRestoringScroll = false; }, 60);
       });
     } catch (e) {
       console.warn('restoreDocScroll error:', e);
@@ -2426,7 +2443,15 @@ function exportDocument(format) {
     editor.value = targetVal;
     if (classicEditor) classicEditor.value = targetVal;
 
-    // 4. إعادة ضبط لقطات التراجع للحجرة الجديدة
+    // استعادة فورية متزامنة لسكرول المحرر لمنع رسم الإطار عند الصفر
+    const targetDocKey = getActiveDocumentKey();
+    const earlySaved = documentScrollPositions[targetDocKey];
+    if (earlySaved && typeof earlySaved.editorScroll === 'number') {
+      editor.scrollTop = earlySaved.editorScroll;
+      if (classicEditor) classicEditor.scrollTop = earlySaved.editorScroll;
+    }
+
+    // 4. استعادة لقطات التراجع للحجرة الهدف
     initHistoryWithContent(targetVal);
 
     // 5. التصيير
@@ -2436,7 +2461,7 @@ function exportDocument(format) {
       renderMarkdown();
     }
 
-    // استعادة موضع السكرول والمؤشر الخاص بالحجرة الهدف
+    // استعادة موضع السكرول والمؤشر الخاص بالحجرة الهدف فورياً
     restoreDocScroll();
 
     // 6. تحديث مظهر الأزرار
@@ -3820,11 +3845,20 @@ function exportDocument(format) {
     // 4. تحميل النص في المحرر وتحديث الواجهة
     if (editor) editor.value = fileContent;
     if (classicEditor) classicEditor.value = fileContent;
+
+    // استعادة فورية متزامنة لسكرول المحرر لمنع رسم الإطار عند الصفر
+    const targetDocKey8 = getActiveDocumentKey();
+    const earlySaved8 = documentScrollPositions[targetDocKey8];
+    if (earlySaved8 && typeof earlySaved8.editorScroll === 'number') {
+      if (editor) editor.scrollTop = earlySaved8.editorScroll;
+      if (classicEditor) classicEditor.scrollTop = earlySaved8.editorScroll;
+    }
+
     initHistoryWithContent(fileContent);
     if (isClassicMode) renderClassicMarkdown(); else renderMarkdown();
     updateChambersUI();
 
-    // استعادة موضع السكرول والمؤشر الخاص بالملف الهدف كما تركه المستخدم
+    // استعادة موضع السكرول والمؤشر الخاص بالملف الهدف كما تركه المستخدم فورياً
     restoreDocScroll();
 
     if (typeof renderChambersExplorerTree === 'function') {
@@ -6586,12 +6620,24 @@ function exportDocument(format) {
     }
 
     // تثبيت السكرول فوراً ومنع القفز
-    if (activeEl) activeEl.scrollTop = savedEditorScroll;
-    if (outputEl) outputEl.scrollTop = savedOutputScroll;
+    if (activeEl) {
+      try { activeEl.scrollTo({ top: savedEditorScroll, behavior: 'instant' }); } catch (e) {}
+      activeEl.scrollTop = savedEditorScroll;
+    }
+    if (outputEl) {
+      try { outputEl.scrollTo({ top: savedOutputScroll, behavior: 'instant' }); } catch (e) {}
+      outputEl.scrollTop = savedOutputScroll;
+    }
 
     requestAnimationFrame(() => {
-      if (activeEl) activeEl.scrollTop = savedEditorScroll;
-      if (outputEl) outputEl.scrollTop = savedOutputScroll;
+      if (activeEl) {
+        try { activeEl.scrollTo({ top: savedEditorScroll, behavior: 'instant' }); } catch (e) {}
+        activeEl.scrollTop = savedEditorScroll;
+      }
+      if (outputEl) {
+        try { outputEl.scrollTo({ top: savedOutputScroll, behavior: 'instant' }); } catch (e) {}
+        outputEl.scrollTop = savedOutputScroll;
+      }
       setTimeout(() => {
         isPerformingHistory = false;
         isRestoringScroll = false;
@@ -6645,12 +6691,24 @@ function exportDocument(format) {
     }
 
     // تثبيت السكرول فوراً ومنع القفز
-    if (activeEl) activeEl.scrollTop = savedEditorScroll;
-    if (outputEl) outputEl.scrollTop = savedOutputScroll;
+    if (activeEl) {
+      try { activeEl.scrollTo({ top: savedEditorScroll, behavior: 'instant' }); } catch (e) {}
+      activeEl.scrollTop = savedEditorScroll;
+    }
+    if (outputEl) {
+      try { outputEl.scrollTo({ top: savedOutputScroll, behavior: 'instant' }); } catch (e) {}
+      outputEl.scrollTop = savedOutputScroll;
+    }
 
     requestAnimationFrame(() => {
-      if (activeEl) activeEl.scrollTop = savedEditorScroll;
-      if (outputEl) outputEl.scrollTop = savedOutputScroll;
+      if (activeEl) {
+        try { activeEl.scrollTo({ top: savedEditorScroll, behavior: 'instant' }); } catch (e) {}
+        activeEl.scrollTop = savedEditorScroll;
+      }
+      if (outputEl) {
+        try { outputEl.scrollTo({ top: savedOutputScroll, behavior: 'instant' }); } catch (e) {}
+        outputEl.scrollTop = savedOutputScroll;
+      }
       setTimeout(() => {
         isPerformingHistory = false;
         isRestoringScroll = false;
