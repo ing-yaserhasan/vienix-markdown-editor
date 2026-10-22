@@ -1274,18 +1274,6 @@ function exportDocument(format) {
           persistDocHistory(getActiveDocumentKey());
         }
       });
-    }
-
-    // Persist current history snapshot when tab closes, reloads, or device sleeps
-    const handleAppLeave = () => {
-      try {
-        const activeDocKey = getActiveDocumentKey();
-        recordHistorySnapshot(true);
-        persistDocHistory(activeDocKey);
-      } catch (e) {}
-    };
-    window.addEventListener('beforeunload', handleAppLeave);
-    window.addEventListener('pagehide', handleAppLeave);
 
       // Synchronized scroll between both classic boxes (سلس، دقيق، وبدون أي ارتداد أو تعليق)
       if (classicOutput) {
@@ -1325,6 +1313,17 @@ function exportDocument(format) {
         }, { passive: true });
       }
     }
+
+    // Persist current history snapshot when tab closes, reloads, or device sleeps
+    const handleAppLeave = () => {
+      try {
+        const activeDocKey = getActiveDocumentKey();
+        recordHistorySnapshot(true);
+        persistDocHistory(activeDocKey);
+      } catch (e) {}
+    };
+    window.addEventListener('beforeunload', handleAppLeave);
+    window.addEventListener('pagehide', handleAppLeave);
 
     // Scrolling (Modern Mode)
     editor.addEventListener('scroll', handleEditorScroll);
