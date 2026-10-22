@@ -537,9 +537,26 @@
           }
         }
 
+        // فحص ودعم مسارات مرفقات صور فينيكس (vienix-img://) واسترجاعها فورياً من IndexedDB
+        let displaySrc = href;
+        let attachmentId = '';
+        if (href && (href.startsWith('vienix-img://') || href.startsWith('vienix-image://'))) {
+          attachmentId = href.replace(/^vienix-(?:img|image):\/\//i, '').trim();
+          const stored = window.VienixImages ? window.VienixImages.getImage(attachmentId) : null;
+          if (stored) {
+            displaySrc = stored;
+          } else {
+            // صورة احتياطية توضيحية خفيفة في حال حذف أو عدم توفر مفتاح الصورة محلياً
+            displaySrc = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+              `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="150" viewBox="0 0 300 150" fill="none"><rect width="300" height="150" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 4"/><circle cx="150" cy="58" r="18" fill="#e2e8f0"/><path d="M144 54L150 62L156 54" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/><text x="150" y="100" font-family="system-ui, sans-serif" font-size="12" fill="#64748b" text-anchor="middle">صورة غير متوفرة (${attachmentId})</text></svg>`
+            );
+          }
+        }
+
         const styleAttr = width ? ` style="width: ${width}; max-width: 100%;"` : '';
         const widthAttr = width ? ` width="${width}"` : '';
-        let out = `<img src="${href}" alt="${cleanText}"${widthAttr}${styleAttr}`;
+        const dataAttAttr = attachmentId ? ` data-attachment-id="${attachmentId}" data-attachment-url="${href}"` : '';
+        let out = `<img src="${displaySrc}" alt="${cleanText}"${widthAttr}${styleAttr}${dataAttAttr}`;
         if (title) {
           out += ` title="${title}"`;
         }
@@ -884,6 +901,15 @@ function exportDocument(format) {
         .replace(/<br\s*\/?>\s*<br\s*\/?>\s*جارٍ?\s*استحضار\s*ترجمة\s*العبارة\s*\.\.\.?/gi, '')
         .replace(/جارٍ?\s*استحضار\s*ترجمة\s*العبارة\s*\.\.\.?/gi, '');
       setChamberContent(activeChamber, saved);
+    }
+
+    // تنظيف تلقائي فوري لأي أكواد Base64 ضخمة وتحويلها لمرفقات نظيفة في IndexedDB
+    if (saved && saved.includes('data:image/') && window.VienixImages) {
+      const cleaned = window.VienixImages.cleanseMarkdownImages(saved);
+      if (cleaned !== saved) {
+        saved = cleaned;
+        setChamberContent(activeChamber, saved);
+      }
     }
 
     // التحقق مما إذا كان التطبيق قد تم تشغيله سابقاً لدى الزائر
@@ -2011,7 +2037,10 @@ function exportDocument(format) {
   // 4. Save/Download Markdown (.md)
   window.saveMarkdownFile = function () {
     const text = editor.value;
-    const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+    const exportText = (window.VienixImages && typeof window.VienixImages.prepareForExport === 'function')
+      ? window.VienixImages.prepareForExport(text)
+      : text;
+    const blob = new Blob([exportText], { type: 'text/markdown;charset=utf-8' });
     downloadBlob(blob, 'مستند-vienix-editor.md');
     showToast('تم تنزيل ملف Markdown (.md) بنجاح! 💾', 'success');
   };
@@ -2512,7 +2541,14 @@ function exportDocument(format) {
     }
 
     // 3. جلب محتوى الحجرة الهدف وتحميله في المحرر
-    const targetVal = getChamberContent(targetChamber);
+    let targetVal = getChamberContent(targetChamber);
+    if (targetVal && targetVal.includes('data:image/') && window.VienixImages) {
+      const cleaned = window.VienixImages.cleanseMarkdownImages(targetVal);
+      if (cleaned !== targetVal) {
+        targetVal = cleaned;
+        setChamberContent(targetChamber, targetVal);
+      }
+    }
     editor.value = targetVal;
     if (classicEditor) classicEditor.value = targetVal;
 
@@ -7102,7 +7138,7 @@ function exportDocument(format) {
     window.insertFormat('[', '](https://example.com)', 'عنوان الرابط');
   };
 
-  // إدراج صورة مدمجة (Base64) في موضع المؤشر بالمحرر مع تحديث المعاينة والتاريخ
+  // إدراج صورة مدمجة ونظيفة عبر منظومة VienixImages في موضع المؤشر بالمحرر
   window.insertImageIntoEditor = function (dataUrl, altText = 'صورة') {
     const activeEl = isClassicMode ? (classicEditor || editor) : editor;
     if (!activeEl) return;
@@ -7112,7 +7148,15 @@ function exportDocument(format) {
     const end = typeof activeEl.selectionEnd === 'number' ? activeEl.selectionEnd : activeEl.value.length;
     const val = activeEl.value;
 
-    const imgMarkdown = `\n![${altText}](${dataUrl})\n\n`;
+    let imgTarget = dataUrl;
+    if (dataUrl && dataUrl.startsWith('data:image/') && window.VienixImages) {
+      const imgId = window.VienixImages.saveImage(dataUrl);
+      if (imgId) {
+        imgTarget = `vienix-img://${imgId}`;
+      }
+    }
+
+    const imgMarkdown = `\n![${altText}](${imgTarget})\n\n`;
     activeEl.value = val.substring(0, start) + imgMarkdown + val.substring(end);
     const newPos = start + imgMarkdown.length;
     try {
@@ -7587,7 +7631,7 @@ function exportDocument(format) {
           }
           img.style.height = 'auto';
           updateBadge();
-          updateImageWidthInMarkdown(img.getAttribute('src'), preset);
+          updateImageWidthInMarkdown(img.getAttribute('data-attachment-url') || img.getAttribute('src'), preset);
           if (typeof isWysiwygActive !== 'undefined' && isWysiwygActive) {
             syncPreviewToMarkdown(true);
           }
@@ -7789,7 +7833,7 @@ function exportDocument(format) {
             img.setAttribute('width', finalWidth);
             img.style.width = wVal;
             img.style.height = 'auto';
-            updateImageWidthInMarkdown(img.getAttribute('src'), wVal);
+            updateImageWidthInMarkdown(img.getAttribute('data-attachment-url') || img.getAttribute('src'), wVal);
             if (typeof isWysiwygActive !== 'undefined' && isWysiwygActive) {
               syncPreviewToMarkdown(true);
             }
@@ -7855,8 +7899,7 @@ function exportDocument(format) {
       recordHistorySnapshot(true);
       editor.value = updatedText;
       if (classicEditor) classicEditor.value = updatedText;
-      safeSaveToStorage('vienix_md_content', updatedText);
-      safeSaveToStorage('yaser_md_content', updatedText);
+      setChamberContent(activeChamber, updatedText);
       recordHistorySnapshot(true);
     }
   }
@@ -8490,6 +8533,47 @@ function exportDocument(format) {
         }
         w = w ? w.toString().trim() : '24';
         return `<img src="${src}" width="${w}" height="${w}" class="inline-emoji" alt="${alt}" title="${title}">`;
+      }
+    });
+
+    // قاعدة الحفاظ على مرفقات صور فينيكس النظيفة ومنع تحويلها إلى شفرات Base64 ضخمة في المحرر
+    turndownService.addRule('preserveVienixImages', {
+      filter: function (node) {
+        return (
+          node.nodeName === 'IMG' &&
+          (node.hasAttribute('data-attachment-url') ||
+           node.hasAttribute('data-attachment-id') ||
+           (node.getAttribute('src') || '').startsWith('data:image/'))
+        );
+      },
+      replacement: function (content, node) {
+        let attachmentUrl = node.getAttribute('data-attachment-url');
+        if (!attachmentUrl && node.hasAttribute('data-attachment-id')) {
+          attachmentUrl = `vienix-img://${node.getAttribute('data-attachment-id')}`;
+        }
+        const alt = node.getAttribute('alt') || 'صورة';
+        let w = node.getAttribute('width') || (node.style && node.style.width ? node.style.width : '');
+        if (!w && node.parentElement && node.parentElement.classList.contains('image-resizer-wrapper')) {
+          w = node.parentElement.style.width;
+        }
+        w = w ? w.toString().trim() : '';
+        if (w && !w.endsWith('%') && !w.endsWith('px')) w += 'px';
+
+        // إذا كانت صورة جديدة تم لصقها مباشرة في المعاينة
+        if (!attachmentUrl) {
+          const src = node.getAttribute('src') || '';
+          if (src.startsWith('data:image/') && window.VienixImages) {
+            const id = window.VienixImages.saveImage(src);
+            attachmentUrl = `vienix-img://${id}`;
+          } else {
+            attachmentUrl = src;
+          }
+        }
+
+        if (w) {
+          return `![${alt}|${w}](${attachmentUrl})`;
+        }
+        return `![${alt}](${attachmentUrl})`;
       }
     });
   }

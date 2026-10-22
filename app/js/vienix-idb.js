@@ -356,4 +356,101 @@
   // Immediate database bootstrap
   VienixIDB.openDB();
 
+  // ============================================================================
+  // Vienix Image Attachment & Reference Vault (Clean Markdown Image Engine)
+  // ============================================================================
+  const VienixImages = {
+    // توليد معرّف فريد وموجز لمرفق الصورة
+    generateId: function () {
+      const timestamp = Date.now().toString(36);
+      const rand = Math.random().toString(36).substring(2, 6);
+      return `img_${timestamp}_${rand}`;
+    },
+
+    // حفظ الصورة في قاعدة بيانات IndexedDB واسترجاع المعرف الفريد
+    saveImage: function (dataUrl, explicitId) {
+      if (!dataUrl || typeof dataUrl !== 'string') return null;
+      const id = explicitId || this.generateId();
+      const storageKey = `vienix_image_${id}`;
+      if (window.VienixIDB && typeof window.VienixIDB.setSync === 'function') {
+        window.VienixIDB.setSync(storageKey, dataUrl);
+      } else {
+        try { localStorage.setItem(storageKey, dataUrl); } catch (e) {}
+      }
+      return id;
+    },
+
+    // جلب مسار الصورة الحقيقي (Data URL) عبر المعرف
+    getImage: function (idOrUri) {
+      if (!idOrUri || typeof idOrUri !== 'string') return null;
+      const cleanId = idOrUri.replace(/^vienix-(?:img|image):\/\//i, '').trim();
+      if (!cleanId) return null;
+      const storageKey = `vienix_image_${cleanId}`;
+      let val = null;
+      if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
+        val = window.VienixIDB.getSync(storageKey);
+      }
+      if (!val) {
+        try { val = localStorage.getItem(storageKey); } catch (e) {}
+      }
+      return val;
+    },
+
+    // التحقق مما إذا كان الرابط يمثل مسار صورة خاص بفينيكس
+    isVienixImageUri: function (uri) {
+      return typeof uri === 'string' && /^vienix-(?:img|image):\/\//i.test(uri);
+    },
+
+    // تحويل أي كود Base64 مدمج داخل نص الماركداون إلى وسوم فينيكس النظيفة والمختصرة
+    cleanseMarkdownImages: function (markdownText) {
+      if (!markdownText || typeof markdownText !== 'string') return markdownText;
+      if (!markdownText.includes('data:image/')) return markdownText;
+
+      // 1. صيغة الماركداون القياسية: ![alt](data:image/...) أو ![alt|300px](data:image/...)
+      const mdImgRegex = /!\[([^\]]*)\]\((data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+)\)/g;
+      let cleaned = markdownText.replace(mdImgRegex, (match, altText, dataUrl) => {
+        const id = this.saveImage(dataUrl);
+        return `![${altText || 'صورة'}](vienix-img://${id})`;
+      });
+
+      // 2. صيغة وسوم HTML: <img ... src="data:image/..." ...>
+      const htmlImgRegex = /<img\s+([^>]*?)src=["'](data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+)["']([^>]*?)>/gi;
+      cleaned = cleaned.replace(htmlImgRegex, (match, prefix, dataUrl, suffix) => {
+        const id = this.saveImage(dataUrl);
+        return `<img ${prefix}src="vienix-img://${id}" data-attachment-id="${id}"${suffix}>`;
+      });
+
+      return cleaned;
+    },
+
+    // تجهيز نص الماركداون للتصدير الخارجي لضمان توافقه التام مع برامج الماركداون الأخرى
+    // يحافظ على متن المستند نظيفاً بصيغة المراجع ![alt][id] ويضع تعريفات Base64 في ذيل الملف
+    prepareForExport: function (markdownText) {
+      if (!markdownText || typeof markdownText !== 'string') return markdownText;
+      const uriRegex = /!\[([^\]]*)\]\(vienix-(?:img|image):\/\/([a-zA-Z0-9_-]+)\)/g;
+      const attachments = new Map();
+
+      const textWithRefs = markdownText.replace(uriRegex, (match, altText, id) => {
+        const dataUrl = this.getImage(id);
+        if (dataUrl) {
+          attachments.set(id, dataUrl);
+          return `![${altText || 'صورة'}][${id}]`;
+        }
+        return match;
+      });
+
+      if (attachments.size === 0) return markdownText;
+
+      let appendix = '\n\n<!-- مرفقات الصور المضمنة (Vienix Attachments) -->\n';
+      attachments.forEach((dataUrl, id) => {
+        appendix += `[${id}]: ${dataUrl}\n`;
+      });
+
+      return textWithRefs + appendix;
+    }
+  };
+
+  // Expose VienixImages globally
+  window.VienixImages = VienixImages;
+
 })();

@@ -58,7 +58,10 @@
           totalChars += itemChars;
 
           // Categorization
-          if (key.includes('chamber') || key.includes('md_content')) {
+          if (key.startsWith('vienix_image_') || key.startsWith('vienix_attachment_')) {
+            imagesChars += itemChars;
+            imageCount++;
+          } else if (key.includes('chamber') || key.includes('md_content')) {
             chambersChars += itemChars;
             if (val.trim().length > 0 && !key.includes('meta')) {
               activeChambersCount++;
@@ -340,6 +343,13 @@
         if (k && (k.startsWith('vienix_') || k.startsWith('yaser_')) && !k.startsWith('vienix_history_')) {
           rawVienixData[k] = localStorage.getItem(k);
         }
+      }
+      if (window.VienixIDB && window.VienixIDB.memoryCache) {
+        Object.keys(window.VienixIDB.memoryCache).forEach(k => {
+          if ((k.startsWith('vienix_') || k.startsWith('yaser_')) && !k.startsWith('vienix_history_')) {
+            rawVienixData[k] = window.VienixIDB.memoryCache[k];
+          }
+        });
       }
 
       const backupPackage = {
