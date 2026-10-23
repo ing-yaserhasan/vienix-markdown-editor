@@ -556,6 +556,14 @@
           </div>
         </div>
         <div class="preview-container" id="preview-output">
+          <!-- AI Context Button (اسأل AI عن هذا الملف) - داخل منطقة المعاينة فوق المحتوى -->
+          <button type="button" class="ai-context-pill-btn" id="btn-ai-context" onclick="openAiChatWithContext()" title="اسأل الـ AI عن شيء بهذا الملف — يقرأ المحتوى وينفذ أوامرك" style="display: none;">
+            <svg class="ai-sparkle-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M14 2 Q14 10 22 10 Q14 10 14 18 Q14 10 6 10 Q14 10 14 2 Z" fill="url(#aiPillSparkleGrad)" />
+              <path d="M6 13 Q6 17 10 17 Q6 17 6 21 Q6 17 2 17 Q6 17 6 13 Z" fill="url(#aiPillSparkleGrad)" />
+            </svg>
+            <span class="ai-context-pill-text">اسأل AI عن هذا الملف</span>
+          </button>
           <article class="markdown-body" id="preview-content">
             <!-- Rendered Output -->
           </article>
@@ -2583,6 +2591,169 @@
       if (typeof _origOpenSettings === 'function') _origOpenSettings();
       setTimeout(initAiFeature, 50);
     };
+
+    // ───── Layer 7: Context-Aware AI (File Content Control) ─────
+    var _aiFileContextAbsorbed = false;
+    var _aiFileContextContent = '';
+
+    window.openAiChatWithContext = function() {
+      // Read editor content
+      var editor = document.getElementById('markdown-input');
+      var content = editor ? editor.value.trim() : '';
+
+      if (!content) {
+        showAiToast('المحرر فارغ — اكتب محتوى أولاً', true);
+        return;
+      }
+
+      // Open modal
+      var overlay = document.getElementById('ai-chat-overlay');
+      if (!overlay) return;
+      _aiMessages = [];
+      saveAiChatHistory([]);
+      overlay.style.display = 'flex';
+      setTimeout(function() { overlay.classList.add('ai-chat-visible'); }, 10);
+
+      // Update model label
+      var modelLabel = document.getElementById('ai-chat-model-label');
+      if (modelLabel) {
+        var m = loadAiModel();
+        var names = {'gemini-2.0-flash-lite':'Gemini 2.0 Flash Lite','gemini-3.5-flash-lite':'Gemini 3.5 Flash Lite','gemini-2.5-flash-lite':'Gemini 2.5 Flash Lite','gemini-1.5-flash':'Gemini 1.5 Flash'};
+        modelLabel.textContent = names[m] || m;
+      }
+
+      // Save content for context
+      _aiFileContextContent = content;
+
+      // Clear chat body
+      var body = document.getElementById('ai-chat-body');
+      var empty = document.getElementById('ai-chat-empty');
+      var children = body.querySelectorAll('.ai-bubble-row, .ai-scan-container');
+      children.forEach(function(c) { c.remove(); });
+      if (empty) empty.style.display = 'none';
+
+      // Create scanning indicator
+      var scanDiv = document.createElement('div');
+      scanDiv.id = 'ai-scan-indicator';
+      scanDiv.className = 'ai-scan-container';
+      scanDiv.innerHTML = '<div class="ai-scan-icon">🔍</div>' +
+        '<div class="ai-scan-progress-bar"><div class="ai-scan-progress-fill" id="ai-scan-fill"></div></div>' +
+        '<p class="ai-scan-label">جاري قراءة واستيعاب محتوى الملف...</p>';
+      body.appendChild(scanDiv);
+
+      // Animate progress
+      var fill = document.getElementById('ai-scan-fill');
+      var progress = 0;
+      var scanInterval = setInterval(function() {
+        progress += Math.random() * 18 + 8;
+        if (progress >= 100) progress = 100;
+        if (fill) fill.style.width = progress + '%';
+        if (progress >= 100) {
+          clearInterval(scanInterval);
+          setTimeout(function() {
+            scanDiv.innerHTML = '<div class="ai-scan-success">' +
+              '<span class="ai-scan-success-icon">✅</span>' +
+              '<p>تم فحص واستيعاب كافة تفاصيل المحتوى بنجاح! أنا الآن جاهز للإجابة عن أي استفسار بخصوصه أو تنفيذ أي أمر عليه.</p>' +
+              '</div>';
+            scanDiv.className = 'ai-scan-container ai-scan-done';
+            _aiFileContextAbsorbed = true;
+            var inp = document.getElementById('ai-chat-input');
+            if (inp) { inp.placeholder = 'مثلاً: ترجم النص للإنجليزية، لخص المحتوى، صحح الأخطاء...'; inp.focus(); }
+          }, 300);
+        }
+      }, 120);
+    };
+
+    // Override sendAiMessage to include file context + content manipulation
+    var _origSendAiMessage = window.sendAiMessage;
+    window.sendAiMessage = function() {
+      var input = document.getElementById('ai-chat-input');
+      var text = (input.value || '').trim();
+      if (!text) return;
+      input.value = '';
+
+      var userMsg = { role: 'user', content: text, time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) };
+      _aiMessages.push(userMsg);
+      renderAiChat();
+      setAiLoading(true);
+
+      // Build prompt — include file context if absorbed
+      var fullPrompt = AI_SYSTEM_PROMPT;
+      if (_aiFileContextAbsorbed && _aiFileContextContent) {
+        fullPrompt += '\n\nقاعدة إضافية مهمة جداً:\n' +
+          'المستخدم أعطاك محتوى ملف Markdown للعمل عليه. إذا طلب منك تعديله (ترجمة، تلخيص، تصحيح، إعادة كتابة، تنسيق، إلخ):\n' +
+          '- أعِد المحتوى المعدّل كاملاً بصيغة Markdown جاهزة للاستبدال مباشرة.\n' +
+          '- لا تضع المحتوى داخل كتلة كود (``` ```) إلا إذا كان المستخدم يريد كود برمجي.\n' +
+          '- احفظ نفس التنسيق والهيكل ما لم يطلب غير ذلك.\n' +
+          '- إذا كان السؤال استفساراً (ليس أمر تعديل)، أجب عليه بشكل طبيعي.\n\n' +
+          '--- محتوى الملف الحالي ---\n' + _aiFileContextContent + '\n--- نهاية المحتوى ---\n';
+      }
+      fullPrompt += '\n\n--- سجل المحادثة ---\n';
+      _aiMessages.forEach(function(m) {
+        fullPrompt += '\n' + (m.role === 'user' ? 'المستخدم' : 'AI') + ': ' + m.content + '\n';
+      });
+      fullPrompt += '\nAI:';
+
+      _aiAbortCtrl = new AbortController();
+
+      callGeminiAPI(fullPrompt, { signal: _aiAbortCtrl.signal }).then(function(reply) {
+        var aiMsg = { role: 'model', content: reply, time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) };
+        _aiMessages.push(aiMsg);
+        saveAiChatHistory(_aiMessages);
+        setAiLoading(false);
+        renderAiChat();
+
+        // Add "Apply to editor" button for context-aware responses
+        if (_aiFileContextAbsorbed) {
+          // Check if this looks like modified content (not a simple answer)
+          var bubbles = document.querySelectorAll('.ai-bubble-bot');
+          var lastBubble = bubbles[bubbles.length - 1];
+          if (lastBubble) {
+            var existingActions = lastBubble.querySelector('.ai-bubble-actions');
+            if (existingActions) {
+              var applyBtn = document.createElement('button');
+              applyBtn.className = 'ai-apply-btn';
+              applyBtn.onclick = function() { applyAiContentToEditor(_aiMessages.length - 1); };
+              applyBtn.title = 'استبدال محتوى المحرر بالكامل بهذا الرد';
+              applyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> تطبيق على المحرر';
+              existingActions.insertBefore(applyBtn, existingActions.firstChild);
+            }
+          }
+        }
+
+        setTimeout(function() {
+          var bubbles2 = document.querySelectorAll('.ai-bubble-bot');
+          if (bubbles2.length) bubbles2[bubbles2.length - 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 120);
+      }).catch(function(err) {
+        var errMsg = { role: 'model', content: '⚠️ ' + err.message, time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}), isError: true };
+        _aiMessages.push(errMsg);
+        setAiLoading(false);
+        renderAiChat();
+      });
+    };
+
+    // Apply AI content to editor (full replacement)
+    window.applyAiContentToEditor = function(idx) {
+      if (idx < 0 || idx >= _aiMessages.length) return;
+      var content = _aiMessages[idx].content;
+      var editor = document.getElementById('markdown-input');
+      if (!editor) return;
+      editor.value = content;
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
+      _aiFileContextContent = content; // Update context with new content
+      showAiToast('تم تطبيق التعديلات على المحرر بنجاح ✓');
+    };
+
+    // Update visibility to also show/hide context button
+    var _origUpdateVis = updateAiButtonVisibility;
+    updateAiButtonVisibility = function() {
+      _origUpdateVis();
+      var ctxBtn = document.getElementById('btn-ai-context');
+      if (ctxBtn) ctxBtn.style.display = isAiEnabled() ? 'inline-flex' : 'none';
+    };
+    // Re-run to apply
+    updateAiButtonVisibility();
   })();
   </script>
 
