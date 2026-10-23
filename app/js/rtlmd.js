@@ -515,6 +515,99 @@
     }
   }
 
+  // تحليل صيغة الماركداون المختصرة للأسهم: ![←|120px|#2563eb](arrow:1/left?rot=64&float=35,53)
+  function parseArrowMarkdown(href, altText) {
+    const cleanHref = (href || '').replace(/^(?:vienix-)?arrow:\/?/i, '');
+    const [pathPart, queryPart] = cleanHref.split('?');
+    const [modelPart, dirPart] = (pathPart || '1/right').split('/');
+
+    const modelId = parseInt(modelPart, 10) || 1;
+    const dir = dirPart || 'right';
+
+    let id = '';
+    let rot = 0;
+    let isFloating = false;
+    let floatX = 0;
+    let floatY = 0;
+    let align = 'inline';
+
+    if (queryPart) {
+      const params = new URLSearchParams(queryPart);
+      if (params.has('id')) id = params.get('id');
+      if (params.has('rot')) rot = parseInt(params.get('rot'), 10) || 0;
+      if (params.has('float')) {
+        isFloating = true;
+        const [fx, fy] = (params.get('float') || '0,0').split(',');
+        floatX = parseFloat(fx) || 0;
+        floatY = parseFloat(fy) || 0;
+      }
+      if (params.has('align')) align = params.get('align') || 'inline';
+    }
+
+    const altParts = (altText || '').split('|');
+    const rawChar = altParts[0] ? altParts[0].trim() : '';
+    let size = altParts[1] ? altParts[1].trim() : '28px';
+    if (size && !size.endsWith('px') && !size.endsWith('%')) size += 'px';
+    let color = altParts[2] ? altParts[2].trim() : '#2563eb';
+
+    const charMap = {
+      '1': { up: '↑', down: '↓', left: '←', right: '→' },
+      '2': { up: '⇑', down: '⇓', left: '⇐', right: '⇒' },
+      '3': { up: '➔', down: '➔', left: '➔', right: '➔' },
+      '4': { up: '➜', down: '➜', left: '➜', right: '➜' },
+      '5': { up: '➛', down: '➛', left: '➛', right: '➛' },
+      '6': { up: '➚', down: '➚', left: '➚', right: '➚' },
+      '7': { up: '➤', down: '➤', left: '➤', right: '➤' },
+      '8': { up: '⬆\uFE0E', down: '⬇\uFE0E', left: '⬅\uFE0E', right: '➡\uFE0E' },
+      '9': { up: '⇧', down: '⇩', left: '⇦', right: '⇨' },
+      '10': { up: '■', down: '■', left: '■', right: '■' },
+      '11': { up: '□', down: '□', left: '□', right: '□' },
+      '12': { up: '▢', down: '▢', left: '▢', right: '▢' },
+      '13': { up: '▣', down: '▣', left: '▣', right: '▣' },
+      '14': { up: '◯', down: '◯', left: '◯', right: '◯' }
+    };
+    const defaultChar = (charMap[modelId] && charMap[modelId][dir]) || '→';
+    const char = rawChar || defaultChar;
+
+    return {
+      id,
+      modelId,
+      dir,
+      size: size || '28px',
+      color: color || '#2563eb',
+      rot,
+      align,
+      char,
+      isFloating,
+      floatX,
+      floatY
+    };
+  }
+
+  // تحويل خصائص السهم إلى صيغة ماركداون مختصرة ومرنة شبيهة بالصور: ![←|120px|#2563eb](arrow:1/left?id=a1&rot=64&float=35,53)
+  function formatArrowToMarkdown(attrs) {
+    const modelId = attrs.modelId || 1;
+    const dir = attrs.dir || 'right';
+    const char = attrs.char || '→';
+    const size = attrs.size || '28px';
+    const color = attrs.color || '#2563eb';
+    const rot = typeof attrs.rotation === 'number' ? attrs.rotation : (parseInt(attrs.rotation, 10) || 0);
+    const align = attrs.align || 'inline';
+    const isFloating = !!attrs.isFloating;
+    const floatX = Math.round(attrs.floatX || 0);
+    const floatY = Math.round(attrs.floatY || 0);
+    const arrowId = attrs.arrowId || attrs.id || '';
+
+    const query = [];
+    if (arrowId) query.push(`id=${arrowId}`);
+    if (rot !== 0) query.push(`rot=${rot}`);
+    if (isFloating) query.push(`float=${floatX},${floatY}`);
+    if (align && align !== 'inline') query.push(`align=${align}`);
+    const queryString = query.length ? `?${query.join('&')}` : '';
+
+    return `![${char}|${size}|${color}](arrow:${modelId}/${dir}${queryString})`;
+  }
+
   // Initialize Marked with custom image sizing support
   function initMarked() {
     if (typeof marked !== 'undefined') {
@@ -522,6 +615,17 @@
 
       // دعم أبعاد ومقاسات الصور المخصصة في الماركداون: ![alt|450px](url) أو ![alt](url =450x)
       renderer.image = function (href, title, text) {
+        // 1. دعم الأسهم الموجهة التفاعلية بصيغة مختصرة شبيهة بالصور
+        if (href && (href.startsWith('arrow:') || href.startsWith('vienix-arrow:'))) {
+          const info = parseArrowMarkdown(href, text);
+          const arrowId = info.id || `arrow-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+          const rotStyle = info.rot !== 0 ? ` transform: rotate(${info.rot}deg);` : '';
+          const floatAttrs = info.isFloating ? ` data-is-floating="true" data-float-x="${info.floatX}" data-float-y="${info.floatY}"` : '';
+          const anchorClass = info.isFloating ? 'arrow-anchor is-floating' : 'arrow-anchor';
+          const anchorStyle = info.isFloating ? ' style="display: inline-block !important; position: relative !important; width: 0 !important; height: 0 !important; line-height: 0 !important; font-size: 0 !important; margin: 0 !important; padding: 0 !important; border: 0 !important; vertical-align: baseline !important; overflow: visible !important;"' : '';
+
+          return `<span class="${anchorClass}" data-arrow-id="${arrowId}"${anchorStyle}><span class="vienix-arrow" data-arrow-id="${arrowId}" data-arrow-model="${info.modelId}" data-arrow-dir="${info.dir}" data-arrow-color="${info.color}" data-arrow-size="${info.size}" data-arrow-rotation="${info.rot}" data-arrow-align="${info.align}"${floatAttrs} style="font-size: ${info.size}; color: ${info.color};${rotStyle}">${info.char}</span></span>`;
+        }
         let width = '';
         let cleanText = text || '';
         const match = cleanText.match(/^(.*?)\|(\d+%?|\d+px)$/);
@@ -8650,42 +8754,42 @@ function exportDocument(format) {
       }
     });
 
-    // قاعدة الحفاظ على الأسهم الموجهة التفاعلية
+    // قاعدة الحفاظ على الأسهم الموجهة التفاعلية بصيغة مختصرة شبيهة بالصور
     turndownService.addRule('preserveVienixArrows', {
       filter: function (node) {
         return (
           node.nodeName === 'SPAN' &&
           (node.classList.contains('vienix-arrow') ||
+           node.classList.contains('arrow-anchor') ||
            node.hasAttribute('data-arrow-id') ||
            node.hasAttribute('data-arrow-model'))
         );
       },
       replacement: function (content, node) {
         const arrowSpan = node.classList.contains('vienix-arrow') ? node : (node.querySelector('.vienix-arrow') || node);
-        const arrowId = arrowSpan.getAttribute('data-arrow-id') || `arrow-${Date.now()}`;
         const model = arrowSpan.getAttribute('data-arrow-model') || '1';
         const dir = arrowSpan.getAttribute('data-arrow-dir') || 'right';
         const color = arrowSpan.getAttribute('data-arrow-color') || arrowSpan.style.color || '#2563eb';
         const size = arrowSpan.getAttribute('data-arrow-size') || arrowSpan.style.fontSize || '28px';
-        const rot = arrowSpan.getAttribute('data-arrow-rotation') || '0';
+        const rot = parseInt(arrowSpan.getAttribute('data-arrow-rotation') || '0', 10);
         const align = arrowSpan.getAttribute('data-arrow-align') || 'inline';
         const char = arrowSpan.getAttribute('data-arrow-char') || arrowSpan.textContent || '→';
         const isFloat = arrowSpan.getAttribute('data-is-floating') === 'true';
-        const floatX = arrowSpan.getAttribute('data-float-x') || '';
-        const floatY = arrowSpan.getAttribute('data-float-y') || '';
+        const floatX = parseFloat(arrowSpan.getAttribute('data-float-x')) || 0;
+        const floatY = parseFloat(arrowSpan.getAttribute('data-float-y')) || 0;
 
-        let styles = ['display: inline-block', 'line-height: 1', 'vertical-align: middle'];
-        if (color) styles.push(`color: ${color}`);
-        if (size) styles.push(`font-size: ${size}`);
-        if (rot && rot !== '0') styles.push(`transform: rotate(${rot}deg)`);
-        if (isFloat) {
-          styles.push('position: relative');
-          if (floatX) styles.push(`left: ${floatX}px`);
-          if (floatY) styles.push(`top: ${floatY}px`);
-          styles.push('z-index: 50');
-        }
-
-        return `<span class="vienix-arrow" data-arrow-id="${arrowId}" data-arrow-model="${model}" data-arrow-dir="${dir}" data-arrow-color="${color}" data-arrow-size="${size}" data-arrow-rotation="${rot}" data-arrow-align="${align}"${isFloat ? ` data-is-floating="true" data-float-x="${floatX}" data-float-y="${floatY}"` : ''} style="${styles.join('; ')}">${char}</span>`;
+        return formatArrowToMarkdown({
+          modelId: model,
+          dir,
+          size,
+          color,
+          rotation: rot,
+          align,
+          char,
+          isFloating: isFloat,
+          floatX,
+          floatY
+        });
       }
     });
 
@@ -9711,6 +9815,66 @@ function exportDocument(format) {
         left: { char: '⇦', rot: 0, name: 'يسار' },
         right: { char: '⇨', rot: 0, name: 'يمين' }
       }
+    },
+    {
+      id: 10,
+      name: 'مربع معبأ مصمت',
+      sample: '■',
+      isShape: true,
+      dirs: {
+        up: { char: '■', rot: 0, name: 'مربع معبأ' },
+        down: { char: '■', rot: 0, name: 'مربع معبأ' },
+        left: { char: '■', rot: 0, name: 'مربع معبأ' },
+        right: { char: '■', rot: 0, name: 'مربع معبأ' }
+      }
+    },
+    {
+      id: 11,
+      name: 'مربع هندسي مفرغ',
+      sample: '□',
+      isShape: true,
+      dirs: {
+        up: { char: '□', rot: 0, name: 'مربع مفرغ' },
+        down: { char: '□', rot: 0, name: 'مربع مفرغ' },
+        left: { char: '□', rot: 0, name: 'مربع مفرغ' },
+        right: { char: '□', rot: 0, name: 'مربع مفرغ' }
+      }
+    },
+    {
+      id: 12,
+      name: 'مربع دائري الزوايا',
+      sample: '▢',
+      isShape: true,
+      dirs: {
+        up: { char: '▢', rot: 0, name: 'مربع دائري' },
+        down: { char: '▢', rot: 0, name: 'مربع دائري' },
+        left: { char: '▢', rot: 0, name: 'مربع دائري' },
+        right: { char: '▢', rot: 0, name: 'مربع دائري' }
+      }
+    },
+    {
+      id: 13,
+      name: 'مربع بنواة مركزية',
+      sample: '▣',
+      isShape: true,
+      dirs: {
+        up: { char: '▣', rot: 0, name: 'مربع بنواة' },
+        down: { char: '▣', rot: 0, name: 'مربع بنواة' },
+        left: { char: '▣', rot: 0, name: 'مربع بنواة' },
+        right: { char: '▣', rot: 0, name: 'مربع بنواة' }
+      }
+    },
+    {
+      id: 14,
+      name: 'دائرة هندسية مفرغة',
+      sample: '◯',
+      isShape: true,
+      dirs: {
+        up: { char: '◯', rot: 0, name: 'دائرة مفرغة' },
+        down: { char: '◯', rot: 0, name: 'دائرة مفرغة' },
+        left: { char: '◯', rot: 0, name: 'دائرة مفرغة' },
+        right: { char: '◯', rot: 0, name: 'دائرة مفرغة' }
+      }
     }
   ];
 
@@ -9728,6 +9892,37 @@ function exportDocument(format) {
 
   let currentArrowCategory = 'all';
   let currentArrowPickerColor = '#2563eb';
+  let isArrowTextMode = localStorage.getItem('vienix_arrow_text_mode') === 'true';
+
+  window.toggleArrowTextMode = function () {
+    isArrowTextMode = !isArrowTextMode;
+    localStorage.setItem('vienix_arrow_text_mode', isArrowTextMode ? 'true' : 'false');
+    window.updateArrowModeUI();
+    showToast(
+      isArrowTextMode
+        ? 'تم تفعيل وضع الرموز النصية العادية 🔤 — تُدرج الرموز كنص عادي منساب ومباشر بدون تعقيدات'
+        : 'تم تفعيل وضع الرموز التفاعلية ⚡ — إدراج رموز حرة وقابلة للتلوين والتحجيم',
+      'info',
+      2500
+    );
+  };
+
+  window.updateArrowModeUI = function () {
+    const btn = document.getElementById('arrow-mode-toggle-btn');
+    const colorPalette = document.querySelector('.arrow-quick-color-palette');
+    if (btn) {
+      btn.classList.toggle('active', isArrowTextMode);
+      const textSpan = btn.querySelector('.mode-text');
+      if (textSpan) {
+        textSpan.textContent = isArrowTextMode ? '✓ رمز نصي عادي (Text)' : 'نص عادي 🔤';
+      }
+    }
+    if (colorPalette) {
+      colorPalette.classList.toggle('is-disabled', isArrowTextMode);
+      colorPalette.title = isArrowTextMode ? 'في وضع النص العادي يتلون الرمز بلون النص المحيط تلقائياً' : 'اختر لون السهم أو الشكل';
+    }
+    window.renderArrowGrid(currentArrowCategory || 'all');
+  };
 
   window.setArrowPickerColor = function (color, dotEl) {
     currentArrowPickerColor = color || '#2563eb';
@@ -9738,9 +9933,11 @@ function exportDocument(format) {
     if (customInp && customInp.value !== currentArrowPickerColor) {
       customInp.value = currentArrowPickerColor;
     }
-    document.querySelectorAll('.arrow-grid-char').forEach((el) => {
-      el.style.color = currentArrowPickerColor;
-    });
+    if (!isArrowTextMode) {
+      document.querySelectorAll('.arrow-grid-char').forEach((el) => {
+        el.style.color = currentArrowPickerColor;
+      });
+    }
   };
 
   window.selectArrowCategory = function (cat) {
@@ -9757,8 +9954,36 @@ function exportDocument(format) {
     grid.innerHTML = '';
 
     const fragment = document.createDocumentFragment();
+    const charColor = isArrowTextMode ? 'var(--text-color, #e2e8f0)' : currentArrowPickerColor;
 
     ARROW_MODELS.forEach((model) => {
+      // الأشكال الهندسية (Models 10-14)
+      if (model.isShape) {
+        if (filterCat !== 'all' && filterCat !== 'shapes') return;
+        const dirData = model.dirs.right || model.dirs.up;
+        const itemBtn = document.createElement('button');
+        itemBtn.type = 'button';
+        itemBtn.className = 'arrow-grid-item';
+        itemBtn.title = `${model.name}${isArrowTextMode ? ' (رمز نصي عادي)' : ''}`;
+
+        itemBtn.innerHTML = `
+          <span class="arrow-grid-char" style="color: ${charColor};">${dirData.char}</span>
+          <span class="arrow-grid-label">${dirData.name}</span>
+        `;
+
+        itemBtn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          window.insertArrowIcon(model.id, 'right', dirData.char, 0);
+        };
+
+        fragment.appendChild(itemBtn);
+        return;
+      }
+
+      // الأسهم الموجهة (Models 1-9)
+      if (filterCat === 'shapes') return;
+
       const dirKeys = ['up', 'down', 'right', 'left'];
       dirKeys.forEach((dirKey) => {
         if (filterCat !== 'all' && filterCat !== dirKey) return;
@@ -9768,20 +9993,20 @@ function exportDocument(format) {
         const itemBtn = document.createElement('button');
         itemBtn.type = 'button';
         itemBtn.className = 'arrow-grid-item';
-        itemBtn.title = `${model.name} (${dirData.name})`;
+        itemBtn.title = `${model.name} (${dirData.name})${isArrowTextMode ? ' (رمز نصي عادي)' : ''}`;
 
-        const rot = dirData.rot || 0;
+        const rot = isArrowTextMode ? 0 : (dirData.rot || 0);
         const transformStyle = rot !== 0 ? `transform: rotate(${rot}deg);` : '';
 
         itemBtn.innerHTML = `
-          <span class="arrow-grid-char" style="color: ${currentArrowPickerColor}; ${transformStyle}">${dirData.char}</span>
+          <span class="arrow-grid-char" style="color: ${charColor}; ${transformStyle}">${dirData.char}</span>
           <span class="arrow-grid-label">${dirData.name}</span>
         `;
 
         itemBtn.onclick = (e) => {
           e.preventDefault();
           e.stopPropagation();
-          window.insertArrowIcon(model.id, dirKey, dirData.char, rot);
+          window.insertArrowIcon(model.id, dirKey, dirData.char, dirData.rot || 0);
         };
 
         fragment.appendChild(itemBtn);
@@ -9818,7 +10043,7 @@ function exportDocument(format) {
       b.classList.toggle('active', b.getAttribute('data-cat') === 'all');
     });
 
-    window.renderArrowGrid('all');
+    window.updateArrowModeUI();
     popover.style.display = 'flex';
 
     const btnRect = (triggerBtn || document.getElementById('btn-insert-arrow')).getBoundingClientRect();
@@ -9844,15 +10069,57 @@ function exportDocument(format) {
 
   window.insertArrowIcon = function (modelId, dirKey, arrowChar, baseRot = 0) {
     const model = ARROW_MODELS.find((m) => m.id === modelId) || ARROW_MODELS[0];
-    const dirData = model.dirs[dirKey] || { char: arrowChar, rot: baseRot, name: dirKey };
-    const color = currentArrowPickerColor || '#2563eb';
-    const arrowId = `arrow-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const rot = typeof baseRot === 'number' ? baseRot : (dirData.rot || 0);
+    const dirData = (model.dirs && model.dirs[dirKey]) || { char: arrowChar, rot: baseRot, name: dirKey };
+    const charToInsert = dirData.char || arrowChar;
 
-    const rotStyle = rot !== 0 ? ` transform: rotate(${rot}deg);` : '';
-    const arrowHtml = `<span class="vienix-arrow" data-arrow-id="${arrowId}" data-arrow-model="${modelId}" data-arrow-dir="${dirKey}" data-arrow-color="${color}" data-arrow-size="28px" data-arrow-rotation="${rot}" data-arrow-align="inline" style="display: inline-block; font-size: 28px; color: ${color}; line-height: 1; vertical-align: middle;${rotStyle}">${arrowChar}</span>`;
+    // 1. الوضع النصي العادي (Plain Text Mode) - إدراج رمز نصي مباشر وسلس بدون أي تعقيدات
+    if (isArrowTextMode) {
+      if (isWysiwygActive && previewContent) {
+        if (savedWysiwygSelectionRange) {
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(savedWysiwygSelectionRange);
+        }
+        try {
+          document.execCommand('insertText', false, charToInsert + ' ');
+        } catch (_) {
+          const textNode = document.createTextNode(charToInsert + ' ');
+          if (savedWysiwygSelectionRange) {
+            savedWysiwygSelectionRange.insertNode(textNode);
+          } else {
+            previewContent.appendChild(textNode);
+          }
+        }
+        syncPreviewToMarkdown(true);
+      } else {
+        window.insertFormat('', '', charToInsert + ' ');
+      }
+      window.closeArrowPicker();
+      showToast(`تم إدراج رمز نصي: ${charToInsert} ✓`, 'success');
+      return;
+    }
+
+    // 2. الوضع التفاعلي المتقدم (Interactive Mode)
+    const color = currentArrowPickerColor || '#2563eb';
+    const rot = typeof baseRot === 'number' ? baseRot : (dirData.rot || 0);
+    const arrowId = `a${Date.now().toString().slice(-6)}`;
+
+    const arrowMarkdown = formatArrowToMarkdown({
+      arrowId,
+      modelId,
+      dir: dirKey,
+      char: charToInsert,
+      size: '28px',
+      color,
+      rotation: rot,
+      align: 'inline',
+      isFloating: false
+    });
 
     if (isWysiwygActive && previewContent) {
+      const rotStyle = rot !== 0 ? ` transform: rotate(${rot}deg);` : '';
+      const arrowHtml = `<span class="arrow-anchor" data-arrow-id="${arrowId}"><span class="vienix-arrow" data-arrow-id="${arrowId}" data-arrow-model="${modelId}" data-arrow-dir="${dirKey}" data-arrow-color="${color}" data-arrow-size="28px" data-arrow-rotation="${rot}" data-arrow-align="inline" style="font-size: 28px; color: ${color};${rotStyle}">${charToInsert}</span></span>`;
+
       if (savedWysiwygSelectionRange) {
         const sel = window.getSelection();
         sel.removeAllRanges();
@@ -9871,11 +10138,12 @@ function exportDocument(format) {
       }
       syncPreviewToMarkdown(true);
     } else {
-      window.insertFormat('', '', arrowHtml + ' ');
+      // إدراج صيغة الماركداون المختصرة التي تشبه الصور
+      window.insertFormat('', '', arrowMarkdown + ' ');
     }
 
     window.closeArrowPicker();
-    showToast(`تم إدراج ${model.name} (${dirData.name}) ✓`, 'success');
+    showToast(`تم إدراج ${model.name} (${dirData.name || ''}) ✓`, 'success');
   };
 
   // =========================================================================
@@ -9884,77 +10152,8 @@ function exportDocument(format) {
   function setupArrowResizers(container) {
     if (!container) return;
 
-    // 1. تحويل الرموز النصية العادية للأسهم المكتوبة بالمحرر إلى عناصر تفاعلية
-    try {
-      const walker = document.createTreeWalker(
-        container,
-        NodeFilter.SHOW_TEXT,
-        {
-          acceptNode: function (node) {
-            if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-            if (node.parentElement && node.parentElement.closest('pre, code, .mermaid, .diagram-zoom-controls, script, style, .arrow-resizer-wrapper, .vienix-arrow')) {
-              return NodeFilter.FILTER_REJECT;
-            }
-            return NodeFilter.FILTER_ACCEPT;
-          }
-        }
-      );
-
-      const textNodesToProcess = [];
-      let curTextNode;
-      while ((curTextNode = walker.nextNode())) {
-        textNodesToProcess.push(curTextNode);
-      }
-
-      textNodesToProcess.forEach((textNode) => {
-        const textVal = textNode.nodeValue;
-        let matched = false;
-        for (const ch of Object.keys(ALL_ARROW_CHARS_MAP)) {
-          if (textVal.includes(ch)) {
-            matched = true;
-            break;
-          }
-        }
-        if (!matched) return;
-
-        const fragment = document.createDocumentFragment();
-        let remaining = textVal;
-
-        // مطابقة أي سهم من الأسهم الـ 36
-        const allCharsSorted = Object.keys(ALL_ARROW_CHARS_MAP).sort((a, b) => b.length - a.length);
-        const charPattern = new RegExp(`(${allCharsSorted.map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g');
-
-        const parts = remaining.split(charPattern);
-        parts.forEach((part) => {
-          if (ALL_ARROW_CHARS_MAP[part]) {
-            const info = ALL_ARROW_CHARS_MAP[part];
-            const arrowSpan = document.createElement('span');
-            arrowSpan.className = 'vienix-arrow';
-            arrowSpan.setAttribute('data-arrow-id', `arrow-${Date.now()}-${Math.floor(Math.random() * 10000)}`);
-            arrowSpan.setAttribute('data-arrow-model', info.modelId);
-            arrowSpan.setAttribute('data-arrow-dir', info.dir);
-            arrowSpan.setAttribute('data-arrow-color', '#2563eb');
-            arrowSpan.setAttribute('data-arrow-size', '28px');
-            arrowSpan.setAttribute('data-arrow-rotation', info.rot || 0);
-            arrowSpan.setAttribute('data-raw-char', part);
-            arrowSpan.style.display = 'inline-block';
-            arrowSpan.style.fontSize = '28px';
-            arrowSpan.style.color = '#2563eb';
-            arrowSpan.style.lineHeight = '1';
-            arrowSpan.style.verticalAlign = 'middle';
-            if (info.rot) arrowSpan.style.transform = `rotate(${info.rot}deg)`;
-            arrowSpan.textContent = part;
-            fragment.appendChild(arrowSpan);
-          } else if (part) {
-            fragment.appendChild(document.createTextNode(part));
-          }
-        });
-
-        textNode.parentNode.replaceChild(fragment, textNode);
-      });
-    } catch (_) {}
-
-    // 2. تغليف جميع الأسهم (.vienix-arrow) داخل حاويات تفاعلية مع شريط الأدوات والمقابض
+    // تغليف عناصر الأسهم والأشكال التفاعلية فقط (.vienix-arrow)
+    // بينما تبقى الرموز النصية العادية المكتوبة في النص نصاً عادياً 100% بدون أي تعقيدات
     const arrows = container.querySelectorAll('.vienix-arrow');
 
     arrows.forEach((arrowEl) => {
@@ -9972,12 +10171,30 @@ function exportDocument(format) {
       let currentRotation = parseInt(arrowEl.getAttribute('data-arrow-rotation') || '0', 10);
       let currentAlign = arrowEl.getAttribute('data-arrow-align') || 'inline';
       const originalRawChar = arrowEl.getAttribute('data-raw-char') || '';
+      const isFloatingInit = arrowEl.getAttribute('data-is-floating') === 'true';
+
+      // التحقق من الحاوية المرجعية .arrow-anchor لمنع أي تشويه لتدفق النص
+      let anchor = arrowEl.closest('.arrow-anchor');
+      if (!anchor) {
+        anchor = document.createElement('span');
+        anchor.className = 'arrow-anchor' + (isFloatingInit ? ' is-floating' : '');
+        anchor.setAttribute('data-arrow-id', arrowId);
+        arrowEl.parentNode.insertBefore(anchor, arrowEl);
+      } else {
+        anchor.className = 'arrow-anchor' + (isFloatingInit ? ' is-floating' : '');
+      }
+
+      if (isFloatingInit) {
+        anchor.style.cssText = 'display: inline-block !important; position: relative !important; width: 0 !important; height: 0 !important; line-height: 0 !important; font-size: 0 !important; margin: 0 !important; padding: 0 !important; border: 0 !important; vertical-align: baseline !important; overflow: visible !important;';
+      } else {
+        anchor.style.cssText = 'display: inline !important; width: auto !important; height: auto !important; line-height: inherit !important; font-size: inherit !important; margin: 0 !important; padding: 0 !important; border: 0 !important;';
+      }
 
       const wrapper = document.createElement('div');
       wrapper.className = 'arrow-resizer-wrapper';
       wrapper.setAttribute('data-arrow-id', arrowId);
       wrapper.setAttribute('data-align', currentAlign);
-      if (arrowEl.getAttribute('data-is-floating') === 'true') {
+      if (isFloatingInit) {
         wrapper.classList.add('is-floating');
         wrapper.style.left = `${arrowEl.getAttribute('data-float-x') || 0}px`;
         wrapper.style.top = `${arrowEl.getAttribute('data-float-y') || 0}px`;
@@ -9996,9 +10213,9 @@ function exportDocument(format) {
         <button type="button" class="resizer-btn btn-dir-left ${currentDir === 'left' ? 'active' : ''}" data-dir="left" title="لليسار ⬅">⬅</button>
         <span class="resizer-divider"></span>
 
-        <!-- تبديل موديل السهم (1-9) -->
+        <!-- تبديل موديل السهم أو الشكل (1-14) -->
         <button type="button" class="resizer-btn btn-prev-model" title="الموديل السابق">⟨</button>
-        <span class="resizer-btn model-badge-indicator" title="رقم موديل السهم الحالي" style="pointer-events:none; font-size:0.68rem;">م${currentModelId}</span>
+        <span class="resizer-btn model-badge-indicator" title="رقم موديل السهم أو الشكل الحالي" style="pointer-events:none; font-size:0.68rem;">م${currentModelId}</span>
         <button type="button" class="resizer-btn btn-next-model" title="الموديل التالي">⟩</button>
         <span class="resizer-divider"></span>
 
@@ -10029,8 +10246,8 @@ function exportDocument(format) {
         <button type="button" class="resizer-btn btn-rotate-cw" title="تدوير 90° مع عقارب الساعة">↻</button>
         <span class="resizer-divider"></span>
 
-        <!-- التحريك الحر فوق العناصر -->
-        <button type="button" class="resizer-btn btn-float-toggle" title="تحريك حر فوق العناصر (اسحب السهم بالماوس في أي مكان فوق النص)">
+        <!-- التحريك الحر فوق العناصر (Zero Footprint Floating) -->
+        <button type="button" class="resizer-btn btn-float-toggle" title="تحريك حر فوق العناصر: عند تفعيله لا يؤثر حجمه أو تموضعه إطلاقاً على الأسطر والنصوص المحيطة">
           <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
           <span>حر</span>
         </button>
@@ -10041,6 +10258,10 @@ function exportDocument(format) {
         <button type="button" class="resizer-btn ${currentAlign === 'right' ? 'active' : ''}" data-align="right" title="محاذاة لليمين">▶</button>
         <button type="button" class="resizer-btn ${currentAlign === 'center' ? 'active' : ''}" data-align="center" title="توسيط">■</button>
         <button type="button" class="resizer-btn ${currentAlign === 'left' ? 'active' : ''}" data-align="left" title="محاذاة لليسار">◀</button>
+        <span class="resizer-divider"></span>
+
+        <!-- تحويل لنص عادي مجرد بدون تعقيدات -->
+        <button type="button" class="resizer-btn btn-convert-to-text" title="تحويل هذا السهم إلى رمز نصي عادي (Text) في المحرر بدون تعقيدات">🔤</button>
         <span class="resizer-divider"></span>
 
         <!-- حذف السهم -->
@@ -10062,10 +10283,10 @@ function exportDocument(format) {
         <div class="resizer-handle handle-se" data-dir="se" title="اسحب للتكبير والتصغير"></div>
       `;
 
-      arrowEl.parentNode.insertBefore(wrapper, arrowEl);
       wrapper.appendChild(toolbar);
       wrapper.appendChild(arrowEl);
       wrapper.insertAdjacentHTML('beforeend', handlesHtml);
+      anchor.appendChild(wrapper);
 
       // دالة التموضع الذكي لشريط الأدوات لمنع خروجه خارج الشاشة
       const clampToolbar = () => {
@@ -10098,7 +10319,7 @@ function exportDocument(format) {
       // دالة الحفظ والتزامن الفوري مع محرر الماركداون
       const syncChangesToMarkdown = () => {
         const model = ARROW_MODELS.find((m) => m.id === currentModelId) || ARROW_MODELS[0];
-        const dirData = model.dirs[currentDir] || { char: arrowEl.textContent, rot: 0, name: currentDir };
+        const dirData = (model.dirs && model.dirs[currentDir]) || { char: arrowEl.textContent, rot: 0, name: currentDir };
         const baseRot = dirData.rot || 0;
         const totalRot = ((baseRot + currentRotation) % 360 + 360) % 360;
 
@@ -10163,7 +10384,7 @@ function exportDocument(format) {
         });
       });
 
-      // 2. تبديل موديل السهم (Model Switcher)
+      // 2. تبديل موديل السهم أو الشكل (Model Switcher 1-14)
       const btnPrev = toolbar.querySelector('.btn-prev-model');
       if (btnPrev) {
         btnPrev.addEventListener('click', (e) => {
@@ -10281,7 +10502,7 @@ function exportDocument(format) {
         }, { passive: false });
       }
 
-      // 7. ميزة التحريك الحر فوق العناصر (Free Floating Drag)
+      // 7. ميزة التحريك الحر فوق العناصر (Zero-Footprint Free Floating Drag)
       let isFloatingMode = wrapper.classList.contains('is-floating');
       let floatOffsetX = parseFloat(wrapper.style.left) || 0;
       let floatOffsetY = parseFloat(wrapper.style.top) || 0;
@@ -10294,14 +10515,19 @@ function exportDocument(format) {
           isFloatingMode = !isFloatingMode;
           wrapper.classList.toggle('is-floating', isFloatingMode);
           floatBtn.classList.toggle('active', isFloatingMode);
-          if (isFloatingMode) {
-            showToast('تم تفعيل التحريك الحر للسهم ✥ — اسحبه بالماوس أو اللمس في أي مكان', 'info', 2500);
-          } else {
-            wrapper.style.left = '0px';
-            wrapper.style.top = '0px';
-            floatOffsetX = 0;
-            floatOffsetY = 0;
-            showToast('تم إرجاع السهم للمحاذاة المنسابة مع النص ✓', 'info', 2000);
+          if (anchor) {
+            anchor.classList.toggle('is-floating', isFloatingMode);
+            if (isFloatingMode) {
+              anchor.style.cssText = 'display: inline-block !important; position: relative !important; width: 0 !important; height: 0 !important; line-height: 0 !important; font-size: 0 !important; margin: 0 !important; padding: 0 !important; border: 0 !important; vertical-align: baseline !important; overflow: visible !important;';
+              showToast('تم تفعيل التحريك الحر للسهم ✥ — تموضع حر لا يؤثر إطلاقاً على النص المحيط', 'info', 2500);
+            } else {
+              anchor.style.cssText = 'display: inline !important; width: auto !important; height: auto !important; line-height: inherit !important; font-size: inherit !important; margin: 0 !important; padding: 0 !important; border: 0 !important;';
+              wrapper.style.left = '0px';
+              wrapper.style.top = '0px';
+              floatOffsetX = 0;
+              floatOffsetY = 0;
+              showToast('تم إرجاع السهم للمحاذاة المنسابة مع النص ✓', 'info', 2000);
+            }
           }
           syncChangesToMarkdown();
         });
@@ -10404,46 +10630,99 @@ function exportDocument(format) {
         handle.addEventListener('touchstart', onPointerDown, { passive: false });
       });
 
+      // تحويل السهم التفاعلي إلى رمز نصي عادي (Text) في المحرر والمعاينة
+      const btnConvertToText = toolbar.querySelector('.btn-convert-to-text');
+      if (btnConvertToText) {
+        btnConvertToText.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const char = arrowEl.textContent || '→';
+          replaceArrowWithPlainText(arrowId, char, currentModelId);
+          if (anchor) {
+            const textNode = document.createTextNode(char + ' ');
+            anchor.parentNode.replaceChild(textNode, anchor);
+          } else {
+            wrapper.remove();
+          }
+          showToast(`تم تحويل السهم إلى رمز نصي عادي: ${char} ✓`, 'success', 2000);
+        });
+      }
+
       // 10. حذف السهم (Delete)
       const btnDelete = toolbar.querySelector('.btn-arrow-delete');
       if (btnDelete) {
         btnDelete.addEventListener('click', (e) => {
           e.stopPropagation();
-          deleteArrowInMarkdown(arrowId, originalRawChar);
-          wrapper.remove();
+          deleteArrowInMarkdown(arrowId, originalRawChar, currentModelId);
+          if (anchor) anchor.remove();
+          else wrapper.remove();
           showToast('تم حذف السهم ✓', 'info', 1500);
         });
       }
     });
   }
 
-  // تحديث كود السهم داخل نص الماركداون بالمحرر
+  // تحديث كود السهم داخل نص الماركداون بالمحرر بصيغة مختصرة تشبه الصور
   function updateArrowInMarkdown(arrowId, attrs) {
     if (!arrowId) return;
     const activeEditor = isClassicMode ? (classicEditor || editor) : editor;
     if (!activeEditor) return;
 
     const currentText = activeEditor.value;
-    const rot = attrs.rotation || 0;
-    const rotStyle = rot !== 0 ? ` transform: rotate(${rot}deg);` : '';
-
-    let floatStyles = '';
-    let floatAttrs = '';
-    if (attrs.isFloating) {
-      floatStyles = ` position: relative; left: ${attrs.floatX || 0}px; top: ${attrs.floatY || 0}px; z-index: 50;`;
-      floatAttrs = ` data-is-floating="true" data-float-x="${attrs.floatX || 0}" data-float-y="${attrs.floatY || 0}"`;
-    }
-
-    const newSpan = `<span class="vienix-arrow" data-arrow-id="${arrowId}" data-arrow-model="${attrs.modelId}" data-arrow-dir="${attrs.dir}" data-arrow-color="${attrs.color}" data-arrow-size="${attrs.size}" data-arrow-rotation="${rot}" data-arrow-align="${attrs.align}"${floatAttrs} style="display: inline-block; font-size: ${attrs.size}; color: ${attrs.color}; line-height: 1; vertical-align: middle;${rotStyle}${floatStyles}">${attrs.char}</span>`;
+    attrs.arrowId = arrowId;
+    const newMarkdown = formatArrowToMarkdown(attrs);
 
     let updatedText = currentText;
+
+    // 1. استبدال وسم HTML القديم <span class="vienix-arrow" ...>
     const regexById = new RegExp(`<span\\s+[^>]*data-arrow-id=["']${arrowId}["'][^>]*>[\\s\\S]*?<\\/span>`, 'i');
+    // 2. استبدال صيغة الماركداون التي تحتوي على نفس المعرف
+    const mdRegexWithId = new RegExp(`!\\[[^\\]]*\\]\\((?:vienix-)?arrow:[^\\)]*[?&]id=${arrowId}[^\\)]*\\)`, 'i');
+    // 3. استبدال صيغة الماركداون المطابقة للموديل
+    const mdRegex = new RegExp(`!\\[[^\\]]*\\]\\((?:vienix-)?arrow:${attrs.modelId}\\/[^\\)]*\\)`, 'i');
 
     if (regexById.test(currentText)) {
-      updatedText = currentText.replace(regexById, newSpan);
+      updatedText = currentText.replace(regexById, newMarkdown);
+    } else if (mdRegexWithId.test(currentText)) {
+      updatedText = currentText.replace(mdRegexWithId, newMarkdown);
+    } else if (mdRegex.test(currentText)) {
+      updatedText = currentText.replace(mdRegex, newMarkdown);
     } else if (attrs.originalChar && currentText.includes(attrs.originalChar)) {
-      // إذا كان سهماً مجرداً تمت كتابته يدوياً في المحرر، نستبدله بالسهم المخصص الجديد
-      updatedText = currentText.replace(attrs.originalChar, newSpan);
+      updatedText = currentText.replace(attrs.originalChar, newMarkdown);
+    }
+
+    if (updatedText !== currentText) {
+      recordHistorySnapshot(true);
+      editor.value = updatedText;
+      if (classicEditor) classicEditor.value = updatedText;
+      setChamberContent(activeChamber, updatedText);
+      recordHistorySnapshot(true);
+    }
+  }
+
+  // تحويل السهم التفاعلي في المحرر إلى رمز نصي عادي مجرد
+  function replaceArrowWithPlainText(arrowId, char, modelId) {
+    const activeEditor = isClassicMode ? (classicEditor || editor) : editor;
+    if (!activeEditor) return;
+
+    const currentText = activeEditor.value;
+    let updatedText = currentText;
+    const replacement = (char || '→') + ' ';
+
+    if (arrowId) {
+      const regexById = new RegExp(`<span\\s+[^>]*data-arrow-id=["']${arrowId}["'][^>]*>[\\s\\S]*?<\\/span>`, 'i');
+      if (regexById.test(currentText)) {
+        updatedText = currentText.replace(regexById, replacement);
+      }
+      const mdRegexWithId = new RegExp(`!\\[[^\\]]*\\]\\((?:vienix-)?arrow:[^\\)]*[?&]id=${arrowId}[^\\)]*\\)`, 'i');
+      if (mdRegexWithId.test(currentText)) {
+        updatedText = currentText.replace(mdRegexWithId, replacement);
+      }
+    }
+    if (updatedText === currentText && modelId) {
+      const mdRegex = new RegExp(`!\\[[^\\]]*\\]\\((?:vienix-)?arrow:${modelId}\\/[^\\)]*\\)`, 'i');
+      if (mdRegex.test(currentText)) {
+        updatedText = currentText.replace(mdRegex, replacement);
+      }
     }
 
     if (updatedText !== currentText) {
@@ -10456,7 +10735,7 @@ function exportDocument(format) {
   }
 
   // حذف السهم من نص الماركداون بالمحرر
-  function deleteArrowInMarkdown(arrowId, originalChar) {
+  function deleteArrowInMarkdown(arrowId, originalChar, modelId) {
     const activeEditor = isClassicMode ? (classicEditor || editor) : editor;
     if (!activeEditor) return;
 
@@ -10467,6 +10746,16 @@ function exportDocument(format) {
       const regexById = new RegExp(`\\s*<span\\s+[^>]*data-arrow-id=["']${arrowId}["'][^>]*>[\\s\\S]*?<\\/span>\\s*`, 'i');
       if (regexById.test(currentText)) {
         updatedText = currentText.replace(regexById, ' ');
+      }
+      const mdRegexWithId = new RegExp(`\\s*!\\[[^\\]]*\\]\\((?:vienix-)?arrow:[^\\)]*[?&]id=${arrowId}[^\\)]*\\)\\s*`, 'i');
+      if (mdRegexWithId.test(currentText)) {
+        updatedText = currentText.replace(mdRegexWithId, ' ');
+      }
+    }
+    if (updatedText === currentText && modelId) {
+      const mdRegex = new RegExp(`\\s*!\\[[^\\]]*\\]\\((?:vienix-)?arrow:${modelId}\\/[^\\)]*\\)\\s*`, 'i');
+      if (mdRegex.test(currentText)) {
+        updatedText = currentText.replace(mdRegex, ' ');
       }
     }
     if (updatedText === currentText && originalChar && currentText.includes(originalChar)) {
