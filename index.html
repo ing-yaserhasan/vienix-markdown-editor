@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
@@ -2604,10 +2604,7 @@
       var editor = document.getElementById('markdown-input');
       var content = editor ? editor.value.trim() : '';
 
-      if (!content) {
-        showAiToast('المحرر فارغ — اكتب محتوى أولاً', true);
-        return;
-      }
+      // content check removed - works with empty editor too
 
       // Open modal
       var overlay = document.getElementById('ai-chat-overlay');
@@ -2633,8 +2630,10 @@
       var empty = document.getElementById('ai-chat-empty');
       var children = body.querySelectorAll('.ai-bubble-row, .ai-scan-container');
       children.forEach(function(c) { c.remove(); });
-      if (empty) empty.style.display = 'none';
 
+      if (content) {
+        // Editor has content - scan and absorb
+        if (empty) empty.style.display = 'none';
       // Create scanning indicator
       var scanDiv = document.createElement('div');
       scanDiv.id = 'ai-scan-indicator';
@@ -2665,8 +2664,14 @@
           }, 300);
         }
       }, 120);
+      } else {
+        // Editor empty - regular Gemini chat
+        _aiFileContextAbsorbed = false;
+        if (empty) empty.style.display = 'block';
+        var inp = document.getElementById('ai-chat-input');
+        if (inp) { inp.placeholder = '\u0627\u0643\u062a\u0628 \u0623\u064a \u0634\u064a\u0621 \u2014 Gemini \u062c\u0627\u0647\u0632 \u0644\u0644\u0645\u0633\u0627\u0639\u062f\u0629'; inp.focus(); }
+      }
     };
-
     // Override sendAiMessage to include file context + content manipulation
     var _origSendAiMessage = window.sendAiMessage;
     window.sendAiMessage = function() {
