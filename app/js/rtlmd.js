@@ -7788,24 +7788,38 @@ function exportDocument(format) {
         toolbar.style.left = '50%';
         toolbar.style.transform = 'translateX(-50%)';
 
-        const tbRect = toolbar.getBoundingClientRect();
-        const minPadding = 10;
-
-        // فحص الطرف الأيسر (عند الخط الفاصل ومقبض تقسيم مساحات العمل)
-        if (tbRect.left < containerRect.left + minPadding) {
-          const shiftX = Math.round((containerRect.left + minPadding) - tbRect.left);
-          toolbar.style.transform = `translateX(calc(-50% + ${shiftX}px))`;
-        } else if (tbRect.right > containerRect.right - minPadding) {
-          const shiftX = Math.round(tbRect.right - (containerRect.right - minPadding));
-          toolbar.style.transform = `translateX(calc(-50% - ${shiftX}px))`;
+        const minPadding = 8;
+        if (window.innerWidth <= 768) {
+          const maxAvailWidth = Math.max(200, Math.min(window.innerWidth - 16, containerRect.width - (minPadding * 2)));
+          toolbar.style.maxWidth = `${maxAvailWidth}px`;
+        } else {
+          toolbar.style.maxWidth = '';
         }
 
-        // فحص الطرف العلوي (إذا كان الإيموجي في أعلى الصفحة، تظهر الفقاعة بالأسفل لتظل مرئية بالكامل)
-        if (tbRect.top < containerRect.top + 10) {
+        const tbRect = toolbar.getBoundingClientRect();
+
+        // فحص وحساب الإزاحة الأفقية لضمان بقاء الشريط كاملاً داخل الحاوية والشاشة
+        let shiftX = 0;
+        if (tbRect.left < containerRect.left + minPadding) {
+          shiftX = Math.round((containerRect.left + minPadding) - tbRect.left);
+        } else if (tbRect.right > containerRect.right - minPadding) {
+          shiftX = -Math.round(tbRect.right - (containerRect.right - minPadding));
+        }
+
+        if (tbRect.left + shiftX < containerRect.left + minPadding) {
+          shiftX = Math.round((containerRect.left + minPadding) - tbRect.left);
+        } else if (tbRect.right + shiftX > containerRect.right - minPadding) {
+          shiftX = -Math.round(tbRect.right - (containerRect.right - minPadding));
+        }
+
+        toolbar.style.transform = shiftX !== 0 ? `translateX(calc(-50% + ${shiftX}px))` : 'translateX(-50%)';
+
+        // فحص الطرف العلوي (إذا كان العنصر في أعلى الصفحة، تظهر الفقاعة بالأسفل لتظل مرئية بالكامل)
+        if (tbRect.top < containerRect.top + 8) {
           toolbar.style.bottom = 'auto';
-          toolbar.style.top = 'calc(100% + 12px)';
+          toolbar.style.top = 'calc(100% + 8px)';
         } else {
-          toolbar.style.bottom = 'calc(100% + 12px)';
+          toolbar.style.bottom = 'calc(100% + 8px)';
           toolbar.style.top = 'auto';
         }
       };
@@ -8071,8 +8085,8 @@ function exportDocument(format) {
 
   // Deactivate resizers when clicking outside
   document.addEventListener('click', (e) => {
-    if (!e.target.closest('.image-resizer-wrapper')) {
-      document.querySelectorAll('.image-resizer-wrapper.active').forEach((w) => w.classList.remove('active'));
+    if (!e.target.closest('.image-resizer-wrapper, .arrow-resizer-wrapper')) {
+      document.querySelectorAll('.image-resizer-wrapper.active, .arrow-resizer-wrapper.active').forEach((w) => w.classList.remove('active'));
     }
   });
 
@@ -9083,19 +9097,33 @@ function exportDocument(format) {
       toolbar.style.display = 'flex';
       toolbar.classList.add('visible');
 
-      const toolbarWidth = toolbar.offsetWidth || 340;
-      const toolbarHeight = toolbar.offsetHeight || 38;
+      // تحديد الحد الأقصى للعرض ليتناسب مع شاشات الموبايل فقط دون التأثير على سطح المكتب
+      if (window.innerWidth <= 768) {
+        toolbar.style.maxWidth = `${Math.min(window.innerWidth - 16, 350)}px`;
+      } else {
+        toolbar.style.maxWidth = '';
+      }
+
+      const toolbarWidth = toolbar.offsetWidth || 320;
+      const toolbarHeight = toolbar.offsetHeight || 40;
 
       let left = rect.left + rect.width / 2;
-      const margin = 12;
+      const margin = 8;
       const minLeft = toolbarWidth / 2 + margin;
       const maxLeft = window.innerWidth - toolbarWidth / 2 - margin;
-      left = Math.max(minLeft, Math.min(left, maxLeft));
+      if (minLeft >= maxLeft) {
+        left = window.innerWidth / 2;
+      } else {
+        left = Math.max(minLeft, Math.min(left, maxLeft));
+      }
 
       let top = rect.top - toolbarHeight - 8;
       if (top < 12) {
         // إذا كان قريباً جداً من الحافة العلوية، يظهر أسفل النص المحدد
         top = rect.bottom + 8;
+      }
+      if (top + toolbarHeight > window.innerHeight - 12) {
+        top = Math.max(12, window.innerHeight - toolbarHeight - 12);
       }
 
       toolbar.style.left = `${left}px`;
@@ -10295,20 +10323,35 @@ function exportDocument(format) {
         toolbar.style.left = '50%';
         toolbar.style.transform = 'translateX(-50%)';
 
-        const tbRect = toolbar.getBoundingClientRect();
-        if (tbRect.left < containerRect.left + 10) {
-          const shiftX = Math.round((containerRect.left + 10) - tbRect.left);
-          toolbar.style.transform = `translateX(calc(-50% + ${shiftX}px))`;
-        } else if (tbRect.right > containerRect.right - 10) {
-          const shiftX = Math.round(tbRect.right - (containerRect.right - 10));
-          toolbar.style.transform = `translateX(calc(-50% - ${shiftX}px))`;
+        const minPadding = 8;
+        if (window.innerWidth <= 768) {
+          const maxAvailWidth = Math.max(200, Math.min(window.innerWidth - 16, containerRect.width - (minPadding * 2)));
+          toolbar.style.maxWidth = `${maxAvailWidth}px`;
+        } else {
+          toolbar.style.maxWidth = '';
         }
 
-        if (tbRect.top < containerRect.top + 10) {
+        const tbRect = toolbar.getBoundingClientRect();
+        let shiftX = 0;
+        if (tbRect.left < containerRect.left + minPadding) {
+          shiftX = Math.round((containerRect.left + minPadding) - tbRect.left);
+        } else if (tbRect.right > containerRect.right - minPadding) {
+          shiftX = -Math.round(tbRect.right - (containerRect.right - minPadding));
+        }
+
+        if (tbRect.left + shiftX < containerRect.left + minPadding) {
+          shiftX = Math.round((containerRect.left + minPadding) - tbRect.left);
+        } else if (tbRect.right + shiftX > containerRect.right - minPadding) {
+          shiftX = -Math.round(tbRect.right - (containerRect.right - minPadding));
+        }
+
+        toolbar.style.transform = shiftX !== 0 ? `translateX(calc(-50% + ${shiftX}px))` : 'translateX(-50%)';
+
+        if (tbRect.top < containerRect.top + 8) {
           toolbar.style.bottom = 'auto';
-          toolbar.style.top = 'calc(100% + 12px)';
+          toolbar.style.top = 'calc(100% + 8px)';
         } else {
-          toolbar.style.bottom = 'calc(100% + 12px)';
+          toolbar.style.bottom = 'calc(100% + 8px)';
           toolbar.style.top = 'auto';
         }
       };
