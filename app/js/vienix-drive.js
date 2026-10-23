@@ -1,14 +1,15 @@
 /**
  * ============================================================================
- * Vienix Markdown Editor - Google Drive Cloud Sync Engine (Phase 2)
+ * Vienix Markdown Editor - Google Drive Cloud Sync Engine (Phase 2 - Robust)
  * ============================================================================
- * Architecture: Local-First + Personal Cloud
+ * Architecture: Local-First + Personal Cloud (Zero Servers, Zero Leaks)
  *  - Scope: https://www.googleapis.com/auth/drive.file (Strictly isolated to app files)
- *  - Google Identity Services (GIS) OAuth 2.0 Token Client
+ *  - Google Identity Services (GIS) OAuth 2.0 Token Client with Auto Refresh
  *  - App Folder: 'Vienix Notes' on Google Drive
- *  - Automatic Drive Versioning (Free revision history on PATCH)
- *  - Debounced Auto-Sync (Prevents API quota limits)
- *  - Bi-directional Sync (Push to Cloud & Pull from Cloud)
+ *  - Automatic Drive Versioning (PATCH media generates automatic revision history)
+ *  - Exact Chamber Mapping: Tracks and updates existing Drive files by Chamber number
+ *  - Honest Error Reporting: No fake successes or silent swallows
+ *  - Bi-directional Smart Sync: Force Push, Force Pull, and Auto Smart Sync
  * ============================================================================
  */
 
@@ -22,6 +23,7 @@
 
   let tokenClient = null;
   let autoSyncDebounceTimer = null;
+  let tokenRequestResolvers = [];
 
   const VienixDrive = {
     accessToken: null,
@@ -30,6 +32,7 @@
     appFolderId: null,
     isSyncing: false,
     lastSyncTime: null,
+    lastSyncError: null,
     autoSyncEnabled: true,
     clientId: localStorage.getItem('vienix_google_client_id') || DEFAULT_CLIENT_ID,
 
@@ -37,13 +40,17 @@
     // 1. INITIALIZATION & SDK LOADER
     // ─────────────────────────────────────────────────────────────
     init: function () {
-      // 1. Check if token was saved in sessionStorage (survives page refresh during active session)
       const savedToken = sessionStorage.getItem('vienix_drive_token');
       const savedExpiry = sessionStorage.getItem('vienix_drive_token_expires');
       const savedProfile = sessionStorage.getItem('vienix_drive_profile');
       const savedFolder = localStorage.getItem('vienix_drive_folder_id');
+      const savedLastSync = localStorage.getItem('vienix_drive_last_sync');
 
       if (savedFolder) this.appFolderId = savedFolder;
+      if (savedLastSync) {
+        const d = new Date(savedLastSync);
+        if (!isNaN(d.getTime())) this.lastSyncTime = d;
+      }
 
       if (savedToken && savedExpiry && Number(savedExpiry) > Date.now()) {
         this.accessToken = savedToken;
@@ -56,10 +63,7 @@
       const autoSyncSetting = localStorage.getItem('vienix_drive_auto_sync');
       this.autoSyncEnabled = autoSyncSetting !== 'false';
 
-      // 2. Load Google Identity Services SDK
       this.loadGoogleSDK();
-
-      // 3. Update UI
       this.updateUI();
     },
 
@@ -92,60 +96,26 @@
             if (tokenResponse && tokenResponse.access_token) {
               this.accessToken = tokenResponse.access_token;
               this.tokenExpiresAt = Date.now() + (Number(tokenResponse.expires_in) || 3600) * 1000;
+              this.lastSyncError = null;
+
               sessionStorage.setItem('vienix_drive_token', this.accessToken);
               sessionStorage.setItem('vienix_drive_token_expires', String(this.tokenExpiresAt));
 
-              // Fetch user profile info
+              // Resolve pending token request promises
+              const resolvers = tokenRequestResolvers.slice();
+              tokenRequestResolvers = [];
+              resolvers.forEach(r => r.resolve(this.accessToken));
+
+              // Fetch user profile and ensure app folder
               await this.fetchUserProfile();
-
-              // Ensure Vienix Notes folder exists on Drive
               await this.ensureAppFolder();
-
               this.updateUI();
-
-              // Smart workspace check on connection
-              const isLocalEmpty = this.isLocalWorkspaceEmpty();
-              const driveStatus = await this.getDriveWorkspaceStatus();
-
-              if (isLocalEmpty && driveStatus && driveStatus.hasRemoteData) {
-                // Device is empty (e.g. mobile entering for first time), but Drive has user files!
-                if (window.VienixStorage && typeof window.VienixStorage.showCustomModal === 'function') {
-                  window.VienixStorage.showCustomModal({
-                    title: 'تم العثور على ملفاتك في Google Drive! ☁️📥',
-                    icon: '📥',
-                    content: `<p style="color:var(--text-secondary);">أهلاً بك <strong>${this.userProfile ? this.userProfile.name : ''}</strong>!<br>تم ربط حسابك، ووجدنا ملفاتك وحجراتك السابقة في مجلد <strong>Vienix Notes</strong> على Google Drive.<br><br>هل ترغب في <strong>استيراد وتنزيل ملفاتك</strong> إلى هذا الجهاز الآن؟</p>`,
-                    confirmText: 'نعم، استيراد ملفاتي الآن',
-                    cancelText: 'تخطي والبدء بصفحة فارغة',
-                    onConfirm: () => { this.pullFromDrive({ force: true }); }
-                  });
-                } else {
-                  if (confirm('تم العثور على ملفاتك في Google Drive. هل ترغب في استيرادها وتنزيلها الآن؟')) {
-                    this.pullFromDrive({ force: true });
-                  }
-                }
-              } else if (!isLocalEmpty && (!driveStatus || !driveStatus.hasRemoteData)) {
-                // Local has data, Drive is fresh
-                if (window.VienixStorage && typeof window.VienixStorage.showCustomModal === 'function') {
-                  window.VienixStorage.showCustomModal({
-                    title: 'تم الاتصال بـ Google Drive بنجاح! ☁️',
-                    icon: '✅',
-                    content: `<p style="color:var(--text-secondary);">أهلاً بك <strong>${this.userProfile ? this.userProfile.name : ''}</strong>! تم ربط حسابك السحابي، وأصبح بإمكانك مزامنة نصوصك وحجراتك مع مجلد <strong>Vienix Notes</strong> على Google Drive بأمان تام.</p>`,
-                    confirmText: 'ابدأ المزامنة الآن',
-                    onConfirm: () => { this.syncAllToDrive(); }
-                  });
-                }
-              } else {
-                // Both have data or both are empty -> offer smart sync
-                if (window.VienixStorage && typeof window.VienixStorage.showCustomModal === 'function') {
-                  window.VienixStorage.showCustomModal({
-                    title: 'تم الاتصال بـ Google Drive بنجاح! ☁️',
-                    icon: '✅',
-                    content: `<p style="color:var(--text-secondary);">أهلاً بك <strong>${this.userProfile ? this.userProfile.name : ''}</strong>! تم ربط حسابك السحابي بنجاح.</p>`,
-                    confirmText: 'مزامنة ذكية الآن',
-                    onConfirm: () => { this.smartSync(); }
-                  });
-                }
-              }
+            } else {
+              const errMsg = (tokenResponse && tokenResponse.error_description) || (tokenResponse && tokenResponse.error) || 'تعذر الحصول على إذن الاتصال من Google';
+              const resolvers = tokenRequestResolvers.slice();
+              tokenRequestResolvers = [];
+              resolvers.forEach(r => r.reject(new Error(errMsg)));
+              this.updateUI();
             }
           }
         });
@@ -162,27 +132,93 @@
     },
 
     // ─────────────────────────────────────────────────────────────
-    // 2. AUTHENTICATION (LOGIN / LOGOUT)
+    // 2. AUTHENTICATION & TOKEN REFRESH
     // ─────────────────────────────────────────────────────────────
-    connect: function () {
-      if (!this.clientId) {
-        this.clientId = DEFAULT_CLIENT_ID;
+    requestToken: function (interactive = false) {
+      return new Promise((resolve, reject) => {
+        if (!window.google || !window.google.accounts) {
+          this.loadGoogleSDK();
+          setTimeout(() => {
+            this.requestToken(interactive).then(resolve).catch(reject);
+          }, 500);
+          return;
+        }
+
+        if (!tokenClient) {
+          this.initTokenClient();
+        }
+
+        if (!tokenClient) {
+          return reject(new Error('تعذر تحميل واجهة Google Identity Services'));
+        }
+
+        tokenRequestResolvers.push({ resolve, reject });
+
+        try {
+          tokenClient.requestAccessToken({ prompt: interactive ? 'consent' : '' });
+        } catch (e) {
+          tokenRequestResolvers = tokenRequestResolvers.filter(r => r.resolve !== resolve);
+          reject(e);
+        }
+      });
+    },
+
+    ensureValidToken: async function (interactive = false) {
+      // If token exists and has more than 60 seconds left before expiration
+      if (this.accessToken && Date.now() < (this.tokenExpiresAt - 60000)) {
+        return this.accessToken;
       }
 
-      if (!window.google || !window.google.accounts) {
-        this.loadGoogleSDK();
-        setTimeout(() => { this.connect(); }, 400);
-        return;
+      // Token missing or expired -> attempt refresh
+      try {
+        return await this.requestToken(interactive);
+      } catch (err) {
+        if (interactive) throw err;
+        this.accessToken = null;
+        this.updateUI();
+        throw new Error('انتهت جلسة تسجيل الدخول إلى Google Drive. انقر على زر السحابة لإعادة الاتصال.');
       }
+    },
 
-      if (!tokenClient) {
-        this.initTokenClient();
-      }
+    connect: async function () {
+      try {
+        await this.requestToken(true);
+        if (window.showToast) {
+          window.showToast('تم الاتصال بـ Google Drive بنجاح ☁️✓', 'success', 2000);
+        }
 
-      if (tokenClient) {
-        tokenClient.requestAccessToken({ prompt: this.accessToken ? '' : 'consent' });
-      } else {
-        alert('تعذر تحميل واجهة Google Identity Services. تأكد من اتصالك بالإنترنت.');
+        // Smart workspace check on connection
+        const isLocalEmpty = this.isLocalWorkspaceEmpty();
+        const inventory = await this.getFolderInventory();
+
+        if (isLocalEmpty && inventory && inventory.hasRemoteData) {
+          if (window.VienixStorage && typeof window.VienixStorage.showCustomModal === 'function') {
+            window.VienixStorage.showCustomModal({
+              title: 'تم العثور على ملفاتك في Google Drive! ☁️📥',
+              icon: '📥',
+              content: `<p style="color:var(--text-secondary);">أهلاً بك <strong>${this.userProfile ? this.userProfile.name : ''}</strong>!<br>تم ربط حسابك، ووجدنا ملفاتك وحجراتك السابقة في مجلد <strong>Vienix Notes</strong> على Google Drive.<br><br>هل ترغب في <strong>استيراد وتنزيل ملفاتك</strong> إلى هذا الجهاز الآن؟</p>`,
+              confirmText: 'نعم، استيراد ملفاتي الآن',
+              cancelText: 'تخطي والبدء بصفحة فارغة',
+              onConfirm: () => { this.pullFromDrive({ force: true, interactive: false }); }
+            });
+          } else {
+            if (confirm('تم العثور على ملفاتك في Google Drive. هل ترغب في استيرادها وتنزيلها الآن؟')) {
+              this.pullFromDrive({ force: true, interactive: false });
+            }
+          }
+        } else if (!isLocalEmpty && (!inventory || !inventory.hasRemoteData)) {
+          if (window.VienixStorage && typeof window.VienixStorage.showCustomModal === 'function') {
+            window.VienixStorage.showCustomModal({
+              title: 'تم الاتصال بـ Google Drive بنجاح! ☁️',
+              icon: '✅',
+              content: `<p style="color:var(--text-secondary);">أهلاً بك <strong>${this.userProfile ? this.userProfile.name : ''}</strong>! تم ربط حسابك السحابي، وأصبح بإمكانك مزامنة نصوصك وحجراتك مع مجلد <strong>Vienix Notes</strong> على Google Drive بأمان تام.</p>`,
+              confirmText: 'ابدأ المزامنة الآن',
+              onConfirm: () => { this.syncAllToDrive({ force: true, interactive: false }); }
+            });
+          }
+        }
+      } catch (err) {
+        alert('تعذر ربط Google Drive: ' + err.message);
       }
     },
 
@@ -207,6 +243,8 @@
       this.tokenExpiresAt = 0;
       this.userProfile = null;
       this.appFolderId = null;
+      this.lastSyncError = null;
+
       localStorage.removeItem('vienix_drive_folder_id');
       localStorage.removeItem('vienix_drive_last_sync');
       localStorage.removeItem('vienix_drive_connected_email');
@@ -229,173 +267,222 @@
     fetchUserProfile: async function () {
       if (!this.accessToken) return;
       try {
-        const res = await fetch('https://www.googleapis.com/drive/v3/about?fields=user', {
-          headers: { Authorization: `Bearer ${this.accessToken}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.user) {
-            this.userProfile = {
-              name: data.user.displayName || 'مستخدم Google Drive',
-              email: data.user.emailAddress || '',
-              picture: data.user.photoLink || ''
-            };
-            sessionStorage.setItem('vienix_drive_profile', JSON.stringify(this.userProfile));
-            if (this.userProfile.email) {
-              localStorage.setItem('vienix_drive_connected_email', this.userProfile.email);
-            }
+        const res = await this.driveFetch('https://www.googleapis.com/drive/v3/about?fields=user');
+        const data = await res.json();
+        if (data && data.user) {
+          this.userProfile = {
+            name: data.user.displayName || 'مستخدم Google Drive',
+            email: data.user.emailAddress || '',
+            picture: data.user.photoLink || ''
+          };
+          sessionStorage.setItem('vienix_drive_profile', JSON.stringify(this.userProfile));
+          if (this.userProfile.email) {
+            localStorage.setItem('vienix_drive_connected_email', this.userProfile.email);
           }
         }
       } catch (err) {
-        console.warn('[VienixDrive] Failed to fetch user profile via Drive about:', err);
+        console.warn('[VienixDrive] Failed to fetch user profile:', err);
       }
     },
 
     // ─────────────────────────────────────────────────────────────
-    // 3. DRIVE API CORE HELPERS
+    // 3. SECURE DRIVE API FETCH WRAPPER
+    // ─────────────────────────────────────────────────────────────
+    driveFetch: async function (url, options = {}, isRetry = false) {
+      const token = await this.ensureValidToken(false);
+      const headers = Object.assign({}, options.headers || {}, {
+        Authorization: `Bearer ${token}`
+      });
+
+      const res = await fetch(url, Object.assign({}, options, { headers }));
+
+      if (res.status === 401 && !isRetry) {
+        console.warn('[VienixDrive] 401 Unauthorized from Drive API. Attempting silent token renewal...');
+        this.accessToken = null;
+        sessionStorage.removeItem('vienix_drive_token');
+        try {
+          await this.ensureValidToken(false);
+          return await this.driveFetch(url, options, true);
+        } catch (refreshErr) {
+          this.lastSyncError = 'انتهت جلسة Google Drive. انقر على زر السحابة لإعادة الاتصال.';
+          this.updateUI();
+          throw new Error('انتهت جلسة تسجيل الدخول إلى Google Drive (401). يرجى النقر على زر السحابة لإعادة الاتصال.');
+        }
+      }
+
+      if (!res.ok) {
+        let errorDetail = '';
+        try {
+          const errJson = await res.json();
+          if (errJson && errJson.error && errJson.error.message) {
+            errorDetail = errJson.error.message;
+          }
+        } catch (e) {}
+        throw new Error(errorDetail || `Google Drive API error (HTTP ${res.status})`);
+      }
+
+      return res;
+    },
+
+    // ─────────────────────────────────────────────────────────────
+    // 4. DRIVE FOLDER & INVENTORY MANAGEMENT
     // ─────────────────────────────────────────────────────────────
     ensureAppFolder: async function () {
       if (this.appFolderId) {
-        // Quick verify if folder still exists
         try {
-          const res = await fetch(`https://www.googleapis.com/drive/v3/files/${this.appFolderId}?fields=id,trashed`, {
-            headers: { Authorization: `Bearer ${this.accessToken}` }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (!data.trashed) return this.appFolderId;
-          }
-        } catch (e) {}
+          const res = await this.driveFetch(`https://www.googleapis.com/drive/v3/files/${this.appFolderId}?fields=id,name,trashed`);
+          const data = await res.json();
+          if (!data.trashed) return this.appFolderId;
+        } catch (e) {
+          this.appFolderId = null;
+          localStorage.removeItem('vienix_drive_folder_id');
+        }
       }
 
       // Search for folder by name
       try {
         const q = `name='${DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
-        const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)`, {
-          headers: { Authorization: `Bearer ${this.accessToken}` }
-        });
+        const searchRes = await this.driveFetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)`);
+        const searchData = await searchRes.json();
 
-        if (searchRes.ok) {
-          const searchData = await searchRes.json();
-          if (searchData.files && searchData.files.length > 0) {
-            this.appFolderId = searchData.files[0].id;
-            localStorage.setItem('vienix_drive_folder_id', this.appFolderId);
-            return this.appFolderId;
-          }
+        if (searchData.files && searchData.files.length > 0) {
+          this.appFolderId = searchData.files[0].id;
+          localStorage.setItem('vienix_drive_folder_id', this.appFolderId);
+          return this.appFolderId;
         }
 
         // Create folder if not found
-        const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+        const createRes = await this.driveFetch('https://www.googleapis.com/drive/v3/files', {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${this.accessToken}`,
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: DRIVE_FOLDER_NAME,
             mimeType: 'application/vnd.google-apps.folder',
             description: 'Vienix Markdown Editor Workspace Sync Folder'
           })
         });
-
-        if (createRes.ok) {
-          const folderData = await createRes.json();
-          this.appFolderId = folderData.id;
-          localStorage.setItem('vienix_drive_folder_id', this.appFolderId);
-          return this.appFolderId;
-        }
+        const folderData = await createRes.json();
+        this.appFolderId = folderData.id;
+        localStorage.setItem('vienix_drive_folder_id', this.appFolderId);
+        return this.appFolderId;
       } catch (err) {
         console.error('[VienixDrive] Error ensuring app folder:', err);
+        throw err;
       }
-      return null;
     },
 
-    findFileInFolder: async function (filename) {
-      if (!this.appFolderId) await this.ensureAppFolder();
-      if (!this.appFolderId) return null;
-
-      try {
-        const q = `'${this.appFolderId}' in parents and name='${filename}' and trashed=false`;
-        const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,modifiedTime)`, {
-          headers: { Authorization: `Bearer ${this.accessToken}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          return data.files && data.files.length > 0 ? data.files[0] : null;
-        }
-      } catch (e) {}
-      return null;
-    },
-
-    uploadOrUpdateFile: async function (filename, content, mimeType = 'text/markdown') {
-      if (!this.accessToken) return null;
+    getFolderInventory: async function () {
       const folderId = await this.ensureAppFolder();
-      if (!folderId) return null;
+      if (!folderId) throw new Error('تعذر العثور على مجلد Vienix Notes على Google Drive');
 
-      const existingFile = await this.findFileInFolder(filename);
+      const q = `'${folderId}' in parents and trashed=false`;
+      const res = await this.driveFetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,modifiedTime,size,mimeType)&pageSize=100`);
+      const data = await res.json();
+      const files = data.files || [];
 
-      if (existingFile) {
-        // PATCH existing file -> Triggers Google Drive Automatic Version History!
-        const updateRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=media`, {
+      const manifestFile = files.find(f => f.name === 'vienix_workspace_manifest.json') || null;
+
+      // Group chamber files by chamber number
+      const chamberFiles = new Map(); // chNum -> [fileObj, ...]
+      let remoteTime = 0;
+
+      if (manifestFile && manifestFile.modifiedTime) {
+        remoteTime = new Date(manifestFile.modifiedTime).getTime();
+      }
+
+      files.forEach(f => {
+        const match = f.name.match(/^Chamber_(\d+)(?:_(.*))?\.md$/i);
+        if (match) {
+          const chNum = parseInt(match[1], 10);
+          if (!chamberFiles.has(chNum)) chamberFiles.set(chNum, []);
+          chamberFiles.get(chNum).push(f);
+
+          if (f.modifiedTime) {
+            const mt = new Date(f.modifiedTime).getTime();
+            if (mt > remoteTime) remoteTime = mt;
+          }
+        }
+      });
+
+      const hasRemoteData = (manifestFile && Number(manifestFile.size || 0) > 20) || chamberFiles.size > 0;
+
+      return {
+        folderId,
+        files,
+        manifestFile,
+        chamberFiles,
+        remoteTime,
+        hasRemoteData
+      };
+    },
+
+    uploadOrUpdateDriveFile: async function (filename, content, mimeType, existingFileId) {
+      if (existingFileId) {
+        // 1. Update file media content (Triggers Drive revision history)
+        await this.driveFetch(`https://www.googleapis.com/upload/drive/v3/files/${existingFileId}?uploadType=media`, {
           method: 'PATCH',
           headers: {
-            Authorization: `Bearer ${this.accessToken}`,
             'Content-Type': mimeType
           },
           body: content
         });
-        if (updateRes.ok) return await updateRes.json();
+
+        // 2. Ensure filename is up-to-date
+        await this.driveFetch(`https://www.googleapis.com/drive/v3/files/${existingFileId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name: filename })
+        });
+
+        return { id: existingFileId, updated: true };
       } else {
-        // Multipart POST to create new file with metadata in parents folder
+        // Multipart POST to create file with metadata inside app folder
+        const boundary = '-------314159265358979323846';
         const metadata = {
           name: filename,
-          parents: [folderId]
+          parents: [this.appFolderId]
         };
-        const boundary = '-------314159265358979323846';
-        const delimiter = "\r\n--" + boundary + "\r\n";
-        const closeDelimiter = "\r\n--" + boundary + "--";
 
         const multipartBody =
-          delimiter +
+          '--' + boundary + '\r\n' +
           'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
-          JSON.stringify(metadata) +
-          delimiter +
+          JSON.stringify(metadata) + '\r\n' +
+          '--' + boundary + '\r\n' +
           'Content-Type: ' + mimeType + '\r\n\r\n' +
-          content +
-          closeDelimiter;
+          content + '\r\n' +
+          '--' + boundary + '--';
 
-        const createRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        const res = await this.driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${this.accessToken}`,
             'Content-Type': `multipart/related; boundary=${boundary}`
           },
           body: multipartBody
         });
-        if (createRes.ok) return await createRes.json();
+        return await res.json();
       }
-      return null;
     },
 
     // ─────────────────────────────────────────────────────────────
-    // 4. SYNC TO DRIVE (PUSH)
+    // 5. PUSH TO DRIVE (FULL WORKSPACE MIRRORING & UPLOAD)
     // ─────────────────────────────────────────────────────────────
-    syncAllToDrive: async function () {
-      if (!this.accessToken) {
-        this.connect();
-        return;
-      }
-
+    syncAllToDrive: async function (options = {}) {
       if (this.isSyncing) return;
       this.isSyncing = true;
       this.updateUI();
 
       try {
-        console.log('[VienixDrive] Starting full workspace sync to Google Drive...');
-        let syncedCount = 0;
+        await this.ensureValidToken(options.interactive || false);
 
-        // 1. Sync all active Chambers as individual .md files
+        console.log('[VienixDrive] Starting full workspace sync to Google Drive...');
+        const inventory = await this.getFolderInventory();
+        let syncedChambers = 0;
+
         const maxCh = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
+
+        // 1. Sync every active chamber
         for (let ch = 1; ch <= maxCh; ch++) {
           let content = '';
           let meta = null;
@@ -414,51 +501,95 @@
             content = localStorage.getItem('vienix_md_content') || '';
           }
 
+          const remoteFiles = inventory.chamberFiles.get(ch) || [];
+
           if (content.trim().length > 0) {
-            const title = (meta && meta.customTitle) ? meta.customTitle.replace(/[/\\?%*:|"<>]/g, '_') : `Chamber_${ch}`;
-            const filename = `Chamber_${ch}_${title}.md`;
+            const rawTitle = (meta && meta.customTitle && meta.customTitle.trim().length > 0)
+              ? meta.customTitle.trim()
+              : `Chamber_${ch}`;
+            const cleanTitle = rawTitle.replace(/[/\\?%*:|"<>]/g, '_').trim();
+            const targetFilename = `Chamber_${ch}_${cleanTitle}.md`;
 
-            await this.uploadOrUpdateFile(filename, content, 'text/markdown; charset=utf-8');
-            syncedCount++;
-          }
-        }
+            // Existing remote file mapped to this chamber number
+            const primaryRemoteFile = remoteFiles.length > 0 ? remoteFiles[0] : null;
 
-        // 2. Upload full workspace snapshot (JSON Manifest)
-        if (window.VienixStorage && typeof window.VienixStorage.getStats === 'function') {
-          // Generate backup package
-          const manifest = {
-            app: 'Vienix Markdown Editor',
-            timestamp: new Date().toISOString(),
-            rawKeys: {}
-          };
+            await this.uploadOrUpdateDriveFile(
+              targetFilename,
+              content,
+              'text/markdown; charset=utf-8',
+              primaryRemoteFile ? primaryRemoteFile.id : null
+            );
+            syncedChambers++;
 
-          for (let i = 0; i < localStorage.length; i++) {
-            const k = localStorage.key(i);
-            if (k && (k.startsWith('vienix_') || k.startsWith('yaser_')) && !k.startsWith('vienix_history_')) {
-              manifest.rawKeys[k] = localStorage.getItem(k);
+            // Clean up any extra duplicate files for this chamber (from previous bugs)
+            if (remoteFiles.length > 1) {
+              for (let i = 1; i < remoteFiles.length; i++) {
+                try {
+                  await this.driveFetch(`https://www.googleapis.com/drive/v3/files/${remoteFiles[i].id}`, { method: 'DELETE' });
+                } catch (e) {}
+              }
+            }
+          } else if (options.force && remoteFiles.length > 0) {
+            // Force push: remove empty chamber files from remote Drive
+            for (const rf of remoteFiles) {
+              try {
+                await this.driveFetch(`https://www.googleapis.com/drive/v3/files/${rf.id}`, { method: 'DELETE' });
+              } catch (e) {}
             }
           }
-
-          if (window.VienixIDB && window.VienixIDB.memoryCache) {
-            Object.keys(window.VienixIDB.memoryCache).forEach(k => {
-              if (!k.startsWith('vienix_history_')) {
-                manifest.rawKeys[k] = window.VienixIDB.memoryCache[k];
-              }
-            });
-          }
-
-          await this.uploadOrUpdateFile('vienix_workspace_manifest.json', JSON.stringify(manifest, null, 2), 'application/json');
         }
 
+        // 2. Upload full workspace snapshot manifest
+        const manifest = {
+          app: 'Vienix Markdown Editor',
+          timestamp: new Date().toISOString(),
+          rawKeys: {}
+        };
+
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && (k.startsWith('vienix_') || k.startsWith('yaser_')) && !k.startsWith('vienix_history_')) {
+            manifest.rawKeys[k] = localStorage.getItem(k);
+          }
+        }
+
+        if (window.VienixIDB && window.VienixIDB.memoryCache) {
+          Object.keys(window.VienixIDB.memoryCache).forEach(k => {
+            if (!k.startsWith('vienix_history_')) {
+              manifest.rawKeys[k] = window.VienixIDB.memoryCache[k];
+            }
+          });
+        }
+
+        await this.uploadOrUpdateDriveFile(
+          'vienix_workspace_manifest.json',
+          JSON.stringify(manifest, null, 2),
+          'application/json; charset=utf-8',
+          inventory.manifestFile ? inventory.manifestFile.id : null
+        );
+
+        // 3. Mark success
         this.lastSyncTime = new Date();
+        this.lastSyncError = null;
         localStorage.setItem('vienix_drive_last_sync', this.lastSyncTime.toISOString());
-        console.log(`[VienixDrive] Sync finished: ${syncedCount} chambers and manifest updated on Drive.`);
+        console.log(`[VienixDrive] Sync finished: ${syncedChambers} chambers and manifest updated on Drive.`);
 
         if (window.VienixStorage && typeof window.VienixStorage.updateStatusMeter === 'function') {
           window.VienixStorage.updateStatusMeter();
         }
+
+        if (window.showToast) {
+          window.showToast(`تمت مزامنة ورفع مساحة العمل (${syncedChambers} حجرة) إلى Google Drive بنجاح ☁️✓`, 'success', 2500);
+        }
       } catch (err) {
-        console.error('[VienixDrive] Sync error:', err);
+        console.error('[VienixDrive] Sync failed:', err);
+        this.lastSyncError = err.message;
+        if (window.showToast) {
+          window.showToast(`تعذر إتمام المزامنة مع Google Drive: ${err.message} ⚠️`, 'error', 4500);
+        }
+        if (options.interactive) {
+          alert(`تعذر إتمام المزامنة مع Google Drive:\n${err.message}`);
+        }
       } finally {
         this.isSyncing = false;
         this.updateUI();
@@ -466,7 +597,7 @@
     },
 
     // ─────────────────────────────────────────────────────────────
-    // 5. WORKSPACE INSPECTION HELPERS
+    // 6. WORKSPACE INSPECTION HELPERS
     // ─────────────────────────────────────────────────────────────
     isLocalWorkspaceEmpty: function () {
       const maxCh = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
@@ -507,8 +638,12 @@
 
       if (totalLength === 0) return true;
 
-      // If only chamber 1 has text, but it is the default welcome/intro template, treat as empty
-      if (otherChambersLength === 0 && (ch1Text.includes('مرحباً بك في محرر Vienix Markdown') || ch1Text.includes('محرر ماركداون عربي واعد'))) {
+      // If only chamber 1 has text, but it is the default welcome/intro template, treat as fresh/empty
+      if (otherChambersLength === 0 && (
+        ch1Text.includes('Vienix Markdown') ||
+        ch1Text.includes('مرحباً بك في') ||
+        ch1Text.includes('محرر ماركداون عربي')
+      )) {
         return true;
       }
 
@@ -535,67 +670,13 @@
           } catch (e) {}
         }
       }
-      const lastSync = localStorage.getItem('vienix_drive_last_sync');
-      if (lastSync) {
-        const st = new Date(lastSync).getTime();
-        if (!isNaN(st) && st > maxTime) maxTime = st;
-      }
       return maxTime;
     },
 
-    getDriveWorkspaceStatus: async function () {
-      if (!this.accessToken) return null;
-      const folderId = await this.ensureAppFolder();
-      if (!folderId) return null;
-
-      try {
-        const q = `'${folderId}' in parents and trashed=false`;
-        const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,modifiedTime,size)&pageSize=50`, {
-          headers: { Authorization: `Bearer ${this.accessToken}` }
-        });
-        if (!res.ok) return null;
-        const data = await res.json();
-        const files = data.files || [];
-
-        const manifestFile = files.find(f => f.name === 'vienix_workspace_manifest.json');
-        const chamberFiles = files.filter(f => /^Chamber_\d+.*\.md$/i.test(f.name));
-
-        let remoteTime = 0;
-        if (manifestFile && manifestFile.modifiedTime) {
-          remoteTime = new Date(manifestFile.modifiedTime).getTime();
-        }
-        chamberFiles.forEach(f => {
-          if (f.modifiedTime) {
-            const mt = new Date(f.modifiedTime).getTime();
-            if (mt > remoteTime) remoteTime = mt;
-          }
-        });
-
-        const hasRemoteData = (manifestFile && Number(manifestFile.size || 0) > 20) || chamberFiles.length > 0;
-
-        return {
-          folderId,
-          files,
-          manifestFile,
-          chamberFiles,
-          remoteTime,
-          hasRemoteData
-        };
-      } catch (err) {
-        console.warn('[VienixDrive] Failed to get drive workspace status:', err);
-        return null;
-      }
-    },
-
     // ─────────────────────────────────────────────────────────────
-    // 6. SYNC FROM DRIVE (PULL / RESTORE)
+    // 7. PULL FROM DRIVE (RESTORE & MIRROR WORKSPACE)
     // ─────────────────────────────────────────────────────────────
     pullFromDrive: async function (options = {}) {
-      if (!this.accessToken) {
-        this.connect();
-        return;
-      }
-
       if (!options.force && !confirm('هل ترغب في استيراد ومطابقة مساحة عملك من Google Drive؟ سيتم استبدال الحجرات لتطابق ملفات السحابة وتفريغ أي حجرات زائدة لضمان عدم تداخل الملفات.')) {
         return;
       }
@@ -604,23 +685,17 @@
       this.updateUI();
 
       try {
-        const folderId = await this.ensureAppFolder();
-        if (!folderId) throw new Error('App folder not found on Drive');
-
-        const driveStatus = await this.getDriveWorkspaceStatus();
+        await this.ensureValidToken(options.interactive || false);
+        const inventory = await this.getFolderInventory();
         let manifest = null;
 
-        // 1. Try to read manifest if available
-        if (driveStatus && driveStatus.manifestFile) {
+        // 1. Read manifest if present
+        if (inventory.manifestFile) {
           try {
-            const res = await fetch(`https://www.googleapis.com/drive/v3/files/${driveStatus.manifestFile.id}?alt=media`, {
-              headers: { Authorization: `Bearer ${this.accessToken}` }
-            });
-            if (res.ok) {
-              manifest = await res.json();
-            }
+            const res = await this.driveFetch(`https://www.googleapis.com/drive/v3/files/${inventory.manifestFile.id}?alt=media`);
+            manifest = await res.json();
           } catch (e) {
-            console.warn('[VienixDrive] Could not parse manifest:', e);
+            console.warn('[VienixDrive] Could not parse manifest from Drive:', e);
           }
         }
 
@@ -629,57 +704,51 @@
         }
         if (!manifest.rawKeys) manifest.rawKeys = {};
 
-        // 2. Check if manifest has any chambers with content
         let hasChambers = false;
+
+        // 2. Read every chamber file directly from Drive inventory
+        for (const [chNum, files] of inventory.chamberFiles.entries()) {
+          const file = files[0];
+          const match = file.name.match(/^Chamber_(\d+)(?:_(.*))?\.md$/i);
+          const title = match && match[2] ? match[2].replace(/_/g, ' ') : '';
+
+          try {
+            const res = await this.driveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`);
+            const text = await res.text();
+            if (text && text.trim().length > 0) {
+              manifest.rawKeys['vienix_chamber_' + chNum] = text;
+              manifest.rawKeys['yaser_chamber_' + chNum] = text;
+              if (chNum === 1) {
+                manifest.rawKeys['vienix_md_content'] = text;
+                manifest.rawKeys['yaser_md_content'] = text;
+              }
+              if (title) {
+                const metaObj = {
+                  customTitle: title,
+                  folder: 'book',
+                  updatedAt: file.modifiedTime ? new Date(file.modifiedTime).getTime() : Date.now()
+                };
+                manifest.rawKeys['vienix_chamber_meta_' + chNum] = JSON.stringify(metaObj);
+                manifest.rawKeys['yaser_chamber_meta_' + chNum] = JSON.stringify(metaObj);
+              }
+              hasChambers = true;
+            }
+          } catch (err) {
+            console.warn('[VienixDrive] Failed reading chamber file from Drive:', file.name, err);
+          }
+        }
+
+        // Check if manifest had chambers even if individual files were absent
         Object.keys(manifest.rawKeys).forEach(k => {
           if (k.includes('chamber') && !k.includes('meta') && String(manifest.rawKeys[k]).trim().length > 0) {
             hasChambers = true;
           }
         });
 
-        // 3. Fallback / Enhancement: read any Chamber_*.md files directly from Drive folder
-        if (driveStatus && driveStatus.chamberFiles && driveStatus.chamberFiles.length > 0) {
-          for (const file of driveStatus.chamberFiles) {
-            const match = file.name.match(/^Chamber_(\d+)(?:_(.*))?\.md$/i);
-            if (match) {
-              const chNum = parseInt(match[1], 10);
-              const title = match[2] ? match[2].replace(/_/g, ' ') : '';
-              const existingContent = manifest.rawKeys['vienix_chamber_' + chNum] || manifest.rawKeys['yaser_chamber_' + chNum];
-
-              // If missing or empty in manifest, fetch it directly
-              if (!existingContent || String(existingContent).trim().length === 0) {
-                try {
-                  const contentRes = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, {
-                    headers: { Authorization: `Bearer ${this.accessToken}` }
-                  });
-                  if (contentRes.ok) {
-                    const text = await contentRes.text();
-                    if (text && text.trim().length > 0) {
-                      manifest.rawKeys['vienix_chamber_' + chNum] = text;
-                      manifest.rawKeys['yaser_chamber_' + chNum] = text;
-                      if (chNum === 1) {
-                        manifest.rawKeys['vienix_md_content'] = text;
-                        manifest.rawKeys['yaser_md_content'] = text;
-                      }
-                      if (title && !manifest.rawKeys['vienix_chamber_meta_' + chNum]) {
-                        const metaObj = { customTitle: title, folder: 'book', updatedAt: Date.now() };
-                        manifest.rawKeys['vienix_chamber_meta_' + chNum] = JSON.stringify(metaObj);
-                        manifest.rawKeys['yaser_chamber_meta_' + chNum] = JSON.stringify(metaObj);
-                      }
-                      hasChambers = true;
-                    }
-                  }
-                } catch (e) {
-                  console.warn('[VienixDrive] Failed reading chamber file:', file.name, e);
-                }
-              } else {
-                hasChambers = true;
-              }
-            }
-          }
-        }
-
         if (hasChambers && window.VienixStorage && typeof window.VienixStorage.applyRestore === 'function') {
+          this.lastSyncTime = new Date();
+          this.lastSyncError = null;
+          localStorage.setItem('vienix_drive_last_sync', this.lastSyncTime.toISOString());
           await window.VienixStorage.applyRestore(manifest);
           return;
         }
@@ -695,6 +764,8 @@
           alert('لم يتم العثور على ملفات سابقة في مجلد Vienix Notes على Google Drive.');
         }
       } catch (err) {
+        console.error('[VienixDrive] Pull error:', err);
+        this.lastSyncError = err.message;
         alert('حدث خطأ أثناء الاستيراد من Google Drive: ' + err.message);
       } finally {
         this.isSyncing = false;
@@ -703,41 +774,42 @@
     },
 
     // ─────────────────────────────────────────────────────────────
-    // 7. SMART BI-DIRECTIONAL SYNC
+    // 8. SMART BI-DIRECTIONAL SYNC
     // ─────────────────────────────────────────────────────────────
     smartSync: async function (options = {}) {
-      if (!this.accessToken) {
-        this.connect();
+      if (this.isSyncing) return;
+
+      try {
+        await this.ensureValidToken(true);
+      } catch (e) {
         return;
       }
 
-      if (this.isSyncing) return;
       this.isSyncing = true;
       this.updateUI();
 
       try {
         const isLocalEmpty = this.isLocalWorkspaceEmpty();
-        const driveStatus = await this.getDriveWorkspaceStatus();
+        const inventory = await this.getFolderInventory();
 
         // 1. Local is completely empty, and Drive has files -> Auto PULL
-        if (isLocalEmpty && driveStatus && driveStatus.hasRemoteData) {
+        if (isLocalEmpty && inventory.hasRemoteData) {
           console.log('[VienixDrive] SmartSync: Local is empty and Drive has files -> Pulling from Drive...');
           this.isSyncing = false;
-          await this.pullFromDrive({ force: true });
+          await this.pullFromDrive({ force: true, interactive: false });
           return;
         }
 
         // 2. Drive has no data, Local has data -> Auto PUSH
-        if (!isLocalEmpty && (!driveStatus || !driveStatus.hasRemoteData)) {
+        if (!isLocalEmpty && !inventory.hasRemoteData) {
           console.log('[VienixDrive] SmartSync: Drive is empty and Local has files -> Pushing to Drive...');
           this.isSyncing = false;
-          await this.syncAllToDrive();
+          await this.syncAllToDrive({ force: true, interactive: false });
           return;
         }
 
         // 3. Both are empty
-        if (isLocalEmpty && (!driveStatus || !driveStatus.hasRemoteData)) {
-          console.log('[VienixDrive] SmartSync: Both local and Drive are empty.');
+        if (isLocalEmpty && !inventory.hasRemoteData) {
           this.isSyncing = false;
           this.updateUI();
           if (window.VienixStorage && typeof window.VienixStorage.showCustomModal === 'function') {
@@ -753,7 +825,7 @@
 
         // 4. Both have data -> Compare timestamps
         const localTime = this.getLocalLastModifiedTime();
-        const remoteTime = (driveStatus && driveStatus.remoteTime) ? driveStatus.remoteTime : 0;
+        const remoteTime = inventory.remoteTime || 0;
 
         // If remote is noticeably newer (more than 5 seconds newer than local)
         if (remoteTime > (localTime + 5000)) {
@@ -768,17 +840,17 @@
               confirmText: 'استيراد الأحدث من السحابة (تنزيل)',
               cancelText: 'رفع النسخة الحالية إلى السحابة',
               onConfirm: () => {
-                this.pullFromDrive({ force: true });
+                this.pullFromDrive({ force: true, interactive: false });
               },
               onCancel: () => {
-                this.syncAllToDrive();
+                this.syncAllToDrive({ force: true, interactive: false });
               }
             });
           } else {
             if (confirm(`توجد نسخة أحدث على Google Drive بتاريخ ${dateStr}. هل ترغب في تنزيلها؟`)) {
-              await this.pullFromDrive({ force: true });
+              await this.pullFromDrive({ force: true, interactive: false });
             } else {
-              await this.syncAllToDrive();
+              await this.syncAllToDrive({ force: true, interactive: false });
             }
           }
           return;
@@ -787,9 +859,13 @@
         // Local is newer or equal -> Push local changes to Drive
         console.log('[VienixDrive] SmartSync: Local is up-to-date or newer -> Pushing to Drive...');
         this.isSyncing = false;
-        await this.syncAllToDrive();
+        await this.syncAllToDrive({ force: false, interactive: false });
       } catch (err) {
         console.error('[VienixDrive] SmartSync error:', err);
+        this.lastSyncError = err.message;
+        if (window.showToast) {
+          window.showToast(`تعذر إتمام المزامنة الذكية: ${err.message} ⚠️`, 'error', 4000);
+        }
       } finally {
         this.isSyncing = false;
         this.updateUI();
@@ -797,14 +873,14 @@
     },
 
     // ─────────────────────────────────────────────────────────────
-    // 6. DEBOUNCED AUTO-SYNC TRIGGER
+    // 9. DEBOUNCED AUTO-SYNC TRIGGER
     // ─────────────────────────────────────────────────────────────
     triggerAutoSync: function () {
       if (!this.autoSyncEnabled || !this.accessToken) return;
 
       if (autoSyncDebounceTimer) clearTimeout(autoSyncDebounceTimer);
       autoSyncDebounceTimer = setTimeout(() => {
-        this.syncAllToDrive();
+        this.syncAllToDrive({ force: false, interactive: false });
       }, 120000); // 2 minutes debounce
     },
 
@@ -815,24 +891,25 @@
     },
 
     // ─────────────────────────────────────────────────────────────
-    // 7. UI CONTROLLERS & BINDINGS
+    // 10. UI CONTROLLERS & BINDINGS
     // ─────────────────────────────────────────────────────────────
     updateUI: function () {
-      // 1. Top bar cloud icon
-      const syncBtn = document.getElementById('btn-cloud-sync');
+      // 1. Top bar cloud icon dot
       const dot = document.getElementById('cloud-sync-dot');
-
       if (dot) {
         dot.className = 'cloud-sync-status-dot';
         if (this.isSyncing) {
           dot.classList.add('status-syncing');
           dot.title = 'جارٍ المزامنة السحابية...';
+        } else if (this.lastSyncError) {
+          dot.classList.add('status-error');
+          dot.title = `تنبيه مزامنة Google Drive: ${this.lastSyncError}`;
         } else if (this.accessToken) {
           dot.classList.add('status-connected');
           dot.title = `متصل بـ Google Drive (${this.userProfile ? this.userProfile.name : ''})`;
         } else {
           dot.classList.add('status-disconnected');
-          dot.title = 'Google Drive غير متصل';
+          dot.title = 'Google Drive غير متصل (انقر للربط والمزامنة)';
         }
       }
 
@@ -841,7 +918,7 @@
       if (!panel) return;
 
       const isConnected = !!this.accessToken;
-      const lastSyncStr = this.lastSyncTime ? this.lastSyncTime.toLocaleTimeString('ar-SA') : 'لم تتم بعد';
+      const lastSyncStr = this.lastSyncTime ? this.lastSyncTime.toLocaleTimeString('ar-SA') + ' - ' + this.lastSyncTime.toLocaleDateString('ar-SA') : 'لم تتم بعد';
 
       panel.innerHTML = `
         <h3 class="settings-section-title">
@@ -857,12 +934,16 @@
               <div class="cloud-profile-info">
                 <span class="cloud-user-name">${this.userProfile.name}</span>
                 <span class="cloud-user-email">${this.userProfile.email}</span>
-                <span class="cloud-badge-connected">✓ متصل ومفعل</span>
+                ${this.lastSyncError ? `
+                  <span class="cloud-badge-connected" style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3);">⚠️ تنبيه: ${this.lastSyncError}</span>
+                ` : `
+                  <span class="cloud-badge-connected">✓ متصل ومفعل ومربوط</span>
+                `}
               </div>
             </div>
-            <div class="cloud-card-actions">
-              <button type="button" class="btn btn-primary btn-sync-now ${this.isSyncing ? 'loading' : ''}" onclick="VienixDrive.smartSync()">
-                ${this.isSyncing ? '🔄 جارٍ المزامنة...' : '☁️ مزامنة ذكية الآن'}
+            <div class="cloud-card-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="btn btn-primary btn-sync-now ${this.isSyncing ? 'loading' : ''}" onclick="VienixDrive.smartSync()" style="flex:1;">
+                ${this.isSyncing ? '🔄 جارٍ المزامنة...' : '🔄 مزامنة ذكية الآن'}
               </button>
               <button type="button" class="btn btn-ghost btn-disconnect" onclick="VienixDrive.disconnect()">
                 فصل الحساب
@@ -896,7 +977,7 @@
 
         <!-- Sync Settings & Options -->
         <div class="settings-group" style="margin-top:16px;">
-          <label class="settings-label">خيارات المزامنة الذكية</label>
+          <label class="settings-label">خيارات المزامنة التلقائية</label>
           <div class="settings-toggle-row">
             <span class="settings-toggle-desc">المزامنة التلقائية الهادئة في الخلفية (كل دقيقتين بعد التعديل)</span>
             <label class="settings-toggle">
@@ -906,27 +987,44 @@
           </div>
         </div>
 
-        <!-- Cloud Actions & Pull -->
+        <!-- Direct Push & Pull Controls -->
         ${isConnected ? `
           <div class="settings-group">
-            <label class="settings-label">الاستيراد والاسترجاع السحابي</label>
-            <p class="settings-hint">تنزيل ودمج الحجرات والمستندات المحفوظة على Google Drive إلى هذا الجهاز.</p>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-              <button type="button" class="settings-action-btn" onclick="VienixDrive.pullFromDrive()" style="margin:0; flex:1;">
+            <label class="settings-label">التحكم اليدوي المباشر في المزامنة</label>
+            <p class="settings-hint">يمكنك فرض رفع مساحة العمل وتحديث السحابة الآن، أو استيراد ملفات السحابة وتحديث الجهاز.</p>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
+              <button type="button" class="btn btn-primary" onclick="VienixDrive.syncAllToDrive({ force: true, interactive: true })" style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px;">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                <span>رفع وتحديث السحابة الآن (Push)</span>
+              </button>
+              <button type="button" class="settings-action-btn" onclick="VienixDrive.pullFromDrive({ force: false, interactive: true })" style="margin:0; flex:1;">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                استيراد مساحة العمل من Drive
+                <span>استيراد من Drive (Pull)</span>
               </button>
             </div>
-            <p style="font-size:0.75rem; color:var(--text-muted); margin-top:8px;">
-              آخر مزامنة ناجحة: <strong>${lastSyncStr}</strong>
+            <p style="font-size:0.75rem; color:var(--text-muted); margin-top:10px;">
+              آخر مزامنة ناجحة: <strong style="color:var(--text-primary);">${lastSyncStr}</strong>
             </p>
           </div>
         ` : ''}
+
+        <!-- Advanced Client ID Configuration -->
+        <div class="settings-group" style="margin-top:20px; border-top:1px solid var(--border-color); padding-top:16px;">
+          <label class="settings-label" style="display:flex; align-items:center; justify-content:space-between;">
+            <span>معرّف تطبيق Google (Client ID)</span>
+            <span style="font-size:0.72rem; color:var(--text-muted); font-weight:normal;">للمطورين والمتقدمين</span>
+          </label>
+          <p class="settings-hint">يمكنك استخدام Client ID مخصص لك للتحكم الكامل بصلاحيات الوصول.</p>
+          <div style="display:flex; gap:8px;">
+            <input type="text" class="settings-input" id="s-google-client-id" value="${this.clientId}" placeholder="xxxx.apps.googleusercontent.com" style="direction:ltr; font-family:monospace; font-size:0.8rem; flex:1;" onchange="VienixDrive.setClientId(this.value)">
+            <button class="settings-mini-btn" onclick="VienixDrive.setClientId(document.getElementById('s-google-client-id').value)">حفظ</button>
+          </div>
+        </div>
       `;
     }
   };
 
-  // Expose to window
+  // Expose globally
   window.VienixDrive = VienixDrive;
 
   // Auto-init
