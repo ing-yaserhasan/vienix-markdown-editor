@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
@@ -2079,7 +2079,8 @@
               <label class="settings-label">نموذج الذكاء الاصطناعي</label>
               <select class="settings-input" id="s-ai-model" onchange="saveAiModel(this.value)" style="cursor:pointer;">
                 <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (الموصى به — أسرع)</option>
-                <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash Lite (أحدث)</option>
+                <option value="gemini-3.8-flash">Gemini 3.8 Flash</option>
+                <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash Lite</option>
                 <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
                 <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
               </select>
@@ -2211,7 +2212,7 @@
     var AI_CHAT_STORAGE = 'vienix_ai_chat_history';
     var DEFAULT_AI_MODEL = 'gemini-2.0-flash-lite';
     var GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
-    var CANDIDATE_MODELS = ['gemini-2.0-flash-lite','gemini-3.5-flash-lite','gemini-2.5-flash-lite','gemini-1.5-flash'];
+    var CANDIDATE_MODELS = ['gemini-2.0-flash-lite','gemini-3.8-flash','gemini-3.5-flash-lite','gemini-2.5-flash-lite','gemini-1.5-flash'];
 
     function _b64e(s) { try { return btoa(unescape(encodeURIComponent(s))); } catch(e) { return ''; } }
     function _b64d(s) { try { return decodeURIComponent(escape(atob(s))); } catch(e) { return ''; } }
@@ -2503,7 +2504,7 @@
       var modelLabel = document.getElementById('ai-chat-model-label');
       if (modelLabel) {
         var m = loadAiModel();
-        var names = {'gemini-2.0-flash-lite':'Gemini 2.0 Flash Lite','gemini-3.5-flash-lite':'Gemini 3.5 Flash Lite','gemini-2.5-flash-lite':'Gemini 2.5 Flash Lite','gemini-1.5-flash':'Gemini 1.5 Flash'};
+        var names = {'gemini-2.0-flash-lite':'Gemini 2.0 Flash Lite','gemini-3.8-flash':'Gemini 3.8 Flash','gemini-3.5-flash-lite':'Gemini 3.5 Flash Lite','gemini-2.5-flash-lite':'Gemini 2.5 Flash Lite','gemini-1.5-flash':'Gemini 1.5 Flash'};
         modelLabel.textContent = names[m] || m;
       }
       renderAiChat();
@@ -2618,7 +2619,7 @@
       var modelLabel = document.getElementById('ai-chat-model-label');
       if (modelLabel) {
         var m = loadAiModel();
-        var names = {'gemini-2.0-flash-lite':'Gemini 2.0 Flash Lite','gemini-3.5-flash-lite':'Gemini 3.5 Flash Lite','gemini-2.5-flash-lite':'Gemini 2.5 Flash Lite','gemini-1.5-flash':'Gemini 1.5 Flash'};
+        var names = {'gemini-2.0-flash-lite':'Gemini 2.0 Flash Lite','gemini-3.8-flash':'Gemini 3.8 Flash','gemini-3.5-flash-lite':'Gemini 3.5 Flash Lite','gemini-2.5-flash-lite':'Gemini 2.5 Flash Lite','gemini-1.5-flash':'Gemini 1.5 Flash'};
         modelLabel.textContent = names[m] || m;
       }
 
