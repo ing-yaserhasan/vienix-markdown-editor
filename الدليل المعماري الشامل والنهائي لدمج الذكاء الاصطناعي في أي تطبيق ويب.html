@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مستند Yaser Markdown Editor</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&family=Fira+Code:wght@400;500;600&display=swap">
+  <style>
+    body {
+      font-family: 'Tajawal', sans-serif;
+      direction: rtl;
+      text-align: right;
+      line-height: 1.8;
+      max-width: 850px;
+      margin: 40px auto;
+      padding: 20px;
+      color: #0f172a;
+      background: #f8fafc;
+    }
+    .document-card {
+      background: #ffffff;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      border: 1px solid #e2e8f0;
+    }
+    h1, h2, h3 { color: #1e293b; margin-top: 1.5em; }
+    h1 { border-bottom: 2px solid #3b82f6; padding-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 10px; }
+    th { background: #f1f5f9; }
+    blockquote { border-right: 4px solid #3b82f6; padding: 10px 20px; margin: 20px 0; background: #f8fafc; }
+    code:not(pre code) {
+      font-family: 'Fira Code', 'Fira Mono', Consolas, monospace;
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #9333ea;
+      font-size: 0.9em;
+    }
+    pre {
+      background: #1e1e1e !important;
+      color: #f8fafc;
+      padding: 18px 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+      direction: ltr;
+      text-align: left;
+      border: 1px solid #334155;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      margin: 20px 0;
+      font-family: 'Fira Code', 'Fira Mono', Consolas, Monaco, monospace;
+      position: relative;
+    }
+    pre code {
+      background: transparent !important;
+      border: none !important;
+      padding: 0;
+      color: #f8fafc;
+      display: block;
+      font-family: inherit;
+      font-size: 0.92rem;
+      line-height: 1.65;
+      white-space: pre;
+    }
+    img { max-width: 100%; height: auto; border-radius: 8px; }
+    .mermaid-wrapper { text-align: center; margin: 20px 0; background: #ffffff; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; }
+    .mermaid-wrapper svg { max-width: 100%; height: auto; }
+
+    /* Prism Syntax Highlighting (ألوان تلوين الأكواد البرمجية كما في المحرر تماماً) */
+    .token.comment, .token.prolog, .token.doctype, .token.cdata, .token.block-comment {
+      color: #94a3b8 !important;
+      font-style: italic;
+    }
+    .token.punctuation {
+      color: #cbd5e1 !important;
+    }
+    .token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol, .token.deleted {
+      color: #f08d49 !important;
+    }
+    .token.selector, .token.attr-name, .token.string, .token.char, .token.builtin, .token.inserted {
+      color: #7ec699 !important;
+    }
+    .token.operator, .token.entity, .token.url, .language-css .token.string, .style .token.string {
+      color: #67cdcc !important;
+    }
+    .token.atrule, .token.attr-value, .token.keyword {
+      color: #cc99cd !important;
+    }
+    .token.function, .token.class-name {
+      color: #6196cc !important;
+    }
+    .token.regex, .token.important, .token.variable {
+      color: #f8c555 !important;
+    }
+    .token.bold, .token.important {
+      font-weight: bold;
+    }
+    .token.italic {
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="document-card">
+    <h1>الدليل المعماري الشامل والنهائي لدمج الذكاء الاصطناعي في أي تطبيق ويب</h1>
+<blockquote>
+<p><strong>المرجع الهندسي المتكامل: دمج Google Gemini API، تدوير المفاتيح، الـ Fallback الذكي، كود زر "إسأل AI" الفاخر (HTML + JSX + CSS)، مخططات Mermaid، عداد استيعاب المحتوى، والتمرير الذكي</strong></p>
+</blockquote>
+<hr>
+<h2>أولاً: الفلسفة والدافع الهندسي (لماذا وكيف فكرنا بها؟)</h2>
+<p>في أغلب التطبيقات التقليدية، يقع المطور في إحدى مشكلتين عند إضافة الذكاء الاصطناعي:</p>
+<ol>
+<li><strong>استنزاف ميزانية الخوادم (Server Cost Explosion):</strong> ربط التطبيق بخادم وسيط يدفع فيه المطور تكلفة كل سؤال يطرحه المستخدمون (API Quota Billing)، مما يؤدي للإفلاس السريع عند انتشار التطبيق.</li>
+<li><strong>التعطل عند استنفاد الحصة أو انهيار النموذج:</strong> إذا توقف مفتاح الـ API أو كان النموذج تحت ضغط شديد، يتعطل التطبيق بالكامل وتظهر أخطاء مزعجة للمستخدم.</li>
+</ol>
+<h3>الحل المبتكر (Client-Side BYOK + Multi-Key Rotation + Smart Fallback):</h3>
+<ol>
+<li><strong>نموذج "أحضر مفتاحك معك" (Bring Your Own Key - BYOK):</strong> يدخل المستخدم مفتاحه المجاني من Google AI Studio (أو عدة مفاتيح)، وتبقى المفاتيح مشفرة ومحفوظة داخل جهازه فقط (Privacy-First) دون أي تكلفة على صاحب التطبيق.</li>
+<li><strong>اعتماد <code>gemini-3.5-flash-lite</code> كنموذج افتراضي عالمي:</strong><ul>
+<li><strong>زمن استجابة شبه لحظي:</strong> يبدأ إرسال الردود في أقل من <strong>500ms</strong> مقارنة بـ 4 ثوانٍ في النماذج الثقيلة.</li>
+<li><strong>حصص مجانية هائلة (High Free Quota):</strong> نادراً جداً ما يواجه خطأ <code>429 Too Many Requests</code>.</li>
+<li><strong>توفير استهلاك التوكنز:</strong> صُمم خصيصاً للسرعة والإجابات المركزة المباشرة.</li>
+</ul>
+</li>
+<li><strong>مصفوفة الأمان الثلاثية (Triple-Safety Engine):</strong><ul>
+<li>إن استنفد المفتاح حصته ⬅️ يتم تدوير المفاتيح تلقائياً في الخلفية.</li>
+<li>إن كان النموذج غير متوفر في بلد المستخدم أو به عطل ⬅️ يسقط الكود تلقائياً للنموذج البديل.</li>
+<li>إن أراد المستخدم تجربة نموذج آخر (مثل 3.8 Flash أو 2.5 Flash) ⬅️ يختاره من القائمة بكل حرية.</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2>ثانياً: الشق المتعلق بالمنصات الخارجية (Google AI Studio Setup)</h2>
+<ol>
+<li><strong>إنشاء المفتاح من المنصة الرسمية:</strong><ul>
+<li>الانتقال إلى <a href="https://aistudio.google.com/">Google AI Studio</a>.</li>
+<li>تسجيل الدخول بأي حساب Google شخصي مجاني، ثم الضغط على <strong>Get API key</strong> ثم <strong>Create API key</strong>.</li>
+</ul>
+</li>
+<li><strong>مزايا باقة Google AI Studio المجانية:</strong><ul>
+<li>تمنحك جوجل حصة مجانية متجددة شهرياً وكافية لآلاف الأسئلة دون الحاجة لربط بطاقة ائتمان.</li>
+</ul>
+</li>
+<li><strong>تأمين الرابط وسياسة الاستخدام:</strong><ul>
+<li>المفتاح يتم استدعاؤه مباشرة عبر الـ REST API من متصفح العميل إلى <code>https://generativelanguage.googleapis.com</code>.</li>
+<li>لا يمر المفتاح بأي خادم وسيط على الإطلاق.</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2>ثالثاً: مخططات النظام المعمارية وتدفق التفاعل (System Diagrams)</h2>
+<h3>1. مخطط تدفق دورة حياة المحادثة (User Lifecycle Flow)</h3>
+
+        <div class="mermaid-wrapper" data-zoom="1.0">
+          
+          <div class="mermaid" id="mermaid-node-0" data-diagram="graph%20TD%0A%20%20%20%20Start%5B%D8%A7%D9%84%D9%85%D8%B3%D8%AA%D8%AE%D8%AF%D9%85%20%D9%8A%D8%AA%D8%B5%D9%81%D8%AD%20%D8%A3%D9%8A%20%D8%B9%D9%86%D8%B5%D8%B1%2F%D9%85%D8%AD%D8%AA%D9%88%D9%89%5D%20--%3E%20Click%5B%D8%A7%D9%84%D9%86%D9%82%D8%B1%20%D8%B9%D9%84%D9%89%20%D8%B2%D8%B1%20%D8%A5%D8%B3%D8%A3%D9%84%20AI%20%D8%A7%D9%84%D9%81%D8%A7%D8%AE%D8%B1%5D%0A%20%20%20%20Click%20--%3E%20Modal%5B%D8%A7%D9%86%D9%81%D8%AA%D8%A7%D8%AD%20%D9%86%D8%A7%D9%81%D8%B0%D8%A9%20%D8%A7%D9%84%D8%B4%D8%A7%D8%AA%20%D8%A7%D9%84%D9%86%D8%B8%D9%8A%D9%81%D8%A9%5D%0A%20%20%20%20Modal%20--%3E%20Choice%7B%D9%87%D9%84%20%D9%8A%D8%B1%D9%8A%D8%AF%20%D8%A7%D9%84%D9%85%D8%B3%D8%AA%D8%AE%D8%AF%D9%85%20%D9%81%D8%AD%D8%B5%20%D8%A7%D9%84%D9%85%D8%AD%D8%AA%D9%88%D9%89%20%D8%A3%D9%88%D9%84%D8%A7%D9%8B%D8%9F%7D%0A%20%20%20%20Choice%20--%20%D9%86%D8%B9%D9%85%20--%3E%20Scan%5B%D8%A7%D9%84%D8%B6%D8%BA%D8%B7%20%D8%B9%D9%84%D9%89%20%D8%B2%D8%B1%20%D9%81%D8%AD%D8%B5%20%D9%88%D8%A7%D8%B3%D8%AA%D9%8A%D8%B9%D8%A7%D8%A8%20%D8%A7%D9%84%D9%85%D8%AD%D8%AA%D9%88%D9%89%5D%0A%20%20%20%20Scan%20--%3E%20Progress%5B%D8%B9%D8%AF%D8%A7%D8%AF%20%D8%B1%D8%B3%D9%88%D9%85%D9%8A%20%D9%85%D8%AA%D8%AD%D8%B1%D9%83%3A%200%25%20%D8%A5%D9%84%D9%89%20100%25%5D%0A%20%20%20%20Progress%20--%3E%20Badge%5B%D8%B8%D9%87%D9%88%D8%B1%20%D8%B4%D8%A7%D8%B1%D8%A9%20%D8%AE%D8%B6%D8%B1%D8%A7%D8%A1%3A%20%D8%AA%D9%85%20%D8%A7%D9%84%D9%81%D9%87%D9%85%20%D9%88%D8%A7%D9%84%D8%A7%D8%B3%D8%AA%D9%8A%D8%B9%D8%A7%D8%A8%20%D8%A8%D9%86%D8%AC%D8%A7%D8%AD%5D%0A%20%20%20%20Choice%20--%20%D9%84%D8%A7%20%2F%20%D8%A8%D8%B9%D8%AF%20%D8%A7%D9%84%D9%81%D8%AD%D8%B5%20--%3E%20Ask%5B%D8%A7%D9%84%D9%85%D8%B3%D8%AA%D8%AE%D8%AF%D9%85%20%D9%8A%D9%83%D8%AA%D8%A8%20%D8%B3%D8%A4%D8%A7%D9%84%D9%87%20%D8%A8%D8%A7%D8%AE%D8%AA%D8%B5%D8%A7%D8%B1%5D%0A%20%20%20%20Badge%20--%3E%20Ask%0A%20%20%20%20Ask%20--%3E%20Gemini%5B%D8%A7%D8%B3%D8%AA%D8%AF%D8%B9%D8%A7%D8%A1%20Gemini%203.5%20Flash%20Lite%5D%0A%20%20%20%20Gemini%20--%3E%20Prompt%5B%D8%AD%D8%A7%D8%AC%D8%B2%20%D8%A7%D9%84%D8%A3%D9%88%D8%A7%D9%85%D8%B1%20%D8%A7%D9%84%D8%B5%D8%A7%D8%B1%D9%85%3A%20%D8%A3%D8%AC%D8%A8%20%D8%B9%D9%84%D9%89%20%D9%82%D8%AF%20%D8%A7%D9%84%D8%B3%D8%A4%D8%A7%D9%84%20%D9%83%D8%A5%D9%86%D8%B3%D8%A7%D9%86%20%D8%AE%D8%A8%D9%8A%D8%B1%5D%0A%20%20%20%20Prompt%20--%3E%20Response%5B%D8%A5%D9%86%D8%B4%D8%A7%D8%A1%20%D8%A7%D9%84%D8%B1%D8%AF%20%D8%A7%D9%84%D9%85%D8%B1%D9%83%D8%B2%20%D9%88%D8%A7%D9%84%D9%85%D8%A8%D8%A7%D8%B4%D8%B1%5D%0A%20%20%20%20Response%20--%3E%20Scroll%5B%D8%B3%D9%83%D8%B1%D9%88%D9%84%20%D8%B3%D9%84%D8%B3%20%D8%AA%D9%84%D9%82%D8%A7%D8%A6%D9%8A%20%D9%84%D8%A3%D9%88%D9%84%20%D8%B3%D8%B7%D8%B1%20%D9%81%D9%8A%20%D8%A7%D9%84%D8%B1%D8%AF%5D"><svg id="mermaid-svg-1792258308240-0" width="100%" xmlns="http://www.w3.org/2000/svg" style="max-width: 459.9765625px;" viewBox="-8 -8 459.9765625 1479.59375" role="graphics-document document" aria-roledescription="flowchart-v2"><style>#mermaid-svg-1792258308240-0{font-family:'Tajawal',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:16px;fill:#333;}#mermaid-svg-1792258308240-0 .error-icon{fill:#552222;}#mermaid-svg-1792258308240-0 .error-text{fill:#552222;stroke:#552222;}#mermaid-svg-1792258308240-0 .edge-thickness-normal{stroke-width:2px;}#mermaid-svg-1792258308240-0 .edge-thickness-thick{stroke-width:3.5px;}#mermaid-svg-1792258308240-0 .edge-pattern-solid{stroke-dasharray:0;}#mermaid-svg-1792258308240-0 .edge-pattern-dashed{stroke-dasharray:3;}#mermaid-svg-1792258308240-0 .edge-pattern-dotted{stroke-dasharray:2;}#mermaid-svg-1792258308240-0 .marker{fill:#333333;stroke:#333333;}#mermaid-svg-1792258308240-0 .marker.cross{stroke:#333333;}#mermaid-svg-1792258308240-0 svg{font-family:'Tajawal',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:16px;}#mermaid-svg-1792258308240-0 .label{font-family:'Tajawal',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#333;}#mermaid-svg-1792258308240-0 .cluster-label text{fill:#333;}#mermaid-svg-1792258308240-0 .cluster-label span,#mermaid-svg-1792258308240-0 p{color:#333;}#mermaid-svg-1792258308240-0 .label text,#mermaid-svg-1792258308240-0 span,#mermaid-svg-1792258308240-0 p{fill:#333;color:#333;}#mermaid-svg-1792258308240-0 .node rect,#mermaid-svg-1792258308240-0 .node circle,#mermaid-svg-1792258308240-0 .node ellipse,#mermaid-svg-1792258308240-0 .node polygon,#mermaid-svg-1792258308240-0 .node path{fill:#ECECFF;stroke:#9370DB;stroke-width:1px;}#mermaid-svg-1792258308240-0 .flowchart-label text{text-anchor:middle;}#mermaid-svg-1792258308240-0 .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#mermaid-svg-1792258308240-0 .node .label{text-align:center;}#mermaid-svg-1792258308240-0 .node.clickable{cursor:pointer;}#mermaid-svg-1792258308240-0 .arrowheadPath{fill:#333333;}#mermaid-svg-1792258308240-0 .edgePath .path{stroke:#333333;stroke-width:2.0px;}#mermaid-svg-1792258308240-0 .flowchart-link{stroke:#333333;fill:none;}#mermaid-svg-1792258308240-0 .edgeLabel{background-color:#e8e8e8;text-align:center;}#mermaid-svg-1792258308240-0 .edgeLabel rect{opacity:0.5;background-color:#e8e8e8;fill:#e8e8e8;}#mermaid-svg-1792258308240-0 .labelBkg{background-color:rgba(232, 232, 232, 0.5);}#mermaid-svg-1792258308240-0 .cluster rect{fill:#ffffde;stroke:#aaaa33;stroke-width:1px;}#mermaid-svg-1792258308240-0 .cluster text{fill:#333;}#mermaid-svg-1792258308240-0 .cluster span,#mermaid-svg-1792258308240-0 p{color:#333;}#mermaid-svg-1792258308240-0 div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:'Tajawal',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:12px;background:hsl(80, 100%, 96.2745098039%);border:1px solid #aaaa33;border-radius:2px;pointer-events:none;z-index:100;}#mermaid-svg-1792258308240-0 .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#333;}#mermaid-svg-1792258308240-0 :root{--mermaid-font-family:'Tajawal',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}</style><g><marker id="mermaid-svg-1792258308240-0_flowchart-pointEnd" class="marker flowchart" viewBox="0 0 10 10" refX="6" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></path></marker><marker id="mermaid-svg-1792258308240-0_flowchart-pointStart" class="marker flowchart" viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></path></marker><marker id="mermaid-svg-1792258308240-0_flowchart-circleEnd" class="marker flowchart" viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id="mermaid-svg-1792258308240-0_flowchart-circleStart" class="marker flowchart" viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id="mermaid-svg-1792258308240-0_flowchart-crossEnd" class="marker cross flowchart" viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><marker id="mermaid-svg-1792258308240-0_flowchart-crossStart" class="marker cross flowchart" viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><g class="root"><g class="clusters"></g><g class="edgePaths"><path d="M178.563,42L178.563,47C178.563,52,178.563,62,178.563,71.117C178.563,80.233,178.563,88.467,178.563,92.583L178.563,96.7" id="L-Start-Click-0" class=" edge-thickness-normal edge-pattern-solid flowchart-link LS-Start LE-Click" style="fill:none;" marker-end="url(#mermaid-svg-1792258308240-0_flowchart-pointEnd)"></path><path d="M178.563,144L178.563,149C178.563,154,178.563,164,178.563,173.117C178.563,182.233,178.563,190.467,178.563,194.583L178.563,198.7" id="L-Click-Modal-0" class=" edge-thickness-normal edge-pattern-solid flowchart-link LS-Click LE-Modal" style="fill:none;" marker-end="url(#mermaid-svg-1792258308240-0_flowchart-pointEnd)"></path><path d="M178.563,246L178.563,251C178.563,256,178.563,266,178.631,275.2C178.7,284.4,178.838,292.8,178.907,297.001L178.976,301.201" id="L-Modal-Choice-0" class=" edge-thickness-normal edge-pattern-solid flowchart-link LS-Modal LE-Choice" style="fill:none;" marker-end="url(#mermaid-svg-1792258308240-0_flowchart-pointEnd)"></path><path d="M232.851,572.306L240.783,588.02C248.715,603.735,264.58,635.164,272.513,656.829C280.445,678.494,280.445,690.394,280.445,696.344L280.445,702.294" id="L-Choice-Scan-0" class=" edge-thickness-normal edge-pattern-solid flowchart-link LS-Choice LE-Scan" style="fill:none;" marker-end="url(#mermaid-svg-1792258308240-0_flowchart-pointEnd)"></path><path d="M280.445,749.594L280.445,754.594C280.445,759.594,280.445,769.594,280.445,778.71C280.445,787.827,280.445,796.06,280.445,800.177L280.445,804.294" id="L-Scan-Progress-0" class=" edge-thickness-normal edge-pattern-solid flowchart-link LS-Scan LE-Progress" style="fill:none;" marker-end="url(#mermaid-svg-1792258308240-0_flowchart-pointEnd)"></path><path d="M280.445,851.594L280.445,856.594C280.445,861.594,280.445,871.594,280.445,880.71C280.445,889.827,280.445,898.06,280.445,902.177L280.445,906.294" id="L-Progress-Badge-0" class=" edge-thickness-normal edge-pattern-solid flowchart-link LS-Progress LE-Badge" style="fill:none;" marker-end="url(#mermaid-svg-1792258308240-0_flowchart-pointEnd)"></path><path d="M125.274,572.306L117.175,588.02C109.076,603.735,92.878,635.164,84.779,661.212C76.68,687.26,76.68,707.927,76.68,726.76C76.68,745.594,76.68,762.594,76.68,779.594C76.68,796.594,76.68,813.594,76.68,830.594C76.68,847.594,76.68,864.594,76.68,881.594C76.68,898.594,76.68,915.594,76.68,932.594C76.68,949.594,76.68,966.594,85.878,979.698C95.077,992.803,113.474,1002.012,122.673,1006.617L131.871,1011.221" id="L-Choice-Ask-0" class=" edge-thickness-normal edge-pattern-solid flowchart-link LS-Choice LE-Ask" style="fill:none;" marker-end="url(#mermaid-svg-1792258308240-0_flowchart-pointEnd)"></path><path d="M280.445,953.594L280.445,958.594C280.445,963.594,280.445,973.594,271.247,983.198C262.048,992.803,243.651,1002.012,234.452,1006.617L225.254,1011.221" id="L-Badge-Ask-0" class=" edge-thickness-normal edge-pattern-solid flowchart-link LS-Badge LE-Ask" style="fill:none;" marker-end="url(#mermaid-svg-1792258308240-0_flowchart-pointEnd)"></path><path d="M178.563,1055.594L178.563,1060.594C178.563,1065.594,178.563,1075.594,178.563,1084.71C178.563,1093.827,178.563,1102.06,178.563,1106.177L178.563,1110.294" id="L-Ask-Gemini-0" class=" edge-thickness-normal edge-pattern-solid flowchart-link LS-Ask LE-Gemini" style="fill:none;" marker-end="url(#mermaid-svg-1792258308240-0_flowchart-pointEnd)"></path><path d="M178.563,1157.594L178.563,1162.594C178.563,1167.594,178.563,1177.594,178.563,1186.71C178.563,1195.827,178.563,1204.06,178.563,1208.177L178.563,1212.294" id="L-Gemini-Prompt-0" class=" edge-thickness-normal edge-pattern-solid flowchart-link LS-Gemini LE-Prompt" style="fill:none;" marker-end="url(#mermaid-svg-1792258308240-0_flowchart-pointEnd)"></path><path d="M178.563,1259.594L178.563,1264.594C178.563,1269.594,178.563,1279.594,178.563,1288.71C178.563,1297.827,178.563,1306.06,178.563,1310.177L178.563,1314.294" id="L-Prompt-Response-0" class=" edge-thickness-normal edge-pattern-solid flowchart-link LS-Prompt LE-Response" style="fill:none;" marker-end="url(#mermaid-svg-1792258308240-0_flowchart-pointEnd)"></path><path d="M178.563,1361.594L178.563,1366.594C178.563,1371.594,178.563,1381.594,178.563,1390.71C178.563,1399.827,178.563,1408.06,178.563,1412.177L178.563,1416.294" id="L-Response-Scroll-0" class=" edge-thickness-normal edge-pattern-solid flowchart-link LS-Response LE-Scroll" style="fill:none;" marker-end="url(#mermaid-svg-1792258308240-0_flowchart-pointEnd)"></path></g><g class="edgeLabels"><g class="edgeLabel"><g class="label" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(280.4453125, 666.59375)"><g class="label" transform="translate(-12.90625, -11)"><foreignObject width="25.8125" height="22"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="edgeLabel">نعم</span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(76.6796875, 830.59375)"><g class="label" transform="translate(-50.3203125, -11)"><foreignObject width="100.640625" height="22"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="edgeLabel">لا / بعد الفحص</span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="edgeLabel"></span></div></foreignObject></g></g></g><g class="nodes"><g class="node default default flowchart-label" id="flowchart-Start-24" data-node="true" data-id="Start" transform="translate(178.5625, 21)"><rect class="basic label-container" style="" rx="0" ry="0" x="-123.9296875" y="-21" width="247.859375" height="42"></rect><g class="label" style="" transform="translate(-113.9296875, -11)"><rect></rect><foreignObject width="227.859375" height="22"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="nodeLabel">المستخدم يتصفح أي عنصر/محتوى</span></div></foreignObject></g></g><g class="node default default flowchart-label" id="flowchart-Click-25" data-node="true" data-id="Click" transform="translate(178.5625, 123)"><rect class="basic label-container" style="" rx="0" ry="0" x="-93.8828125" y="-21" width="187.765625" height="42"></rect><g class="label" style="" transform="translate(-83.8828125, -11)"><rect></rect><foreignObject width="167.765625" height="22"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="nodeLabel">النقر على زر إسأل AI الفاخر</span></div></foreignObject></g></g><g class="node default default flowchart-label" id="flowchart-Modal-27" data-node="true" data-id="Modal" transform="translate(178.5625, 225)"><rect class="basic label-container" style="" rx="0" ry="0" x="-99.09375" y="-21" width="198.1875" height="42"></rect><g class="label" style="" transform="translate(-89.09375, -11)"><rect></rect><foreignObject width="178.1875" height="22"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="nodeLabel">انفتاح نافذة الشات النظيفة</span></div></foreignObject></g></g><g class="node default default flowchart-label" id="flowchart-Choice-29" data-node="true" data-id="Choice" transform="translate(178.5625, 465.796875)"><polygon points="159.796875,0 319.59375,-159.796875 159.796875,-319.59375 0,-159.796875" class="label-container" transform="translate(-159.796875,159.796875)" style=""></polygon><g class="label" style="" transform="translate(-128.796875, -11)"><rect></rect><foreignObject width="257.59375" height="22"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="nodeLabel">هل يريد المستخدم فحص المحتوى أولاً؟</span></div></foreignObject></g></g><g class="node default default flowchart-label" id="flowchart-Scan-31" data-node="true" data-id="Scan" transform="translate(280.4453125, 728.59375)"><rect class="basic label-container" style="" rx="0" ry="0" x="-144.2890625" y="-21" width="288.578125" height="42"></rect><g class="label" style="" transform="translate(-134.2890625, -11)"><rect></rect><foreignObject width="268.578125" height="22"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="nodeLabel">الضغط على زر فحص واستيعاب المحتوى</span></div></foreignObject></g></g><g class="node default default flowchart-label" id="flowchart-Progress-33" data-node="true" data-id="Progress" transform="translate(280.4453125, 830.59375)"><rect class="basic label-container" style="" rx="0" ry="0" x="-118.4453125" y="-21" width="236.890625" height="42"></rect><g class="label" style="" transform="translate(-108.4453125, -11)"><rect></rect><foreignObject width="216.890625" height="22"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="nodeLabel">عداد رسومي متحرك: 0% إلى 100%</span></div></foreignObject></g></g><g class="node default default flowchart-label" id="flowchart-Badge-35" data-node="true" data-id="Badge" transform="translate(280.4453125, 932.59375)"><rect class="basic label-container" style="" rx="0" ry="0" x="-163.53125" y="-21" width="327.0625" height="42"></rect><g class="label" style="" transform="translate(-153.53125, -11)"><rect></rect><foreignObject width="307.0625" height="22"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="nodeLabel">ظهور شارة خضراء: تم الفهم والاستيعاب بنجاح</span></div></foreignObject></g></g><g class="node default default flowchart-label" id="flowchart-Ask-37" data-node="true" data-id="Ask" transform="translate(178.5625, 1034.59375)"><rect class="basic label-container" style="" rx="0" ry="0" x="-111.625" y="-21" width="223.25" height="42"></rect><g class="label" style="" transform="translate(-101.625, -11)"><rect></rect><foreignObject width="203.25" height="22"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="nodeLabel">المستخدم يكتب سؤاله باختصار</span></div></foreignObject></g></g><g class="node default default flowchart-label" id="flowchart-Gemini-41" data-node="true" data-id="Gemini" transform="translate(178.5625, 1136.59375)"><rect class="basic label-container" style="" rx="0" ry="0" x="-108.390625" y="-21" width="216.78125" height="42"></rect><g class="label" style="" transform="translate(-98.390625, -11)"><rect></rect><foreignObject width="196.78125" height="22"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="nodeLabel">استدعاء Gemini 3.5 Flash Lite</span></div></foreignObject></g></g><g class="node default default flowchart-label" id="flowchart-Prompt-43" data-node="true" data-id="Prompt" transform="translate(178.5625, 1238.59375)"><rect class="basic label-container" style="" rx="0" ry="0" x="-178.5625" y="-21" width="357.125" height="42"></rect><g class="label" style="" transform="translate(-168.5625, -11)"><rect></rect><foreignObject width="337.125" height="22"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="nodeLabel">حاجز الأوامر الصارم: أجب على قد السؤال كإنسان خبير</span></div></foreignObject></g></g><g class="node default default flowchart-label" id="flowchart-Response-45" data-node="true" data-id="Response" transform="translate(178.5625, 1340.59375)"><rect class="basic label-container" style="" rx="0" ry="0" x="-93.4921875" y="-21" width="186.984375" height="42"></rect><g class="label" style="" transform="translate(-83.4921875, -11)"><rect></rect><foreignObject width="166.984375" height="22"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="nodeLabel">إنشاء الرد المركز والمباشر</span></div></foreignObject></g></g><g class="node default default flowchart-label" id="flowchart-Scroll-47" data-node="true" data-id="Scroll" transform="translate(178.5625, 1442.59375)"><rect class="basic label-container" style="" rx="0" ry="0" x="-139" y="-21" width="278" height="42"></rect><g class="label" style="" transform="translate(-129, -11)"><rect></rect><foreignObject width="258" height="22"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="nodeLabel">سكرول سلس تلقائي لأول سطر في الرد</span></div></foreignObject></g></g></g></g></g></svg></div>
+        </div>
+      
+<hr>
+<h3>2. مخطط التشريح البصري لزر "إسأل AI" (Button Anatomy)</h3>
+
+        <div class="mermaid-wrapper" data-zoom="1.0">
+          
+          <div class="mermaid" id="mermaid-node-1" data-diagram="graph%20LR%0A%20%20%20%20subgraph%20Button_Architecture%20%5B%22%D8%A7%D9%84%D9%87%D9%8A%D9%83%D9%84%20%D8%A7%D9%84%D9%87%D9%86%D8%AF%D8%B3%D9%8A%20%D9%84%D9%84%D8%B2%D8%B1%20%D8%A7%D9%84%D9%81%D8%A7%D8%AE%D8%B1%20(Dribbble%20Pill)%22%5D%0A%20%20%20%20%20%20%20%20Shadow%5B%221.%20%D8%AA%D9%88%D9%87%D8%AC%20%D9%86%D9%8A%D9%88%D9%86%20%D8%AE%D8%A7%D9%81%D8%AA%3Cbr%2F%3Ebox-shadow%3A%200%2010px%2024px...%22%5D%0A%20%20%20%20%20%20%20%20Border%5B%222.%20%D8%A5%D8%B7%D8%A7%D8%B1%20%D9%85%D8%AA%D8%AF%D8%B1%D8%AC%20%D9%86%D8%A7%D8%B9%D9%85%3Cbr%2F%3Ebackground-clip%3A%20border-box%22%5D%0A%20%20%20%20%20%20%20%20Core%5B%223.%20%D8%A7%D9%84%D8%AE%D9%84%D9%81%D9%8A%D8%A9%20%D8%A7%D9%84%D8%B5%D9%84%D8%A8%D8%A9%20%D8%A7%D9%84%D8%AF%D8%A7%D8%AE%D9%84%D9%8A%D8%A9%3Cbr%2F%3Ebackground-clip%3A%20padding-box%22%5D%0A%20%20%20%20%20%20%20%20Icon%5B%224.%20%D8%A3%D9%8A%D9%82%D9%88%D9%86%D8%A9%20%D8%A8%D8%B1%D9%8A%D9%82%20SVG%3Cbr%2F%3E%D8%AA%D8%AF%D8%B1%D8%AC%20%D9%84%D9%88%D9%86%D9%8A%20%D8%AB%D9%84%D8%A7%D8%AB%D9%8A%203-Stop%22%5D%0A%20%20%20%20%20%20%20%20Text%5B%225.%20%D9%86%D8%B5%20%D9%85%D8%AA%D8%AF%D8%B1%D8%AC%20%D9%85%D9%84%D9%88%D9%86%3Cbr%2F%3E-webkit-background-clip%3A%20text%22%5D%0A%20%20%20%20end%0A%20%20%20%20Shadow%20--%3E%20Border%20--%3E%20Core%20--%3E%20Icon%20--%3E%20Text"><svg id="mermaid-svg-1792258308325-1" width="100%" xmlns="http://www.w3.org/2000/svg" style="max-width: 303.15625px;" viewBox="-10 -8 303.15625 586" role="graphics-document document" aria-roledescription="flowchart-v2"><style>#mermaid-svg-1792258308325-1{font-family:'Tajawal',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:16px;fill:#333;}#mermaid-svg-1792258308325-1 .error-icon{fill:#552222;}#mermaid-svg-1792258308325-1 .error-text{fill:#552222;stroke:#552222;}#mermaid-svg-1792258308325-1 .edge-thickness-normal{stroke-width:2px;}#mermaid-svg-1792258308325-1 .edge-thickness-thick{stroke-width:3.5px;}#mermaid-svg-1792258308325-1 .edge-pattern-solid{stroke-dasharray:0;}#mermaid-svg-1792258308325-1 .edge-pattern-dashed{stroke-dasharray:3;}#mermaid-svg-1792258308325-1 .edge-pattern-dotted{stroke-dasharray:2;}#mermaid-svg-1792258308325-1 .marker{fill:#333333;stroke:#333333;}#mermaid-svg-1792258308325-1 .marker.cross{stroke:#333333;}#mermaid-svg-1792258308325-1 svg{font-family:'Tajawal',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:16px;}#mermaid-svg-1792258308325-1 .label{font-family:'Tajawal',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#333;}#mermaid-svg-1792258308325-1 .cluster-label text{fill:#333;}#mermaid-svg-1792258308325-1 .cluster-label span,#mermaid-svg-1792258308325-1 p{color:#333;}#mermaid-svg-1792258308325-1 .label text,#mermaid-svg-1792258308325-1 span,#mermaid-svg-1792258308325-1 p{fill:#333;color:#333;}#mermaid-svg-1792258308325-1 .node rect,#mermaid-svg-1792258308325-1 .node circle,#mermaid-svg-1792258308325-1 .node ellipse,#mermaid-svg-1792258308325-1 .node polygon,#mermaid-svg-1792258308325-1 .node path{fill:#ECECFF;stroke:#9370DB;stroke-width:1px;}#mermaid-svg-1792258308325-1 .flowchart-label text{text-anchor:middle;}#mermaid-svg-1792258308325-1 .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#mermaid-svg-1792258308325-1 .node .label{text-align:center;}#mermaid-svg-1792258308325-1 .node.clickable{cursor:pointer;}#mermaid-svg-1792258308325-1 .arrowheadPath{fill:#333333;}#mermaid-svg-1792258308325-1 .edgePath .path{stroke:#333333;stroke-width:2.0px;}#mermaid-svg-1792258308325-1 .flowchart-link{stroke:#333333;fill:none;}#mermaid-svg-1792258308325-1 .edgeLabel{background-color:#e8e8e8;text-align:center;}#mermaid-svg-1792258308325-1 .edgeLabel rect{opacity:0.5;background-color:#e8e8e8;fill:#e8e8e8;}#mermaid-svg-1792258308325-1 .labelBkg{background-color:rgba(232, 232, 232, 0.5);}#mermaid-svg-1792258308325-1 .cluster rect{fill:#ffffde;stroke:#aaaa33;stroke-width:1px;}#mermaid-svg-1792258308325-1 .cluster text{fill:#333;}#mermaid-svg-1792258308325-1 .cluster span,#mermaid-svg-1792258308325-1 p{color:#333;}#mermaid-svg-1792258308325-1 div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:'Tajawal',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:12px;background:hsl(80, 100%, 96.2745098039%);border:1px solid #aaaa33;border-radius:2px;pointer-events:none;z-index:100;}#mermaid-svg-1792258308325-1 .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#333;}#mermaid-svg-1792258308325-1 :root{--mermaid-font-family:'Tajawal',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}</style><g><marker id="mermaid-svg-1792258308325-1_flowchart-pointEnd" class="marker flowchart" viewBox="0 0 10 10" refX="6" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></path></marker><marker id="mermaid-svg-1792258308325-1_flowchart-pointStart" class="marker flowchart" viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></path></marker><marker id="mermaid-svg-1792258308325-1_flowchart-circleEnd" class="marker flowchart" viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id="mermaid-svg-1792258308325-1_flowchart-circleStart" class="marker flowchart" viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id="mermaid-svg-1792258308325-1_flowchart-crossEnd" class="marker cross flowchart" viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><marker id="mermaid-svg-1792258308325-1_flowchart-crossStart" class="marker cross flowchart" viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><g class="root"><g class="clusters"></g><g class="edgePaths"></g><g class="edgeLabels"></g><g class="nodes"><g class="root" transform="translate(-10, -8)"><g class="clusters"><g class="cluster default flowchart-label" id="Button_Architecture"><rect style="" rx="0" ry="0" x="8" y="8" width="287.15625" height="570"></rect><g class="cluster-label" transform="translate(17.1640625, 8)"><foreignObject width="268.828125" height="22"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="nodeLabel">الهيكل الهندسي للزر الفاخر (Dribbble Pill)</span></div></foreignObject></g></g></g><g class="edgePaths"><path d="M151.578,97L151.578,101.167C151.578,105.333,151.578,113.667,151.578,121.117C151.578,128.567,151.578,135.133,151.578,138.417L151.578,141.7" id="L-Shadow-Border-0" class=" edge-thickness-normal edge-pattern-solid flowchart-link LS-Shadow LE-Border" style="fill:none;" marker-end="url(#mermaid-svg-1792258308325-1_flowchart-pointEnd)"></path><path d="M151.578,211L151.578,215.167C151.578,219.333,151.578,227.667,151.578,235.117C151.578,242.567,151.578,249.133,151.578,252.417L151.578,255.7" id="L-Border-Core-0" class=" edge-thickness-normal edge-pattern-solid flowchart-link LS-Border LE-Core" style="fill:none;" marker-end="url(#mermaid-svg-1792258308325-1_flowchart-pointEnd)"></path><path d="M151.578,325L151.578,329.167C151.578,333.333,151.578,341.667,151.578,349.117C151.578,356.567,151.578,363.133,151.578,366.417L151.578,369.7" id="L-Core-Icon-0" class=" edge-thickness-normal edge-pattern-solid flowchart-link LS-Core LE-Icon" style="fill:none;" marker-end="url(#mermaid-svg-1792258308325-1_flowchart-pointEnd)"></path><path d="M151.578,439L151.578,443.167C151.578,447.333,151.578,455.667,151.578,463.117C151.578,470.567,151.578,477.133,151.578,480.417L151.578,483.7" id="L-Icon-Text-0" class=" edge-thickness-normal edge-pattern-solid flowchart-link LS-Icon LE-Text" style="fill:none;" marker-end="url(#mermaid-svg-1792258308325-1_flowchart-pointEnd)"></path></g><g class="edgeLabels"><g class="edgeLabel"><g class="label" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="edgeLabel"></span></div></foreignObject></g></g></g><g class="nodes"><g class="node default default flowchart-label" id="flowchart-Shadow-48" data-node="true" data-id="Shadow" transform="translate(151.578125, 65)"><rect class="basic label-container" style="" rx="0" ry="0" x="-99.1484375" y="-32" width="198.296875" height="64"></rect><g class="label" style="" transform="translate(-89.1484375, -22)"><rect></rect><foreignObject width="178.296875" height="44"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="nodeLabel">1. توهج نيون خافت<br>box-shadow: 0 10px 24px...</span></div></foreignObject></g></g><g class="node default default flowchart-label" id="flowchart-Border-49" data-node="true" data-id="Border" transform="translate(151.578125, 179)"><rect class="basic label-container" style="" rx="0" ry="0" x="-104.28125" y="-32" width="208.5625" height="64"></rect><g class="label" style="" transform="translate(-94.28125, -22)"><rect></rect><foreignObject width="188.5625" height="44"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="nodeLabel">2. إطار متدرج ناعم<br>background-clip: border-box</span></div></foreignObject></g></g><g class="node default default flowchart-label" id="flowchart-Core-50" data-node="true" data-id="Core" transform="translate(151.578125, 293)"><rect class="basic label-container" style="" rx="0" ry="0" x="-108.578125" y="-32" width="217.15625" height="64"></rect><g class="label" style="" transform="translate(-98.578125, -22)"><rect></rect><foreignObject width="197.15625" height="44"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="nodeLabel">3. الخلفية الصلبة الداخلية<br>background-clip: padding-box</span></div></foreignObject></g></g><g class="node default default flowchart-label" id="flowchart-Icon-51" data-node="true" data-id="Icon" transform="translate(151.578125, 407)"><rect class="basic label-container" style="" rx="0" ry="0" x="-80.203125" y="-32" width="160.40625" height="64"></rect><g class="label" style="" transform="translate(-70.203125, -22)"><rect></rect><foreignObject width="140.40625" height="44"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="nodeLabel">4. أيقونة بريق SVG<br>تدرج لوني ثلاثي 3-Stop</span></div></foreignObject></g></g><g class="node default default flowchart-label" id="flowchart-Text-52" data-node="true" data-id="Text" transform="translate(151.578125, 521)"><rect class="basic label-container" style="" rx="0" ry="0" x="-106.8984375" y="-32" width="213.796875" height="64"></rect><g class="label" style="" transform="translate(-96.8984375, -22)"><rect></rect><foreignObject width="193.796875" height="44"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; white-space: nowrap;"><span class="nodeLabel">5. نص متدرج ملون<br>-webkit-background-clip: text</span></div></foreignObject></g></g></g></g></g></g></g></svg></div>
+        </div>
+      
+<hr>
+<h2>رابعاً: الشق البرمجي والمعماري الكامل (The 5-Layer Engine)</h2>
+<h3>الطبقة 1: إدارة وتشفير وتدوير المفاتيح المتعددة (<code>storage.js</code>)</h3>
+<pre class="language-javascript" tabindex="0"><code class="language-javascript"><span class="token comment">// lib/storage.js</span>
+<span class="token keyword">import</span> CryptoJS <span class="token keyword">from</span> <span class="token string">'crypto-js'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> <span class="token constant">ENCRYPTION_SALT</span> <span class="token operator">=</span> <span class="token string">'your-unique-app-secret-salt-2026'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">export</span> <span class="token keyword">function</span> <span class="token function">encrypt</span><span class="token punctuation">(</span><span class="token parameter">text</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>text<span class="token punctuation">)</span> <span class="token keyword">return</span> <span class="token string">''</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> CryptoJS<span class="token punctuation">.</span><span class="token constant">AES</span><span class="token punctuation">.</span><span class="token function">encrypt</span><span class="token punctuation">(</span>text<span class="token punctuation">,</span> <span class="token constant">ENCRYPTION_SALT</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">export</span> <span class="token keyword">function</span> <span class="token function">decrypt</span><span class="token punctuation">(</span><span class="token parameter">ciphertext</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>ciphertext<span class="token punctuation">)</span> <span class="token keyword">return</span> <span class="token string">''</span><span class="token punctuation">;</span>
+  <span class="token keyword">try</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> bytes <span class="token operator">=</span> CryptoJS<span class="token punctuation">.</span><span class="token constant">AES</span><span class="token punctuation">.</span><span class="token function">decrypt</span><span class="token punctuation">(</span>ciphertext<span class="token punctuation">,</span> <span class="token constant">ENCRYPTION_SALT</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> bytes<span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span>CryptoJS<span class="token punctuation">.</span>enc<span class="token punctuation">.</span>Utf8<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token string">''</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">export</span> <span class="token keyword">function</span> <span class="token function">saveGeminiKeys</span><span class="token punctuation">(</span><span class="token parameter">keys</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">typeof</span> window <span class="token operator">===</span> <span class="token string">'undefined'</span><span class="token punctuation">)</span> <span class="token keyword">return</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> encrypted <span class="token operator">=</span> keys<span class="token punctuation">.</span><span class="token function">map</span><span class="token punctuation">(</span><span class="token parameter">k</span> <span class="token operator">=&gt;</span> <span class="token function">encrypt</span><span class="token punctuation">(</span>k<span class="token punctuation">.</span><span class="token function">trim</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">filter</span><span class="token punctuation">(</span>Boolean<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  localStorage<span class="token punctuation">.</span><span class="token function">setItem</span><span class="token punctuation">(</span><span class="token string">'app_gemini_keys'</span><span class="token punctuation">,</span> <span class="token constant">JSON</span><span class="token punctuation">.</span><span class="token function">stringify</span><span class="token punctuation">(</span>encrypted<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  window<span class="token punctuation">.</span><span class="token function">dispatchEvent</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">Event</span><span class="token punctuation">(</span><span class="token string">'storage'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">export</span> <span class="token keyword">function</span> <span class="token function">loadGeminiKeys</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">typeof</span> window <span class="token operator">===</span> <span class="token string">'undefined'</span><span class="token punctuation">)</span> <span class="token keyword">return</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token keyword">try</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> stored <span class="token operator">=</span> localStorage<span class="token punctuation">.</span><span class="token function">getItem</span><span class="token punctuation">(</span><span class="token string">'app_gemini_keys'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>stored<span class="token punctuation">)</span> <span class="token keyword">return</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token constant">JSON</span><span class="token punctuation">.</span><span class="token function">parse</span><span class="token punctuation">(</span>stored<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">map</span><span class="token punctuation">(</span><span class="token parameter">k</span> <span class="token operator">=&gt;</span> <span class="token function">decrypt</span><span class="token punctuation">(</span>k<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">filter</span><span class="token punctuation">(</span>Boolean<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">export</span> <span class="token keyword">function</span> <span class="token function">getCurrentKeyIndex</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">typeof</span> window <span class="token operator">===</span> <span class="token string">'undefined'</span><span class="token punctuation">)</span> <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> <span class="token function">parseInt</span><span class="token punctuation">(</span>localStorage<span class="token punctuation">.</span><span class="token function">getItem</span><span class="token punctuation">(</span><span class="token string">'app_active_key_index'</span><span class="token punctuation">)</span> <span class="token operator">||</span> <span class="token string">'0'</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">export</span> <span class="token keyword">function</span> <span class="token function">setCurrentKeyIndex</span><span class="token punctuation">(</span><span class="token parameter">index</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">typeof</span> window <span class="token operator">===</span> <span class="token string">'undefined'</span><span class="token punctuation">)</span> <span class="token keyword">return</span><span class="token punctuation">;</span>
+  localStorage<span class="token punctuation">.</span><span class="token function">setItem</span><span class="token punctuation">(</span><span class="token string">'app_active_key_index'</span><span class="token punctuation">,</span> <span class="token function">String</span><span class="token punctuation">(</span>index<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">export</span> <span class="token keyword">function</span> <span class="token function">saveGeminiModel</span><span class="token punctuation">(</span><span class="token parameter">model</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">typeof</span> window <span class="token operator">===</span> <span class="token string">'undefined'</span><span class="token punctuation">)</span> <span class="token keyword">return</span><span class="token punctuation">;</span>
+  localStorage<span class="token punctuation">.</span><span class="token function">setItem</span><span class="token punctuation">(</span><span class="token string">'app_gemini_model'</span><span class="token punctuation">,</span> model <span class="token operator">||</span> <span class="token string">'gemini-3.5-flash-lite'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">export</span> <span class="token keyword">function</span> <span class="token function">loadGeminiModel</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">typeof</span> window <span class="token operator">===</span> <span class="token string">'undefined'</span><span class="token punctuation">)</span> <span class="token keyword">return</span> <span class="token string">'gemini-3.5-flash-lite'</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> localStorage<span class="token punctuation">.</span><span class="token function">getItem</span><span class="token punctuation">(</span><span class="token string">'app_gemini_model'</span><span class="token punctuation">)</span> <span class="token operator">||</span> <span class="token string">'gemini-3.5-flash-lite'</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">export</span> <span class="token keyword">function</span> <span class="token function">saveItemChat</span><span class="token punctuation">(</span><span class="token parameter">itemId<span class="token punctuation">,</span> messages</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">typeof</span> window <span class="token operator">===</span> <span class="token string">'undefined'</span><span class="token punctuation">)</span> <span class="token keyword">return</span><span class="token punctuation">;</span>
+  localStorage<span class="token punctuation">.</span><span class="token function">setItem</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">app_chat_</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>itemId<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> <span class="token constant">JSON</span><span class="token punctuation">.</span><span class="token function">stringify</span><span class="token punctuation">(</span>messages<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">export</span> <span class="token keyword">function</span> <span class="token function">loadItemChat</span><span class="token punctuation">(</span><span class="token parameter">itemId</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">typeof</span> window <span class="token operator">===</span> <span class="token string">'undefined'</span><span class="token punctuation">)</span> <span class="token keyword">return</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token keyword">try</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> data <span class="token operator">=</span> localStorage<span class="token punctuation">.</span><span class="token function">getItem</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">app_chat_</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>itemId<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> data <span class="token operator">?</span> <span class="token constant">JSON</span><span class="token punctuation">.</span><span class="token function">parse</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span> <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<hr>
+<h3>الطبقة 2: محرك Gemini الذكي وضبط الردود "على قد السؤال" (<code>gemini.js</code>)</h3>
+<pre class="language-javascript" tabindex="0"><code class="language-javascript"><span class="token comment">// lib/gemini.js</span>
+<span class="token keyword">import</span> <span class="token punctuation">{</span> loadGeminiKeys<span class="token punctuation">,</span> getCurrentKeyIndex<span class="token punctuation">,</span> setCurrentKeyIndex<span class="token punctuation">,</span> loadGeminiModel <span class="token punctuation">}</span> <span class="token keyword">from</span> <span class="token string">'./storage'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> <span class="token constant">GEMINI_API_BASE</span> <span class="token operator">=</span> <span class="token string">'https://generativelanguage.googleapis.com/v1beta'</span><span class="token punctuation">;</span>
+<span class="token keyword">export</span> <span class="token keyword">const</span> <span class="token constant">DEFAULT_GEMINI_MODEL</span> <span class="token operator">=</span> <span class="token string">'gemini-3.5-flash-lite'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> <span class="token constant">CANDIDATE_MODELS</span> <span class="token operator">=</span> <span class="token punctuation">[</span>
+  <span class="token string">'gemini-3.5-flash-lite'</span><span class="token punctuation">,</span>
+  <span class="token string">'gemini-2.5-flash-lite'</span><span class="token punctuation">,</span>
+  <span class="token string">'gemini-2.0-flash-lite'</span><span class="token punctuation">,</span>
+  <span class="token string">'gemini-1.5-flash'</span><span class="token punctuation">,</span>
+  <span class="token string">'gemini-3.8-flash'</span><span class="token punctuation">,</span>
+<span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+<span class="token keyword">export</span> <span class="token keyword">async</span> <span class="token keyword">function</span> <span class="token function">callGemini</span><span class="token punctuation">(</span><span class="token parameter">prompt<span class="token punctuation">,</span> options <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span></span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> keys <span class="token operator">=</span> <span class="token function">loadGeminiKeys</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>keys<span class="token punctuation">.</span>length<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name">Error</span><span class="token punctuation">(</span><span class="token string">'يرجى إضافة مفتاح Gemini API في الإعدادات أولاً'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token keyword">const</span> preferredModel <span class="token operator">=</span> options<span class="token punctuation">.</span>model <span class="token operator">||</span> <span class="token function">loadGeminiModel</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">||</span> <span class="token constant">DEFAULT_GEMINI_MODEL</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> modelsToTry <span class="token operator">=</span> <span class="token punctuation">[</span>
+    preferredModel<span class="token punctuation">,</span>
+    <span class="token operator">...</span><span class="token constant">CANDIDATE_MODELS</span><span class="token punctuation">.</span><span class="token function">filter</span><span class="token punctuation">(</span><span class="token parameter">m</span> <span class="token operator">=&gt;</span> m <span class="token operator">!==</span> preferredModel<span class="token punctuation">)</span>
+  <span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">const</span> totalKeys <span class="token operator">=</span> keys<span class="token punctuation">.</span>length<span class="token punctuation">;</span>
+  <span class="token keyword">const</span> startIndex <span class="token operator">=</span> <span class="token function">getCurrentKeyIndex</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">%</span> totalKeys<span class="token punctuation">;</span>
+  <span class="token keyword">let</span> lastError <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">let</span> keyAttempt <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> keyAttempt <span class="token operator">&lt;</span> totalKeys<span class="token punctuation">;</span> keyAttempt<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> keyIndex <span class="token operator">=</span> <span class="token punctuation">(</span>startIndex <span class="token operator">+</span> keyAttempt<span class="token punctuation">)</span> <span class="token operator">%</span> totalKeys<span class="token punctuation">;</span>
+    <span class="token keyword">const</span> apiKey <span class="token operator">=</span> keys<span class="token punctuation">[</span>keyIndex<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>apiKey<span class="token punctuation">)</span> <span class="token keyword">continue</span><span class="token punctuation">;</span>
+
+    <span class="token function">setCurrentKeyIndex</span><span class="token punctuation">(</span>keyIndex<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">const</span> model <span class="token keyword">of</span> modelsToTry<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">try</span> <span class="token punctuation">{</span>
+        <span class="token keyword">const</span> url <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token constant">GEMINI_API_BASE</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/models/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>model<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">:generateContent?key=</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>apiKey<span class="token punctuation">.</span><span class="token function">trim</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+        <span class="token keyword">const</span> res <span class="token operator">=</span> <span class="token keyword">await</span> <span class="token function">fetch</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+          <span class="token literal-property property">method</span><span class="token operator">:</span> <span class="token string">'POST'</span><span class="token punctuation">,</span>
+          <span class="token literal-property property">headers</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token string-property property">'Content-Type'</span><span class="token operator">:</span> <span class="token string">'application/json'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+          <span class="token literal-property property">signal</span><span class="token operator">:</span> options<span class="token punctuation">.</span>signal<span class="token punctuation">,</span>
+          <span class="token literal-property property">body</span><span class="token operator">:</span> <span class="token constant">JSON</span><span class="token punctuation">.</span><span class="token function">stringify</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+            <span class="token literal-property property">contents</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">{</span> <span class="token literal-property property">parts</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">{</span> <span class="token literal-property property">text</span><span class="token operator">:</span> prompt <span class="token punctuation">}</span><span class="token punctuation">]</span> <span class="token punctuation">}</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+            <span class="token literal-property property">generationConfig</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+              <span class="token literal-property property">temperature</span><span class="token operator">:</span> options<span class="token punctuation">.</span>temperature <span class="token operator">||</span> <span class="token number">0.65</span><span class="token punctuation">,</span>
+              <span class="token literal-property property">maxOutputTokens</span><span class="token operator">:</span> options<span class="token punctuation">.</span>maxTokens <span class="token operator">||</span> <span class="token number">3000</span><span class="token punctuation">,</span>
+            <span class="token punctuation">}</span><span class="token punctuation">,</span>
+          <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token comment">// 429 Quota Exceeded -&gt; تدوير فوري للمفتاح التالي</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>res<span class="token punctuation">.</span>status <span class="token operator">===</span> <span class="token number">429</span> <span class="token operator">||</span> res<span class="token punctuation">.</span>status <span class="token operator">===</span> <span class="token number">403</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          lastError <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Error</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">المفتاح رقم </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>keyIndex <span class="token operator">+</span> <span class="token number">1</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string"> استنفد الحصة (</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>res<span class="token punctuation">.</span>status<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">)</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">typeof</span> window <span class="token operator">!==</span> <span class="token string">'undefined'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            window<span class="token punctuation">.</span><span class="token function">dispatchEvent</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">CustomEvent</span><span class="token punctuation">(</span><span class="token string">'gemini-key-rotated'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+              <span class="token literal-property property">detail</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token literal-property property">fromIndex</span><span class="token operator">:</span> keyIndex<span class="token punctuation">,</span> <span class="token literal-property property">toIndex</span><span class="token operator">:</span> <span class="token punctuation">(</span>keyIndex <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">%</span> totalKeys <span class="token punctuation">}</span>
+            <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token punctuation">}</span>
+          <span class="token keyword">break</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+
+        <span class="token comment">// 404 Model Not Found -&gt; سقوط تلقائي للنموذج البديل</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>res<span class="token punctuation">.</span>ok<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token keyword">const</span> errData <span class="token operator">=</span> <span class="token keyword">await</span> res<span class="token punctuation">.</span><span class="token function">json</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=&gt;</span> <span class="token punctuation">(</span><span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token keyword">const</span> errMsg <span class="token operator">=</span> errData<span class="token punctuation">.</span>error<span class="token operator">?.</span>message <span class="token operator">||</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">خطأ </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>res<span class="token punctuation">.</span>status<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+          <span class="token keyword">if</span> <span class="token punctuation">(</span>res<span class="token punctuation">.</span>status <span class="token operator">===</span> <span class="token number">404</span> <span class="token operator">||</span> errMsg<span class="token punctuation">.</span><span class="token function">toLowerCase</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">includes</span><span class="token punctuation">(</span><span class="token string">'not found'</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            lastError <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Error</span><span class="token punctuation">(</span>errMsg<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">continue</span><span class="token punctuation">;</span>
+          <span class="token punctuation">}</span>
+          <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name">Error</span><span class="token punctuation">(</span>errMsg<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+
+        <span class="token keyword">const</span> data <span class="token operator">=</span> <span class="token keyword">await</span> res<span class="token punctuation">.</span><span class="token function">json</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">const</span> text <span class="token operator">=</span> data<span class="token punctuation">.</span>candidates<span class="token operator">?.</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">?.</span>content<span class="token operator">?.</span>parts<span class="token operator">?.</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token operator">?.</span>text<span class="token punctuation">;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>text<span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name">Error</span><span class="token punctuation">(</span><span class="token string">'استجابة فارغة من النموذج'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> text<span class="token punctuation">;</span>
+
+      <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span>err<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>err<span class="token punctuation">.</span>name <span class="token operator">===</span> <span class="token string">'AbortError'</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name">Error</span><span class="token punctuation">(</span><span class="token string">'تم إلغاء الطلب'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        lastError <span class="token operator">=</span> err<span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token keyword">throw</span> lastError <span class="token operator">||</span> <span class="token keyword">new</span> <span class="token class-name">Error</span><span class="token punctuation">(</span><span class="token string">'تعذر إتمام الطلب عبر كافة المفاتيح والنماذج'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">export</span> <span class="token keyword">async</span> <span class="token keyword">function</span> <span class="token function">chatAboutItem</span><span class="token punctuation">(</span><span class="token punctuation">{</span> item<span class="token punctuation">,</span> history <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span> newMessage<span class="token punctuation">,</span> systemRole <span class="token operator">=</span> <span class="token string">'مساعد تقني ذكي وخبير'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span> options <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> itemContext <span class="token operator">=</span> <span class="token constant">JSON</span><span class="token punctuation">.</span><span class="token function">stringify</span><span class="token punctuation">(</span>item<span class="token punctuation">,</span> <span class="token keyword">null</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">const</span> systemPrompt <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">أنت </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>systemRole<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">.
+أنت في محادثة مباشرة ونقاش تفاعلي مع المستخدم حول هذا العنصر بالتحديد:
+</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>itemContext<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">
+
+قواعد الرد والمحادثة الصارمة:
+1. أجب مثل إنسان حقيقي خبير يقف أمام المستخدم: "على قد السؤال بالضبط".
+2. إذا كان السؤال صغيراً أو مباشراً، أجب بجملة أو جملتين مركزتين دون مقدمات إنشائية أو إطالة مصطنعة.
+3. تجنب كتابة صفحات أو فقرات طويلة أبداً، إلا إذا قال لك المستخدم صراحة: "اشرح بالتفصيل" أو "قارن بشكل شامل" أو طلب كوداً برمجياً كاملاً أو كانت الاجابة فعلياً تتطلب صفحات متعددة.
+4. حافظ على نبرة واثقة، مباشرة، ذكية، ومريحة للقارئ.</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+
+  <span class="token keyword">let</span> fullPrompt <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>systemPrompt<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">\n\n--- سجل المحادثة السابقة ---\n</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">const</span> msg <span class="token keyword">of</span> history<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    fullPrompt <span class="token operator">+=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">\n</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>msg<span class="token punctuation">.</span>role <span class="token operator">===</span> <span class="token string">'user'</span> <span class="token operator">?</span> <span class="token string">'المستخدم'</span> <span class="token operator">:</span> <span class="token string">'AI'</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">: </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>msg<span class="token punctuation">.</span>content<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">\n</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  fullPrompt <span class="token operator">+=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">\nالمستخدم: </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>newMessage<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">\n\nAI:</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+
+  <span class="token keyword">return</span> <span class="token keyword">await</span> <span class="token function">callGemini</span><span class="token punctuation">(</span>fullPrompt<span class="token punctuation">,</span> options<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<hr>
+<h3>الطبقة 3: واجهة اختيار النماذج وإدارة المفاتيح (<code>SettingsAiSection.jsx</code>)</h3>
+<pre class="language-jsx" tabindex="0"><code class="language-jsx">// components/SettingsAiSection.jsx
+import { useState, useEffect } from 'react';
+import { loadGeminiKeys, saveGeminiKeys, loadGeminiModel, saveGeminiModel } from '../lib/storage';
+
+export default function SettingsAiSection() {
+  const [keys, setKeys] = useState([]);
+  const [newKey, setNewKey] = useState('');
+  const [model, setModel] = useState('gemini-3.5-flash-lite');
+
+  useEffect(() =&gt; {
+    setKeys(loadGeminiKeys());
+    setModel(loadGeminiModel());
+  }, []);
+
+  const handleAddKey = () =&gt; {
+    if (!newKey.trim()) return;
+    const updated = [...keys, newKey.trim()];
+    setKeys(updated);
+    saveGeminiKeys(updated);
+    setNewKey('');
+  };
+
+  const handleRemoveKey = (idx) =&gt; {
+    const updated = keys.filter((_, i) =&gt; i !== idx);
+    setKeys(updated);
+    saveGeminiKeys(updated);
+  };
+
+  const handleModelChange = (e) =&gt; {
+    setModel(e.target.value);
+    saveGeminiModel(e.target.value);
+  };
+
+  return (
+    &lt;div className="settings-card"&gt;
+      &lt;h3&gt;إعدادات الذكاء الاصطناعي (Gemini AI)&lt;/h3&gt;
+      
+      &lt;div className="form-group"&gt;
+        &lt;label&gt;نموذج الذكاء الاصطناعي:&lt;/label&gt;
+        &lt;select value={model} onChange={handleModelChange} className="select-field"&gt;
+          &lt;option value="gemini-3.5-flash-lite"&gt;Gemini 3.5 Flash Lite (الموصى به - أسرع وأخف)&lt;/option&gt;
+          &lt;option value="gemini-2.5-flash-lite"&gt;Gemini 2.5 Flash Lite&lt;/option&gt;
+          &lt;option value="gemini-2.0-flash-lite"&gt;Gemini 2.0 Flash Lite&lt;/option&gt;
+          &lt;option value="gemini-1.5-flash"&gt;Gemini 1.5 Flash&lt;/option&gt;
+          &lt;option value="gemini-3.8-flash"&gt;Gemini 3.8 Flash (قدرات استدلال متقدمة)&lt;/option&gt;
+        &lt;/select&gt;
+      &lt;/div&gt;
+
+      &lt;div className="form-group"&gt;
+        &lt;label&gt;مفاتيح Gemini API (يدعم التدوير التلقائي):&lt;/label&gt;
+        &lt;div style={{ display: 'flex', gap: '8px' }}&gt;
+          &lt;input 
+            type="password" 
+            placeholder="AIzaSy..." 
+            value={newKey} 
+            onChange={(e) =&gt; setNewKey(e.target.value)}
+            className="input-field"
+          /&gt;
+          &lt;button onClick={handleAddKey} className="btn btn-primary"&gt;إضافة&lt;/button&gt;
+        &lt;/div&gt;
+
+        &lt;ul className="keys-list"&gt;
+          {keys.map((k, i) =&gt; (
+            &lt;li key={i}&gt;
+              &lt;span&gt;مفتاح #{i + 1}: ••••••••{k.slice(-4)}&lt;/span&gt;
+              &lt;button onClick={() =&gt; handleRemoveKey(i)} className="btn-delete"&gt;حذف&lt;/button&gt;
+            &lt;/li&gt;
+          ))}
+        &lt;/ul&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<hr>
+<h3>الطبقة 4: نافذة الشات التفاعلية المتطورة (<code>UniversalAiChatModal.jsx</code>)</h3>
+<pre class="language-jsx" tabindex="0"><code class="language-jsx">// components/UniversalAiChatModal.jsx
+import { useState, useEffect, useRef } from 'react';
+import { chatAboutItem } from '../lib/gemini';
+import { loadItemChat, saveItemChat } from '../lib/storage';
+import { Sparkles, CheckCircle2, Loader2, Send, X } from 'lucide-react';
+
+export default function UniversalAiChatModal({ 
+  item, 
+  isOpen, 
+  onClose, 
+  systemRole = 'مساعد ذكي وخبير',
+  showQuickQuestions = false, // الخيار الأول: false افتراضياً لواجهة نظيفة
+  quickQuestions = []
+}) {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  
+  // الخيار الثاني: حالة فحص واستيعاب المحتوى والعداد
+  const [isAbsorbing, setIsAbsorbing] = useState(false);
+  const [absorbProgress, setAbsorbProgress] = useState(0);
+  const [isAbsorbed, setIsAbsorbed] = useState(false);
+
+  const inputRef = useRef(null);
+  const chatBodyRef = useRef(null);
+  const abortRef = useRef(null);
+  const latestAiMsgRef = useRef(null);
+
+  useEffect(() =&gt; {
+    if (isOpen &amp;&amp; item?.id) {
+      setMessages(loadItemChat(item.id));
+      setTimeout(() =&gt; inputRef.current?.focus(), 150);
+    }
+  }, [isOpen, item?.id]);
+
+  const handleAbsorbContent = () =&gt; {
+    setIsAbsorbing(true);
+    setAbsorbProgress(0);
+
+    const interval = setInterval(() =&gt; {
+      setAbsorbProgress((prev) =&gt; {
+        if (prev &gt;= 100) {
+          clearInterval(interval);
+          setIsAbsorbing(false);
+          setIsAbsorbed(true);
+          return 100;
+        }
+        return prev + 25;
+      });
+    }, 200);
+  };
+
+  const handleSend = async (customPrompt) =&gt; {
+    const text = (typeof customPrompt === 'string' ? customPrompt : input).trim();
+    if (!text || loading) return;
+
+    const userMsg = { 
+      role: 'user', 
+      content: text, 
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+    };
+    const newHistory = [...messages, userMsg];
+    setMessages(newHistory);
+    saveItemChat(item.id, newHistory);
+    setInput('');
+    setLoading(true);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    try {
+      const reply = await chatAboutItem({
+        item,
+        history: messages,
+        newMessage: text,
+        systemRole
+      }, { signal: controller.signal });
+
+      const aiMsg = { 
+        role: 'model', 
+        content: reply, 
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        id: `ai-${Date.now()}`
+      };
+      
+      const updated = [...newHistory, aiMsg];
+      setMessages(updated);
+      saveItemChat(item.id, updated);
+
+      // ميزة السكرول الذكي: التمرير فوراً إلى أول سطر في رد الـ AI إذا كان الرد طويلاً
+      setTimeout(() =&gt; {
+        if (latestAiMsgRef.current) {
+          latestAiMsgRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+
+    } catch (err) {
+      const errMsg = { role: 'model', content: `⚠️ تعذر استلام الرد: ${err.message}`, isError: true };
+      setMessages([...newHistory, errMsg]);
+    } finally {
+      setLoading(false);
+      abortRef.current = null;
+    }
+  };
+
+  if (!isOpen || !item) return null;
+
+  return (
+    &lt;div className="modal-overlay" onClick={onClose}&gt;
+      &lt;div className="modal-content chat-modal-premium" onClick={(e) =&gt; e.stopPropagation()}&gt;
+        
+        {/* رأس النافذة */}
+        &lt;div className="modal-header"&gt;
+          &lt;div className="chat-header-title"&gt;
+            &lt;span className="chat-badge-icon"&gt;💬&lt;/span&gt;
+            &lt;div&gt;
+              &lt;h3&gt;{item.title || item.name}&lt;/h3&gt;
+              &lt;p className="chat-subtitle"&gt;محادثة تفاعلية مباشرة مع الذكاء الاصطناعي&lt;/p&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+          &lt;button onClick={onClose} className="btn-close-modal"&gt;✕&lt;/button&gt;
+        &lt;/div&gt;
+
+        {/* الخيار الثاني: منطقة فحص وقراءة المحتوى */}
+        &lt;div className="content-absorption-bar"&gt;
+          {!isAbsorbed &amp;&amp; !isAbsorbing &amp;&amp; (
+            &lt;button onClick={handleAbsorbContent} className="btn-absorb-trigger"&gt;
+              &lt;Sparkles size={16} /&gt;
+              &lt;span&gt;فحص وقراءة تفاصيل المحتوى للبدء&lt;/span&gt;
+            &lt;/button&gt;
+          )}
+
+          {isAbsorbing &amp;&amp; (
+            &lt;div className="absorb-progress-wrapper"&gt;
+              &lt;div className="absorb-progress-header"&gt;
+                &lt;span className="pulse-dot"&gt;&lt;/span&gt;
+                &lt;span&gt;جاري فحص وقراءة بيانات المحتوى... {absorbProgress}%&lt;/span&gt;
+              &lt;/div&gt;
+              &lt;div className="absorb-progress-track"&gt;
+                &lt;div className="absorb-progress-fill" style={{ width: `${absorbProgress}%` }}&gt;&lt;/div&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+          )}
+
+          {isAbsorbed &amp;&amp; (
+            &lt;div className="absorb-success-banner"&gt;
+              &lt;CheckCircle2 size={18} className="text-emerald" /&gt;
+              &lt;span&gt;تم فحص واستيعاب كامل المحتوى بنجاح — أنا جاهز لإجابتك على قدر السؤال بدقة!&lt;/span&gt;
+            &lt;/div&gt;
+          )}
+        &lt;/div&gt;
+
+        {/* الأسئلة المقترحة إن رغب المطور بتفعيلها */}
+        {showQuickQuestions &amp;&amp; quickQuestions.length &gt; 0 &amp;&amp; messages.length === 0 &amp;&amp; (
+          &lt;div className="quick-questions"&gt;
+            {quickQuestions.map((q, i) =&gt; (
+              &lt;button key={i} onClick={() =&gt; handleSend(q.text)} className="quick-btn"&gt;
+                {q.label}
+              &lt;/button&gt;
+            ))}
+          &lt;/div&gt;
+        )}
+
+        {/* جسم الشات */}
+        &lt;div className="chat-messages-container" ref={chatBodyRef}&gt;
+          {messages.length === 0 &amp;&amp; !loading &amp;&amp; (
+            &lt;div className="empty-chat-state"&gt;
+              &lt;div className="empty-icon"&gt;🤖&lt;/div&gt;
+              &lt;h4&gt;تفضل بطرح سؤالك حول هذا المحتوى&lt;/h4&gt;
+              &lt;p&gt;سأجيبك باقتضاب وسرعة على قدر سؤالك تماماً دون حشو أو إطالة.&lt;/p&gt;
+            &lt;/div&gt;
+          )}
+
+          {messages.map((m, idx) =&gt; {
+            const isLastAi = m.role === 'model' &amp;&amp; idx === messages.length - 1;
+            return (
+              &lt;div 
+                key={idx} 
+                ref={isLastAi ? latestAiMsgRef : null}
+                className={`chat-bubble-row ${m.role === 'user' ? 'row-user' : 'row-ai'}`}
+              &gt;
+                &lt;div className={`chat-bubble ${m.role === 'user' ? 'bubble-user' : 'bubble-ai'} ${m.isError ? 'bubble-error' : ''}`}&gt;
+                  &lt;div className="bubble-text"&gt;{m.content}&lt;/div&gt;
+                  &lt;span className="bubble-time"&gt;{m.time}&lt;/span&gt;
+                &lt;/div&gt;
+              &lt;/div&gt;
+            );
+          })}
+
+          {loading &amp;&amp; (
+            &lt;div className="chat-bubble-row row-ai"&gt;
+              &lt;div className="chat-bubble bubble-ai bubble-typing"&gt;
+                &lt;Loader2 size={16} className="animate-spin" /&gt;
+                &lt;span&gt;جاري صياغة الرد المركز...&lt;/span&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+          )}
+        &lt;/div&gt;
+
+        {/* شريط الإدخال */}
+        &lt;div className="chat-input-bar"&gt;
+          &lt;input 
+            ref={inputRef}
+            type="text" 
+            placeholder="اكتب سؤالك هنا باختصار..." 
+            value={input} 
+            onChange={(e) =&gt; setInput(e.target.value)}
+            onKeyDown={(e) =&gt; e.key === 'Enter' &amp;&amp; handleSend()}
+            disabled={loading}
+          /&gt;
+          &lt;button onClick={handleSend} disabled={loading || !input.trim()} className="btn-send-chat"&gt;
+            &lt;Send size={16} /&gt;
+          &lt;/button&gt;
+        &lt;/div&gt;
+
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<hr>
+<h3>الطبقة 5: كود تصميم زر "إسأل AI" الفاخر (HTML + JSX + CSS)</h3>
+<h4>أ. بصيغة HTML نقية (Plain HTML &amp; SVG):</h4>
+<pre class="language-html" tabindex="0"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>button</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>button<span class="token punctuation">"</span></span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>ai-assist-pill-btn<span class="token punctuation">"</span></span> <span class="token attr-name">title</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>استشر الذكاء الاصطناعي<span class="token punctuation">"</span></span><span class="token punctuation">&gt;</span></span>
+  <span class="token comment">&lt;!-- أيقونة البريق SVG بتدرج لوني ثلاثي --&gt;</span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>svg</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>ai-sparkle-svg<span class="token punctuation">"</span></span> <span class="token attr-name">width</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>18<span class="token punctuation">"</span></span> <span class="token attr-name">height</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>18<span class="token punctuation">"</span></span> <span class="token attr-name">viewBox</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>0 0 24 24<span class="token punctuation">"</span></span> <span class="token attr-name">fill</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>none<span class="token punctuation">"</span></span> <span class="token attr-name">xmlns</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>http://www.w3.org/2000/svg<span class="token punctuation">"</span></span><span class="token punctuation">&gt;</span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>defs</span><span class="token punctuation">&gt;</span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>linearGradient</span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>aiPillSparkleGrad<span class="token punctuation">"</span></span> <span class="token attr-name">x1</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>0%<span class="token punctuation">"</span></span> <span class="token attr-name">y1</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>0%<span class="token punctuation">"</span></span> <span class="token attr-name">x2</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>100%<span class="token punctuation">"</span></span> <span class="token attr-name">y2</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>100%<span class="token punctuation">"</span></span><span class="token punctuation">&gt;</span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>stop</span> <span class="token attr-name">offset</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>0%<span class="token punctuation">"</span></span> <span class="token attr-name">stop-color</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>#c084fc<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>stop</span> <span class="token attr-name">offset</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>45%<span class="token punctuation">"</span></span> <span class="token attr-name">stop-color</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>#a855f7<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>stop</span> <span class="token attr-name">offset</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>100%<span class="token punctuation">"</span></span> <span class="token attr-name">stop-color</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>#38bdf8<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>linearGradient</span><span class="token punctuation">&gt;</span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>defs</span><span class="token punctuation">&gt;</span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>path</span> <span class="token attr-name">d</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>M14 2 Q14 10 22 10 Q14 10 14 18 Q14 10 6 10 Q14 10 14 2 Z<span class="token punctuation">"</span></span> <span class="token attr-name">fill</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>url(#aiPillSparkleGrad)<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>path</span> <span class="token attr-name">d</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>M6 13 Q6 17 10 17 Q6 17 6 21 Q6 17 2 17 Q6 17 6 13 Z<span class="token punctuation">"</span></span> <span class="token attr-name">fill</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>url(#aiPillSparkleGrad)<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>svg</span><span class="token punctuation">&gt;</span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>span</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>ai-assist-pill-text<span class="token punctuation">"</span></span><span class="token punctuation">&gt;</span></span>إسأل AI<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>span</span><span class="token punctuation">&gt;</span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>button</span><span class="token punctuation">&gt;</span></span>
+</code></pre>
+<h4>ب. بصيغة مكون React / JSX:</h4>
+<pre class="language-jsx" tabindex="0"><code class="language-jsx">// components/AiAssistButton.jsx
+export function AiSparkleIcon({ size = 18 }) {
+  return (
+    &lt;svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ flexShrink: 0, display: 'block' }}
+    &gt;
+      &lt;defs&gt;
+        &lt;linearGradient id="aiPillSparkleGrad" x1="0%" y1="0%" x2="100%" y2="100%"&gt;
+          &lt;stop offset="0%" stopColor="#c084fc" /&gt;
+          &lt;stop offset="45%" stopColor="#a855f7" /&gt;
+          &lt;stop offset="100%" stopColor="#38bdf8" /&gt;
+        &lt;/linearGradient&gt;
+      &lt;/defs&gt;
+      &lt;path
+        d="M14 2 Q14 10 22 10 Q14 10 14 18 Q14 10 6 10 Q14 10 14 2 Z"
+        fill="url(#aiPillSparkleGrad)"
+      /&gt;
+      &lt;path
+        d="M6 13 Q6 17 10 17 Q6 17 6 21 Q6 17 2 17 Q6 17 6 13 Z"
+        fill="url(#aiPillSparkleGrad)"
+      /&gt;
+    &lt;/svg&gt;
+  );
+}
+
+export function AiAssistButton({ onClick, label = 'إسأل AI' }) {
+  return (
+    &lt;button
+      type="button"
+      onClick={onClick}
+      className="ai-assist-pill-btn"
+      title="استشر الذكاء الاصطناعي حول هذا العنصر"
+    &gt;
+      &lt;AiSparkleIcon size={18} /&gt;
+      &lt;span className="ai-assist-pill-text"&gt;{label}&lt;/span&gt;
+    &lt;/button&gt;
+  );
+}
+</code></pre>
+<hr>
+<h2>خامساً: كود الـ CSS المدمج بالكامل (<code>globals.css</code>)</h2>
+<pre class="language-css" tabindex="0"><code class="language-css"><span class="token comment">/* ==========================================================================
+   1. زر إسأل AI الفاخر (Dribbble Modern Pill Aesthetic)
+   ========================================================================== */</span>
+
+<span class="token selector">.ai-assist-pill-btn</span> <span class="token punctuation">{</span>
+  <span class="token property">position</span><span class="token punctuation">:</span> relative<span class="token punctuation">;</span>
+  <span class="token property">display</span><span class="token punctuation">:</span> inline-flex<span class="token punctuation">;</span>
+  <span class="token property">align-items</span><span class="token punctuation">:</span> center<span class="token punctuation">;</span>
+  <span class="token property">justify-content</span><span class="token punctuation">:</span> center<span class="token punctuation">;</span>
+  <span class="token property">gap</span><span class="token punctuation">:</span> 10px<span class="token punctuation">;</span>
+  <span class="token property">padding</span><span class="token punctuation">:</span> 8px 22px<span class="token punctuation">;</span>
+  <span class="token property">border-radius</span><span class="token punctuation">:</span> 9999px<span class="token punctuation">;</span>
+  <span class="token property">border</span><span class="token punctuation">:</span> 1.5px solid transparent<span class="token punctuation">;</span>
+  
+  <span class="token comment">/* الحافة المتدرجة الفاخرة مع خلفية صلبة */</span>
+  <span class="token property">background-image</span><span class="token punctuation">:</span> 
+    <span class="token function">linear-gradient</span><span class="token punctuation">(</span>#ffffff<span class="token punctuation">,</span> #ffffff<span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token function">linear-gradient</span><span class="token punctuation">(</span>135deg<span class="token punctuation">,</span> <span class="token function">rgba</span><span class="token punctuation">(</span>168<span class="token punctuation">,</span> 85<span class="token punctuation">,</span> 247<span class="token punctuation">,</span> 0.45<span class="token punctuation">)</span> 0%<span class="token punctuation">,</span> <span class="token function">rgba</span><span class="token punctuation">(</span>139<span class="token punctuation">,</span> 92<span class="token punctuation">,</span> 246<span class="token punctuation">,</span> 0.6<span class="token punctuation">)</span> 35%<span class="token punctuation">,</span> <span class="token function">rgba</span><span class="token punctuation">(</span>56<span class="token punctuation">,</span> 189<span class="token punctuation">,</span> 248<span class="token punctuation">,</span> 0.95<span class="token punctuation">)</span> 80%<span class="token punctuation">,</span> <span class="token function">rgba</span><span class="token punctuation">(</span>14<span class="token punctuation">,</span> 165<span class="token punctuation">,</span> 233<span class="token punctuation">,</span> 0.9<span class="token punctuation">)</span> 100%<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">background-origin</span><span class="token punctuation">:</span> padding-box<span class="token punctuation">,</span> border-box<span class="token punctuation">;</span>
+  <span class="token property">background-clip</span><span class="token punctuation">:</span> padding-box<span class="token punctuation">,</span> border-box<span class="token punctuation">;</span>
+  
+  <span class="token property">box-shadow</span><span class="token punctuation">:</span> 
+    0 10px 24px -4px <span class="token function">rgba</span><span class="token punctuation">(</span>56<span class="token punctuation">,</span> 189<span class="token punctuation">,</span> 248<span class="token punctuation">,</span> 0.22<span class="token punctuation">)</span><span class="token punctuation">,</span>
+    0 4px 12px -2px <span class="token function">rgba</span><span class="token punctuation">(</span>168<span class="token punctuation">,</span> 85<span class="token punctuation">,</span> 247<span class="token punctuation">,</span> 0.15<span class="token punctuation">)</span><span class="token punctuation">,</span>
+    0 1px 3px <span class="token function">rgba</span><span class="token punctuation">(</span>0<span class="token punctuation">,</span> 0<span class="token punctuation">,</span> 0<span class="token punctuation">,</span> 0.04<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">cursor</span><span class="token punctuation">:</span> pointer<span class="token punctuation">;</span>
+  <span class="token property">font-family</span><span class="token punctuation">:</span> inherit<span class="token punctuation">;</span>
+  <span class="token property">transition</span><span class="token punctuation">:</span> all 0.25s <span class="token function">cubic-bezier</span><span class="token punctuation">(</span>0.16<span class="token punctuation">,</span> 1<span class="token punctuation">,</span> 0.3<span class="token punctuation">,</span> 1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">outline</span><span class="token punctuation">:</span> none<span class="token punctuation">;</span>
+  <span class="token property">user-select</span><span class="token punctuation">:</span> none<span class="token punctuation">;</span>
+  <span class="token property">white-space</span><span class="token punctuation">:</span> nowrap<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token selector">.ai-assist-pill-btn:hover</span> <span class="token punctuation">{</span>
+  <span class="token property">transform</span><span class="token punctuation">:</span> <span class="token function">translateY</span><span class="token punctuation">(</span>-2px<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">background-image</span><span class="token punctuation">:</span> 
+    <span class="token function">linear-gradient</span><span class="token punctuation">(</span>#ffffff<span class="token punctuation">,</span> #ffffff<span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token function">linear-gradient</span><span class="token punctuation">(</span>135deg<span class="token punctuation">,</span> <span class="token function">rgba</span><span class="token punctuation">(</span>168<span class="token punctuation">,</span> 85<span class="token punctuation">,</span> 247<span class="token punctuation">,</span> 0.7<span class="token punctuation">)</span> 0%<span class="token punctuation">,</span> <span class="token function">rgba</span><span class="token punctuation">(</span>139<span class="token punctuation">,</span> 92<span class="token punctuation">,</span> 246<span class="token punctuation">,</span> 0.8<span class="token punctuation">)</span> 35%<span class="token punctuation">,</span> <span class="token function">rgba</span><span class="token punctuation">(</span>56<span class="token punctuation">,</span> 189<span class="token punctuation">,</span> 248<span class="token punctuation">,</span> 1<span class="token punctuation">)</span> 80%<span class="token punctuation">,</span> <span class="token function">rgba</span><span class="token punctuation">(</span>14<span class="token punctuation">,</span> 165<span class="token punctuation">,</span> 233<span class="token punctuation">,</span> 1<span class="token punctuation">)</span> 100%<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">box-shadow</span><span class="token punctuation">:</span> 
+    0 14px 28px -4px <span class="token function">rgba</span><span class="token punctuation">(</span>56<span class="token punctuation">,</span> 189<span class="token punctuation">,</span> 248<span class="token punctuation">,</span> 0.32<span class="token punctuation">)</span><span class="token punctuation">,</span>
+    0 6px 16px -2px <span class="token function">rgba</span><span class="token punctuation">(</span>168<span class="token punctuation">,</span> 85<span class="token punctuation">,</span> 247<span class="token punctuation">,</span> 0.25<span class="token punctuation">)</span><span class="token punctuation">,</span>
+    0 2px 6px <span class="token function">rgba</span><span class="token punctuation">(</span>0<span class="token punctuation">,</span> 0<span class="token punctuation">,</span> 0<span class="token punctuation">,</span> 0.06<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token selector">.ai-assist-pill-btn:active</span> <span class="token punctuation">{</span>
+  <span class="token property">transform</span><span class="token punctuation">:</span> <span class="token function">translateY</span><span class="token punctuation">(</span>0<span class="token punctuation">)</span> <span class="token function">scale</span><span class="token punctuation">(</span>0.98<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">box-shadow</span><span class="token punctuation">:</span> 
+    0 4px 12px -2px <span class="token function">rgba</span><span class="token punctuation">(</span>56<span class="token punctuation">,</span> 189<span class="token punctuation">,</span> 248<span class="token punctuation">,</span> 0.2<span class="token punctuation">)</span><span class="token punctuation">,</span>
+    0 2px 6px <span class="token function">rgba</span><span class="token punctuation">(</span>168<span class="token punctuation">,</span> 85<span class="token punctuation">,</span> 247<span class="token punctuation">,</span> 0.15<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token selector">.ai-assist-pill-text</span> <span class="token punctuation">{</span>
+  <span class="token property">font-size</span><span class="token punctuation">:</span> 14.5px<span class="token punctuation">;</span>
+  <span class="token property">font-weight</span><span class="token punctuation">:</span> 700<span class="token punctuation">;</span>
+  <span class="token property">letter-spacing</span><span class="token punctuation">:</span> -0.01em<span class="token punctuation">;</span>
+  <span class="token property">background</span><span class="token punctuation">:</span> <span class="token function">linear-gradient</span><span class="token punctuation">(</span>90deg<span class="token punctuation">,</span> #9333ea 0%<span class="token punctuation">,</span> #7c3aed 30%<span class="token punctuation">,</span> #0284c7 75%<span class="token punctuation">,</span> #0ea5e9 100%<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">-webkit-background-clip</span><span class="token punctuation">:</span> text<span class="token punctuation">;</span>
+  <span class="token property">-webkit-text-fill-color</span><span class="token punctuation">:</span> transparent<span class="token punctuation">;</span>
+  <span class="token property">display</span><span class="token punctuation">:</span> inline-block<span class="token punctuation">;</span>
+  <span class="token property">line-height</span><span class="token punctuation">:</span> 1.2<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">/* الوضع الليلي للزر (Dark Mode Glow) */</span>
+<span class="token selector">[data-theme='dark'] .ai-assist-pill-btn</span> <span class="token punctuation">{</span>
+  <span class="token property">background-image</span><span class="token punctuation">:</span> 
+    <span class="token function">linear-gradient</span><span class="token punctuation">(</span>#100d28<span class="token punctuation">,</span> #0b081e<span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token function">linear-gradient</span><span class="token punctuation">(</span>135deg<span class="token punctuation">,</span> <span class="token function">rgba</span><span class="token punctuation">(</span>168<span class="token punctuation">,</span> 85<span class="token punctuation">,</span> 247<span class="token punctuation">,</span> 0.65<span class="token punctuation">)</span> 0%<span class="token punctuation">,</span> <span class="token function">rgba</span><span class="token punctuation">(</span>139<span class="token punctuation">,</span> 92<span class="token punctuation">,</span> 246<span class="token punctuation">,</span> 0.75<span class="token punctuation">)</span> 35%<span class="token punctuation">,</span> <span class="token function">rgba</span><span class="token punctuation">(</span>56<span class="token punctuation">,</span> 189<span class="token punctuation">,</span> 248<span class="token punctuation">,</span> 0.95<span class="token punctuation">)</span> 85%<span class="token punctuation">,</span> <span class="token function">rgba</span><span class="token punctuation">(</span>6<span class="token punctuation">,</span> 182<span class="token punctuation">,</span> 212<span class="token punctuation">,</span> 0.9<span class="token punctuation">)</span> 100%<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">box-shadow</span><span class="token punctuation">:</span> 
+    0 0 24px -2px <span class="token function">rgba</span><span class="token punctuation">(</span>168<span class="token punctuation">,</span> 85<span class="token punctuation">,</span> 247<span class="token punctuation">,</span> 0.35<span class="token punctuation">)</span><span class="token punctuation">,</span>
+    0 0 12px <span class="token function">rgba</span><span class="token punctuation">(</span>56<span class="token punctuation">,</span> 189<span class="token punctuation">,</span> 248<span class="token punctuation">,</span> 0.25<span class="token punctuation">)</span><span class="token punctuation">,</span>
+    inset 0 1px 1.5px <span class="token function">rgba</span><span class="token punctuation">(</span>255<span class="token punctuation">,</span> 255<span class="token punctuation">,</span> 255<span class="token punctuation">,</span> 0.18<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token selector">[data-theme='dark'] .ai-assist-pill-btn:hover</span> <span class="token punctuation">{</span>
+  <span class="token property">transform</span><span class="token punctuation">:</span> <span class="token function">translateY</span><span class="token punctuation">(</span>-2px<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">background-image</span><span class="token punctuation">:</span> 
+    <span class="token function">linear-gradient</span><span class="token punctuation">(</span>#141033<span class="token punctuation">,</span> #0e0a26<span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token function">linear-gradient</span><span class="token punctuation">(</span>135deg<span class="token punctuation">,</span> <span class="token function">rgba</span><span class="token punctuation">(</span>192<span class="token punctuation">,</span> 132<span class="token punctuation">,</span> 252<span class="token punctuation">,</span> 0.85<span class="token punctuation">)</span> 0%<span class="token punctuation">,</span> <span class="token function">rgba</span><span class="token punctuation">(</span>168<span class="token punctuation">,</span> 85<span class="token punctuation">,</span> 247<span class="token punctuation">,</span> 0.9<span class="token punctuation">)</span> 35%<span class="token punctuation">,</span> <span class="token function">rgba</span><span class="token punctuation">(</span>56<span class="token punctuation">,</span> 189<span class="token punctuation">,</span> 248<span class="token punctuation">,</span> 1<span class="token punctuation">)</span> 85%<span class="token punctuation">,</span> <span class="token function">rgba</span><span class="token punctuation">(</span>103<span class="token punctuation">,</span> 232<span class="token punctuation">,</span> 249<span class="token punctuation">,</span> 1<span class="token punctuation">)</span> 100%<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">box-shadow</span><span class="token punctuation">:</span> 
+    0 0 32px 0px <span class="token function">rgba</span><span class="token punctuation">(</span>168<span class="token punctuation">,</span> 85<span class="token punctuation">,</span> 247<span class="token punctuation">,</span> 0.5<span class="token punctuation">)</span><span class="token punctuation">,</span>
+    0 0 18px 0px <span class="token function">rgba</span><span class="token punctuation">(</span>56<span class="token punctuation">,</span> 189<span class="token punctuation">,</span> 248<span class="token punctuation">,</span> 0.4<span class="token punctuation">)</span><span class="token punctuation">,</span>
+    inset 0 1px 2px <span class="token function">rgba</span><span class="token punctuation">(</span>255<span class="token punctuation">,</span> 255<span class="token punctuation">,</span> 255<span class="token punctuation">,</span> 0.3<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token selector">[data-theme='dark'] .ai-assist-pill-btn:active</span> <span class="token punctuation">{</span>
+  <span class="token property">transform</span><span class="token punctuation">:</span> <span class="token function">translateY</span><span class="token punctuation">(</span>0<span class="token punctuation">)</span> <span class="token function">scale</span><span class="token punctuation">(</span>0.98<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token selector">[data-theme='dark'] .ai-assist-pill-text</span> <span class="token punctuation">{</span>
+  <span class="token property">background</span><span class="token punctuation">:</span> <span class="token function">linear-gradient</span><span class="token punctuation">(</span>90deg<span class="token punctuation">,</span> #c084fc 0%<span class="token punctuation">,</span> #a855f7 30%<span class="token punctuation">,</span> #38bdf8 80%<span class="token punctuation">,</span> #7dd3fc 100%<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">-webkit-background-clip</span><span class="token punctuation">:</span> text<span class="token punctuation">;</span>
+  <span class="token property">-webkit-text-fill-color</span><span class="token punctuation">:</span> transparent<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">/* ==========================================================================
+   2. شريط فحص المحتوى والعداد والشارة
+   ========================================================================== */</span>
+
+<span class="token selector">.content-absorption-bar</span> <span class="token punctuation">{</span>
+  <span class="token property">padding</span><span class="token punctuation">:</span> 12px 20px<span class="token punctuation">;</span>
+  <span class="token property">background</span><span class="token punctuation">:</span> <span class="token function">var</span><span class="token punctuation">(</span>--bg-tertiary<span class="token punctuation">,</span> #f8fafc<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">border-bottom</span><span class="token punctuation">:</span> 1px solid <span class="token function">var</span><span class="token punctuation">(</span>--border-color<span class="token punctuation">,</span> #e2e8f0<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token selector">.btn-absorb-trigger</span> <span class="token punctuation">{</span>
+  <span class="token property">display</span><span class="token punctuation">:</span> inline-flex<span class="token punctuation">;</span>
+  <span class="token property">align-items</span><span class="token punctuation">:</span> center<span class="token punctuation">;</span>
+  <span class="token property">gap</span><span class="token punctuation">:</span> 8px<span class="token punctuation">;</span>
+  <span class="token property">padding</span><span class="token punctuation">:</span> 8px 16px<span class="token punctuation">;</span>
+  <span class="token property">background</span><span class="token punctuation">:</span> <span class="token function">var</span><span class="token punctuation">(</span>--bg-card<span class="token punctuation">,</span> #ffffff<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">border</span><span class="token punctuation">:</span> 1.5px solid <span class="token function">var</span><span class="token punctuation">(</span>--primary-500<span class="token punctuation">,</span> #6366f1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">border-radius</span><span class="token punctuation">:</span> 12px<span class="token punctuation">;</span>
+  <span class="token property">color</span><span class="token punctuation">:</span> <span class="token function">var</span><span class="token punctuation">(</span>--primary-500<span class="token punctuation">,</span> #6366f1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">font-weight</span><span class="token punctuation">:</span> 700<span class="token punctuation">;</span>
+  <span class="token property">font-size</span><span class="token punctuation">:</span> 13px<span class="token punctuation">;</span>
+  <span class="token property">cursor</span><span class="token punctuation">:</span> pointer<span class="token punctuation">;</span>
+  <span class="token property">transition</span><span class="token punctuation">:</span> all 0.2s ease<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token selector">.btn-absorb-trigger:hover</span> <span class="token punctuation">{</span>
+  <span class="token property">background</span><span class="token punctuation">:</span> <span class="token function">var</span><span class="token punctuation">(</span>--primary-500<span class="token punctuation">,</span> #6366f1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">color</span><span class="token punctuation">:</span> white<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token selector">.absorb-progress-wrapper</span> <span class="token punctuation">{</span>
+  <span class="token property">display</span><span class="token punctuation">:</span> flex<span class="token punctuation">;</span>
+  <span class="token property">flex-direction</span><span class="token punctuation">:</span> column<span class="token punctuation">;</span>
+  <span class="token property">gap</span><span class="token punctuation">:</span> 6px<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token selector">.absorb-progress-header</span> <span class="token punctuation">{</span>
+  <span class="token property">display</span><span class="token punctuation">:</span> flex<span class="token punctuation">;</span>
+  <span class="token property">align-items</span><span class="token punctuation">:</span> center<span class="token punctuation">;</span>
+  <span class="token property">gap</span><span class="token punctuation">:</span> 8px<span class="token punctuation">;</span>
+  <span class="token property">font-size</span><span class="token punctuation">:</span> 12.5px<span class="token punctuation">;</span>
+  <span class="token property">font-weight</span><span class="token punctuation">:</span> 600<span class="token punctuation">;</span>
+  <span class="token property">color</span><span class="token punctuation">:</span> <span class="token function">var</span><span class="token punctuation">(</span>--text-secondary<span class="token punctuation">,</span> #334155<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token selector">.pulse-dot</span> <span class="token punctuation">{</span>
+  <span class="token property">width</span><span class="token punctuation">:</span> 8px<span class="token punctuation">;</span>
+  <span class="token property">height</span><span class="token punctuation">:</span> 8px<span class="token punctuation">;</span>
+  <span class="token property">background</span><span class="token punctuation">:</span> <span class="token function">var</span><span class="token punctuation">(</span>--primary-500<span class="token punctuation">,</span> #6366f1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">border-radius</span><span class="token punctuation">:</span> 50%<span class="token punctuation">;</span>
+  <span class="token property">animation</span><span class="token punctuation">:</span> pulseDot 1s infinite alternate<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token atrule"><span class="token rule">@keyframes</span> pulseDot</span> <span class="token punctuation">{</span>
+  <span class="token selector">from</span> <span class="token punctuation">{</span> <span class="token property">opacity</span><span class="token punctuation">:</span> 0.3<span class="token punctuation">;</span> <span class="token property">transform</span><span class="token punctuation">:</span> <span class="token function">scale</span><span class="token punctuation">(</span>0.8<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+  <span class="token selector">to</span> <span class="token punctuation">{</span> <span class="token property">opacity</span><span class="token punctuation">:</span> 1<span class="token punctuation">;</span> <span class="token property">transform</span><span class="token punctuation">:</span> <span class="token function">scale</span><span class="token punctuation">(</span>1.3<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token selector">.absorb-progress-track</span> <span class="token punctuation">{</span>
+  <span class="token property">width</span><span class="token punctuation">:</span> 100%<span class="token punctuation">;</span>
+  <span class="token property">height</span><span class="token punctuation">:</span> 6px<span class="token punctuation">;</span>
+  <span class="token property">background</span><span class="token punctuation">:</span> <span class="token function">rgba</span><span class="token punctuation">(</span>0<span class="token punctuation">,</span>0<span class="token punctuation">,</span>0<span class="token punctuation">,</span>0.06<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">border-radius</span><span class="token punctuation">:</span> 10px<span class="token punctuation">;</span>
+  <span class="token property">overflow</span><span class="token punctuation">:</span> hidden<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token selector">.absorb-progress-fill</span> <span class="token punctuation">{</span>
+  <span class="token property">height</span><span class="token punctuation">:</span> 100%<span class="token punctuation">;</span>
+  <span class="token property">background</span><span class="token punctuation">:</span> <span class="token function">linear-gradient</span><span class="token punctuation">(</span>90deg<span class="token punctuation">,</span> #6366f1<span class="token punctuation">,</span> #06b6d4<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">transition</span><span class="token punctuation">:</span> width 0.2s ease<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token selector">.absorb-success-banner</span> <span class="token punctuation">{</span>
+  <span class="token property">display</span><span class="token punctuation">:</span> flex<span class="token punctuation">;</span>
+  <span class="token property">align-items</span><span class="token punctuation">:</span> center<span class="token punctuation">;</span>
+  <span class="token property">gap</span><span class="token punctuation">:</span> 10px<span class="token punctuation">;</span>
+  <span class="token property">padding</span><span class="token punctuation">:</span> 8px 14px<span class="token punctuation">;</span>
+  <span class="token property">background</span><span class="token punctuation">:</span> <span class="token function">rgba</span><span class="token punctuation">(</span>16<span class="token punctuation">,</span> 185<span class="token punctuation">,</span> 129<span class="token punctuation">,</span> 0.1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">border</span><span class="token punctuation">:</span> 1px solid <span class="token function">rgba</span><span class="token punctuation">(</span>16<span class="token punctuation">,</span> 185<span class="token punctuation">,</span> 129<span class="token punctuation">,</span> 0.3<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">border-radius</span><span class="token punctuation">:</span> 10px<span class="token punctuation">;</span>
+  <span class="token property">color</span><span class="token punctuation">:</span> #10b981<span class="token punctuation">;</span>
+  <span class="token property">font-size</span><span class="token punctuation">:</span> 13px<span class="token punctuation">;</span>
+  <span class="token property">font-weight</span><span class="token punctuation">:</span> 600<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">/* ==========================================================================
+   3. منطقة الشات وتدفق الرسائل
+   ========================================================================== */</span>
+
+<span class="token selector">.chat-messages-container</span> <span class="token punctuation">{</span>
+  <span class="token property">flex</span><span class="token punctuation">:</span> 1<span class="token punctuation">;</span>
+  <span class="token property">overflow-y</span><span class="token punctuation">:</span> auto<span class="token punctuation">;</span>
+  <span class="token property">padding</span><span class="token punctuation">:</span> 20px<span class="token punctuation">;</span>
+  <span class="token property">display</span><span class="token punctuation">:</span> flex<span class="token punctuation">;</span>
+  <span class="token property">flex-direction</span><span class="token punctuation">:</span> column<span class="token punctuation">;</span>
+  <span class="token property">gap</span><span class="token punctuation">:</span> 14px<span class="token punctuation">;</span>
+  <span class="token property">scroll-behavior</span><span class="token punctuation">:</span> smooth<span class="token punctuation">;</span>
+  <span class="token property">max-height</span><span class="token punctuation">:</span> 520px<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token selector">.empty-chat-state</span> <span class="token punctuation">{</span>
+  <span class="token property">text-align</span><span class="token punctuation">:</span> center<span class="token punctuation">;</span>
+  <span class="token property">padding</span><span class="token punctuation">:</span> 40px 20px<span class="token punctuation">;</span>
+  <span class="token property">color</span><span class="token punctuation">:</span> <span class="token function">var</span><span class="token punctuation">(</span>--text-tertiary<span class="token punctuation">,</span> #64748b<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token selector">.empty-chat-state .empty-icon</span> <span class="token punctuation">{</span>
+  <span class="token property">font-size</span><span class="token punctuation">:</span> 42px<span class="token punctuation">;</span>
+  <span class="token property">margin-bottom</span><span class="token punctuation">:</span> 12px<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<hr>
+<h2>سادساً: خطة نقل الميزة لأي مشروع جديد (Checklist)</h2>
+<ul>
+<li><input disabled="" type="checkbox"> أنشئ ملف <code>storage.js</code> مع دوال تشفير المفاتيح باستخدام <code>crypto-js</code>.</li>
+<li><input disabled="" type="checkbox"> أنشئ ملف <code>gemini.js</code> مع ضبط <code>DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash-lite'</code> ودعم السقوط التلقائي.</li>
+<li><input disabled="" type="checkbox"> أضف توجيهات الـ Prompt الصارمة: <strong>"أجب على قدر السؤال بالضبط دون إسهاب أو حشو"</strong>.</li>
+<li><input disabled="" type="checkbox"> في مكون الشات، فعّل <strong>السكرول التلقائي لأعلى الرد</strong> عند اكتمال الإجابة (<code>block: 'start'</code>).</li>
+<li><input disabled="" type="checkbox"> الصق كود الـ CSS في <code>globals.css</code> لزر <code>ai-assist-pill-btn</code> وواجهة الشات والعداد.</li>
+<li><input disabled="" type="checkbox"> استورد <code>AiAssistButton</code> وضعه بجوار تفاصيل أي عنصر تريده في تطبيقك.</li>
+</ul>
+<hr>
+<p>ملاحظات:</p>
+<h3>🔹  الواجهة النظيفة الفورية (بدون أي أسئلة مقترحة)</h3>
+<p>عند فتح نافذة الشات، لا تظهر أي أسئلة مقترحة تملأ الشاشة أو تشتت الانتباه. بل تظهر نافذة نظيفة هادئة تحتوي على اسم العنصر، مع التركيز الفوري للمؤشر في حقل الكتابة ليطرح المستخدم ما يريده مباشرة.</p>
+<hr>
+<h3>🔹ميزة "قراءة واستيعاب المحتوى" (Content Scan &amp; Absorb)</h3>
+<p>زر تفاعلي مخصص اختياري: <strong><code>[ قراءة واستيعاب تفاصيل المحتوى]</code></strong></p>
+<ul>
+<li><strong>كيف يعمل العداد؟</strong><br>عند النقر عليه، يعمل مؤشر تقدم رسومي (Progress Bar من 0% إلى 100%) مصحوباً بنبض مرئي (Pulse Animation) لمدة ثانية أو ثانيتين يقوم خلالها النظام بفحص كائن المحتوى.</li>
+<li><strong>شارة التأكيد الخضراء المتوهجة:</strong><br>فور انتهاء العداد بنسبة 100%، يختفي الزر وتظهر شارة دائمة راقية:<br><code> تم فحص واستيعاب كافة تفاصيل المحتوى بنجاح! أنا الآن جاهز للإجابة عن أي استفسار بخصوصه.</code><br>هذه الشارة تمنح المستخدم اطمئناناً وثقة كاملة بأن الذكاء الاصطناعي قد قرأ وألم بكافة التفاصيل.</li>
+</ul>
+<hr>
+<h3>🔹 ميزة السكرول الذكي التلقائي لأعلى الرد (Auto-Scroll to Top of Response)</h3>
+<p>في غرف الشات العادية، السكرول دائماً ينزل إلى أسفل الصفحة (<code>scrollIntoView: end</code>)، وبالتالي إذا كتب الذكاء الاصطناعي رداً طويلاً، فإن المستخدم يجد نفسه ينظر إلى آخر سطر في الرد، ويضطر يدوياً للبحث والتمرير للأعلى لمعرفة من أين بدأت الإجابة!</p>
+<ul>
+<li><strong>الحل البرمجي المنفذ:</strong><br>عند اكتمال الرد، يقوم الكود برصد بداية الفقرة التي كتبها الـ AI (<code>#ai-response-${index}</code>) وعمل تمرير سلس مباشر إلى <strong>أول سطر من الرد (<code>block: 'start'</code>)</strong>، ليجد المستخدم نفسه يقرأ من البداية فوراً.</li>
+</ul>
+
+  </div>
+</body>
+</html>

@@ -156,6 +156,22 @@
           <span class="cloud-sync-status-dot status-disconnected" id="cloud-sync-dot"></span>
         </button>
 
+        <!-- Ask AI Pill Button (يظهر فقط عندما AI مفعل) -->
+        <button type="button" class="ai-assist-pill-btn" id="btn-ask-ai" onclick="openAiChatModal()" title="إسأل AI" style="display: none;">
+          <svg class="ai-sparkle-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="aiPillSparkleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#c084fc" />
+                <stop offset="45%" stop-color="#a855f7" />
+                <stop offset="100%" stop-color="#38bdf8" />
+              </linearGradient>
+            </defs>
+            <path d="M14 2 Q14 10 22 10 Q14 10 14 18 Q14 10 6 10 Q14 10 14 2 Z" fill="url(#aiPillSparkleGrad)" />
+            <path d="M6 13 Q6 17 10 17 Q6 17 6 21 Q6 17 2 17 Q6 17 6 13 Z" fill="url(#aiPillSparkleGrad)" />
+          </svg>
+          <span class="ai-assist-pill-text">إسأل AI</span>
+        </button>
+
         <!-- Settings Gear Button -->
         <button class="btn btn-ghost btn-icon-only settings-gear-btn" onclick="openSettingsModal()" title="الإعدادات (Settings)" id="btn-settings-gear">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1571,6 +1587,11 @@
             <span>السحابة</span>
             <span class="settings-tab-badge" style="background:rgba(2, 132, 199, 0.15); color:#0284c7;">Drive</span>
           </button>
+          <button class="settings-tab-btn" data-tab="ai" onclick="switchSettingsTab('ai')">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 2 Q14 10 22 10 Q14 10 14 18 Q14 10 6 10 Q14 10 14 2 Z" fill="currentColor" opacity="0.85"/><path d="M6 13 Q6 17 10 17 Q6 17 6 21 Q6 17 2 17 Q6 17 6 13 Z" fill="currentColor" opacity="0.6"/></svg>
+            <span>الذكاء الاصطناعي</span>
+            <span class="settings-tab-badge" style="background: linear-gradient(135deg, rgba(168,85,247,0.2), rgba(56,189,248,0.2)); color:#a855f7;">AI</span>
+          </button>
           <button class="settings-tab-btn" data-tab="api" onclick="switchSettingsTab('api')">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
             <span>مفاتيح API</span>
@@ -2028,6 +2049,48 @@
             </div>
           </div>
 
+          <!-- ═══════ Tab: AI Settings ═══════ -->
+          <div class="settings-panel" id="settings-panel-ai">
+            <h3 class="settings-section-title"><svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 2 Q14 10 22 10 Q14 10 14 18 Q14 10 6 10 Q14 10 14 2 Z" fill="currentColor" opacity="0.85"/><path d="M6 13 Q6 17 10 17 Q6 17 6 21 Q6 17 2 17 Q6 17 6 13 Z" fill="currentColor" opacity="0.6"/></svg><span>إعدادات الذكاء الاصطناعي (Gemini AI)</span></h3>
+            <p class="settings-section-desc">فعّل ميزة الذكاء الاصطناعي للاستفادة من مساعد AI مدمج في المحرر. أدخل مفتاحك المجاني من <a href="https://aistudio.google.com/" target="_blank" rel="noopener">Google AI Studio</a> للبدء.</p>
+
+            <!-- Toggle AI -->
+            <div class="settings-group">
+              <div class="settings-toggle-row">
+                <label class="settings-label" style="flex:1; margin:0;">تفعيل ميزة الذكاء الاصطناعي</label>
+                <label class="ai-toggle-switch" title="تشغيل / إيقاف AI">
+                  <input type="checkbox" id="s-ai-enabled" onchange="toggleAiFeature(this.checked)">
+                  <span class="ai-toggle-slider"></span>
+                </label>
+              </div>
+              <p class="settings-hint">عند التفعيل يظهر زر "إسأل AI" في شريط الأدوات العلوي.</p>
+            </div>
+
+            <!-- Model Selection -->
+            <div class="settings-group">
+              <label class="settings-label">نموذج الذكاء الاصطناعي</label>
+              <select class="settings-input" id="s-ai-model" onchange="saveAiModel(this.value)" style="cursor:pointer;">
+                <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (الموصى به — أسرع)</option>
+                <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash Lite (أحدث)</option>
+                <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+              </select>
+              <p class="settings-hint">النموذج الافتراضي يوفر استجابة شبه لحظية (~500ms) وحصص مجانية كبيرة. إذا لم يتوفر النموذج المختار سيتم الانتقال للبديل تلقائياً.</p>
+            </div>
+
+            <!-- API Keys -->
+            <div class="settings-group">
+              <label class="settings-label">مفاتيح Gemini API</label>
+              <p class="settings-hint">أضف مفتاحاً أو أكثر. عند استنفاد حصة مفتاح يتم التدوير للمفتاح التالي تلقائياً. <a href="https://aistudio.google.com/" target="_blank" rel="noopener">احصل على مفتاح مجاني</a></p>
+              <div class="settings-api-row" style="margin-bottom:8px;">
+                <input type="password" class="settings-input" id="s-ai-new-key" placeholder="AIza... (الصق مفتاح Gemini API هنا)" onkeydown="if(event.key==='Enter') addAiKey()">
+                <button class="settings-mini-btn" onclick="toggleApiKeyVisibility('s-ai-new-key')" title="إظهار/إخفاء"><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                <button class="settings-mini-btn" onclick="addAiKey()" title="إضافة المفتاح" style="color:#10b981; font-weight:700;"><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg><span>إضافة</span></button>
+              </div>
+              <div id="ai-keys-list"></div>
+            </div>
+          </div>
+
           <!-- ═══════ Tab: About ═══════ -->
           <div class="settings-panel" id="settings-panel-about">
             <h3 class="settings-section-title">ℹ️ حول Vienix Markdown Editor</h3>
@@ -2071,6 +2134,38 @@
     </div>
   </div>
 
+  <!-- ═══════ AI Chat Modal ═══════ -->
+  <div class="ai-chat-overlay" id="ai-chat-overlay" onclick="closeAiChatModal(event)" style="display:none;">
+    <div class="ai-chat-modal" onclick="event.stopPropagation()">
+      <!-- Header -->
+      <div class="ai-chat-header">
+        <div class="ai-chat-header-info">
+          <span class="ai-chat-header-icon">💬</span>
+          <div>
+            <h3>محادثة مع الذكاء الاصطناعي</h3>
+            <p class="ai-chat-subtitle" id="ai-chat-model-label">Gemini 2.0 Flash Lite</p>
+          </div>
+        </div>
+        <button class="ai-chat-close-btn" onclick="closeAiChatModal()" title="إغلاق">✕</button>
+      </div>
+      <!-- Body -->
+      <div class="ai-chat-body" id="ai-chat-body">
+        <div class="ai-chat-empty" id="ai-chat-empty">
+          <div class="ai-chat-empty-icon">🤖</div>
+          <h4>تفضل بطرح سؤالك</h4>
+          <p>سأجيبك باقتضاب وسرعة على قدر سؤالك تماماً. يمكنك إدراج أي رد مباشرة في المحرر.</p>
+        </div>
+      </div>
+      <!-- Input Bar -->
+      <div class="ai-chat-input-bar">
+        <input type="text" id="ai-chat-input" placeholder="اكتب سؤالك هنا..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAiMessage();}" autocomplete="off">
+        <button class="ai-chat-send-btn" id="ai-chat-send-btn" onclick="sendAiMessage()" title="إرسال">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Offline Local Vendor Libraries -->
   <script src="assets/vendor/marked.min.js"></script>
   <script src="assets/vendor/mermaid.min.js"></script>
@@ -2094,6 +2189,402 @@
 
   <!-- Google Drive Personal Cloud Sync Engine (Phase 2) -->
   <script src="app/js/vienix-drive.js?v=1.3"></script>
+
+  <!-- ═══════ Vienix AI Engine (Gemini Integration) ═══════ -->
+  <script>
+  (function() {
+    'use strict';
+
+    // ───── Layer 1: Storage & Key Management ─────
+    var AI_KEYS_STORAGE = 'vienix_ai_keys';
+    var AI_MODEL_STORAGE = 'vienix_ai_model';
+    var AI_ENABLED_STORAGE = 'vienix_ai_enabled';
+    var AI_KEY_INDEX_STORAGE = 'vienix_ai_key_idx';
+    var AI_CHAT_STORAGE = 'vienix_ai_chat_history';
+    var DEFAULT_AI_MODEL = 'gemini-2.0-flash-lite';
+    var GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+    var CANDIDATE_MODELS = ['gemini-2.0-flash-lite','gemini-3.5-flash-lite','gemini-2.5-flash-lite','gemini-1.5-flash'];
+
+    function _b64e(s) { try { return btoa(unescape(encodeURIComponent(s))); } catch(e) { return ''; } }
+    function _b64d(s) { try { return decodeURIComponent(escape(atob(s))); } catch(e) { return ''; } }
+
+    window.isAiEnabled = function() {
+      return localStorage.getItem(AI_ENABLED_STORAGE) === 'true';
+    };
+    window.setAiEnabled = function(v) {
+      localStorage.setItem(AI_ENABLED_STORAGE, v ? 'true' : 'false');
+    };
+    window.loadAiKeys = function() {
+      try {
+        var raw = localStorage.getItem(AI_KEYS_STORAGE);
+        if (!raw) return [];
+        return JSON.parse(raw).map(function(k) { return _b64d(k); }).filter(Boolean);
+      } catch(e) { return []; }
+    };
+    window.saveAiKeys = function(keys) {
+      var enc = keys.map(function(k) { return _b64e(k.trim()); }).filter(Boolean);
+      localStorage.setItem(AI_KEYS_STORAGE, JSON.stringify(enc));
+      renderAiKeysList();
+    };
+    window.getAiKeyIndex = function() {
+      return parseInt(localStorage.getItem(AI_KEY_INDEX_STORAGE) || '0', 10);
+    };
+    window.setAiKeyIndex = function(i) {
+      localStorage.setItem(AI_KEY_INDEX_STORAGE, String(i));
+    };
+    window.loadAiModel = function() {
+      return localStorage.getItem(AI_MODEL_STORAGE) || DEFAULT_AI_MODEL;
+    };
+    window.saveAiModel = function(m) {
+      localStorage.setItem(AI_MODEL_STORAGE, m || DEFAULT_AI_MODEL);
+    };
+    window.loadAiChatHistory = function() {
+      try { var d = localStorage.getItem(AI_CHAT_STORAGE); return d ? JSON.parse(d) : []; } catch(e) { return []; }
+    };
+    window.saveAiChatHistory = function(msgs) {
+      localStorage.setItem(AI_CHAT_STORAGE, JSON.stringify(msgs));
+    };
+
+    // ───── Layer 2: Gemini API Engine ─────
+    var _aiAbortCtrl = null;
+
+    window.callGeminiAPI = function(prompt, opts) {
+      opts = opts || {};
+      var keys = loadAiKeys();
+      if (!keys.length) return Promise.reject(new Error('يرجى إضافة مفتاح Gemini API في الإعدادات أولاً'));
+      var preferredModel = opts.model || loadAiModel() || DEFAULT_AI_MODEL;
+      var modelsToTry = [preferredModel].concat(CANDIDATE_MODELS.filter(function(m){ return m !== preferredModel; }));
+      var totalKeys = keys.length;
+      var startIdx = getAiKeyIndex() % totalKeys;
+      var lastErr = null;
+
+      function tryKey(keyAttempt) {
+        if (keyAttempt >= totalKeys) {
+          return tryNextKeySet();
+        }
+        var ki = (startIdx + keyAttempt) % totalKeys;
+        var apiKey = keys[ki];
+        if (!apiKey) return tryKey(keyAttempt + 1);
+        setAiKeyIndex(ki);
+
+        function tryModel(modelIdx) {
+          if (modelIdx >= modelsToTry.length) return tryKey(keyAttempt + 1);
+          var model = modelsToTry[modelIdx];
+          var url = GEMINI_API_BASE + '/models/' + model + ':generateContent?key=' + apiKey.trim();
+          return fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: opts.signal,
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: {
+                temperature: opts.temperature || 0.65,
+                maxOutputTokens: opts.maxTokens || 3000
+              }
+            })
+          }).then(function(res) {
+            if (res.status === 429 || res.status === 403) {
+              lastErr = new Error('المفتاح رقم ' + (ki+1) + ' استنفد الحصة (' + res.status + ')');
+              return tryKey(keyAttempt + 1);
+            }
+            if (!res.ok) {
+              return res.json().catch(function(){ return {}; }).then(function(errData) {
+                var errMsg = (errData.error && errData.error.message) || ('خطأ ' + res.status);
+                if (res.status === 404 || errMsg.toLowerCase().indexOf('not found') !== -1) {
+                  lastErr = new Error(errMsg);
+                  return tryModel(modelIdx + 1);
+                }
+                throw new Error(errMsg);
+              });
+            }
+            return res.json().then(function(data) {
+              var text = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
+              if (!text) throw new Error('استجابة فارغة من النموذج');
+              return text;
+            });
+          }).catch(function(err) {
+            if (err.name === 'AbortError') throw new Error('تم إلغاء الطلب');
+            lastErr = err;
+            return tryModel(modelIdx + 1);
+          });
+        }
+        return tryModel(0);
+      }
+
+      function tryNextKeySet() {
+        return Promise.reject(lastErr || new Error('تعذر إتمام الطلب عبر كافة المفاتيح والنماذج'));
+      }
+
+      return tryKey(0);
+    };
+
+    // ───── Layer 3: Chat Logic ─────
+    var _aiMessages = [];
+
+    var AI_SYSTEM_PROMPT = 'أنت مساعد ذكي وخبير. ترد باللغة العربية.\n' +
+      'قواعد الرد الصارمة:\n' +
+      '1. أجب مثل إنسان حقيقي خبير: "على قد السؤال بالضبط".\n' +
+      '2. إذا كان السؤال صغيراً أو مباشراً، أجب بجملة أو جملتين مركزتين.\n' +
+      '3. تجنب الإطالة إلا إذا طلب المستخدم ذلك صراحة أو كانت الإجابة تتطلب تفصيلاً.\n' +
+      '4. أنت تدعم تنسيق Markdown بالكامل — استخدمه في ردودك عند الحاجة.\n' +
+      '5. حافظ على نبرة واثقة، مباشرة، ذكية، ومريحة للقارئ.';
+
+    window.sendAiMessage = function() {
+      var input = document.getElementById('ai-chat-input');
+      var text = (input.value || '').trim();
+      if (!text) return;
+      input.value = '';
+
+      // Add user message
+      var userMsg = { role: 'user', content: text, time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) };
+      _aiMessages.push(userMsg);
+      renderAiChat();
+
+      // Show typing indicator
+      setAiLoading(true);
+
+      // Build prompt
+      var fullPrompt = AI_SYSTEM_PROMPT + '\n\n--- سجل المحادثة ---\n';
+      _aiMessages.forEach(function(m) {
+        fullPrompt += '\n' + (m.role === 'user' ? 'المستخدم' : 'AI') + ': ' + m.content + '\n';
+      });
+      fullPrompt += '\nAI:';
+
+      _aiAbortCtrl = new AbortController();
+
+      callGeminiAPI(fullPrompt, { signal: _aiAbortCtrl.signal }).then(function(reply) {
+        var aiMsg = { role: 'model', content: reply, time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) };
+        _aiMessages.push(aiMsg);
+        saveAiChatHistory(_aiMessages);
+        setAiLoading(false);
+        renderAiChat();
+        // Smart scroll to top of AI response
+        setTimeout(function() {
+          var bubbles = document.querySelectorAll('.ai-bubble-bot');
+          if (bubbles.length) bubbles[bubbles.length - 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 120);
+      }).catch(function(err) {
+        var errMsg = { role: 'model', content: '⚠️ ' + err.message, time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}), isError: true };
+        _aiMessages.push(errMsg);
+        setAiLoading(false);
+        renderAiChat();
+      });
+    };
+
+    function setAiLoading(v) {
+      var btn = document.getElementById('ai-chat-send-btn');
+      var inp = document.getElementById('ai-chat-input');
+      if (btn) btn.disabled = v;
+      if (inp) inp.disabled = v;
+      var typingEl = document.getElementById('ai-typing-indicator');
+      if (v) {
+        if (!typingEl) {
+          var body = document.getElementById('ai-chat-body');
+          var div = document.createElement('div');
+          div.id = 'ai-typing-indicator';
+          div.className = 'ai-bubble-row ai-bubble-row-bot';
+          div.innerHTML = '<div class="ai-bubble ai-bubble-bot ai-bubble-typing"><span class="ai-typing-dots"><span></span><span></span><span></span></span><span>جاري صياغة الرد...</span></div>';
+          body.appendChild(div);
+          div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+      } else {
+        if (typingEl) typingEl.remove();
+      }
+    }
+
+    function renderAiChat() {
+      var body = document.getElementById('ai-chat-body');
+      var empty = document.getElementById('ai-chat-empty');
+      if (!body) return;
+
+      // Remove all except empty state
+      var children = body.querySelectorAll('.ai-bubble-row');
+      children.forEach(function(c) { c.remove(); });
+
+      if (_aiMessages.length === 0) {
+        if (empty) empty.style.display = '';
+        return;
+      }
+      if (empty) empty.style.display = 'none';
+
+      _aiMessages.forEach(function(m, idx) {
+        var row = document.createElement('div');
+        row.className = 'ai-bubble-row ' + (m.role === 'user' ? 'ai-bubble-row-user' : 'ai-bubble-row-bot');
+        var bubble = document.createElement('div');
+        bubble.className = 'ai-bubble ' + (m.role === 'user' ? 'ai-bubble-user' : 'ai-bubble-bot') + (m.isError ? ' ai-bubble-error' : '');
+
+        // Render markdown for AI responses
+        var contentHtml;
+        if (m.role === 'model' && !m.isError && typeof marked !== 'undefined') {
+          try { contentHtml = marked.parse(m.content); } catch(e) { contentHtml = m.content.replace(/\n/g, '<br>'); }
+        } else {
+          contentHtml = m.content.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+        }
+
+        bubble.innerHTML = '<div class="ai-bubble-text">' + contentHtml + '</div>' +
+          '<span class="ai-bubble-time">' + (m.time || '') + '</span>';
+
+        // Insert to editor button (only for AI responses, not errors)
+        if (m.role === 'model' && !m.isError) {
+          var actions = document.createElement('div');
+          actions.className = 'ai-bubble-actions';
+          actions.innerHTML = '<button class="ai-insert-btn" onclick="insertAiResponseToEditor(' + idx + ')" title="إدراج هذا الرد في المحرر عند موضع المؤشر"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg> إدراج في المحرر</button>' +
+            '<button class="ai-copy-btn" onclick="copyAiResponse(' + idx + ')" title="نسخ الرد"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> نسخ</button>';
+          bubble.appendChild(actions);
+        }
+
+        row.appendChild(bubble);
+        body.appendChild(row);
+      });
+    }
+
+    // ───── Layer 4: Insert to Editor ─────
+    window.insertAiResponseToEditor = function(idx) {
+      if (idx < 0 || idx >= _aiMessages.length) return;
+      var content = _aiMessages[idx].content;
+      var editor = document.getElementById('markdown-input');
+      if (!editor) return;
+
+      var start = editor.selectionStart || editor.value.length;
+      var end = editor.selectionEnd || editor.value.length;
+      var before = editor.value.substring(0, start);
+      var after = editor.value.substring(end);
+      var insertText = (before.length > 0 && !before.endsWith('\n')) ? '\n' + content : content;
+      editor.value = before + insertText + after;
+      editor.selectionStart = editor.selectionEnd = start + insertText.length;
+      editor.focus();
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
+
+      // Show success toast
+      showAiToast('تم إدراج الرد في المحرر بنجاح ✓');
+    };
+
+    window.copyAiResponse = function(idx) {
+      if (idx < 0 || idx >= _aiMessages.length) return;
+      var content = _aiMessages[idx].content;
+      navigator.clipboard.writeText(content).then(function() {
+        showAiToast('تم نسخ الرد ✓');
+      }).catch(function() {
+        showAiToast('تعذر النسخ', true);
+      });
+    };
+
+    function showAiToast(msg, isErr) {
+      var existing = document.getElementById('ai-toast');
+      if (existing) existing.remove();
+      var toast = document.createElement('div');
+      toast.id = 'ai-toast';
+      toast.className = 'ai-toast' + (isErr ? ' ai-toast-error' : '');
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.classList.add('ai-toast-show'); }, 20);
+      setTimeout(function() { toast.classList.remove('ai-toast-show'); setTimeout(function() { toast.remove(); }, 350); }, 2200);
+    }
+
+    // ───── Layer 5: Modal Controls ─────
+    window.openAiChatModal = function() {
+      var overlay = document.getElementById('ai-chat-overlay');
+      if (!overlay) return;
+      _aiMessages = loadAiChatHistory();
+      overlay.style.display = 'flex';
+      setTimeout(function() { overlay.classList.add('ai-chat-visible'); }, 10);
+      // Update model label
+      var modelLabel = document.getElementById('ai-chat-model-label');
+      if (modelLabel) {
+        var m = loadAiModel();
+        var names = {'gemini-2.0-flash-lite':'Gemini 2.0 Flash Lite','gemini-3.5-flash-lite':'Gemini 3.5 Flash Lite','gemini-2.5-flash-lite':'Gemini 2.5 Flash Lite','gemini-1.5-flash':'Gemini 1.5 Flash'};
+        modelLabel.textContent = names[m] || m;
+      }
+      renderAiChat();
+      setTimeout(function() { var inp = document.getElementById('ai-chat-input'); if(inp) inp.focus(); }, 200);
+    };
+
+    window.closeAiChatModal = function(e) {
+      if (e && e.target && !e.target.classList.contains('ai-chat-overlay')) return;
+      var overlay = document.getElementById('ai-chat-overlay');
+      if (!overlay) return;
+      overlay.classList.remove('ai-chat-visible');
+      if (_aiAbortCtrl) { _aiAbortCtrl.abort(); _aiAbortCtrl = null; }
+      setTimeout(function() { overlay.style.display = 'none'; }, 300);
+    };
+
+    // ───── Layer 6: Settings UI ─────
+    window.toggleAiFeature = function(enabled) {
+      setAiEnabled(enabled);
+      updateAiButtonVisibility();
+    };
+
+    window.addAiKey = function() {
+      var inp = document.getElementById('s-ai-new-key');
+      if (!inp) return;
+      var val = inp.value.trim();
+      if (!val) return;
+      var keys = loadAiKeys();
+      keys.push(val);
+      saveAiKeys(keys);
+      inp.value = '';
+      inp.type = 'password';
+    };
+
+    window.removeAiKey = function(idx) {
+      var keys = loadAiKeys();
+      keys.splice(idx, 1);
+      saveAiKeys(keys);
+    };
+
+    function renderAiKeysList() {
+      var container = document.getElementById('ai-keys-list');
+      if (!container) return;
+      var keys = loadAiKeys();
+      if (keys.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-tertiary,#94a3b8); font-size:12.5px; margin:4px 0;">لم يتم إضافة أي مفتاح بعد.</p>';
+        return;
+      }
+      var html = '';
+      keys.forEach(function(k, i) {
+        var masked = k.substring(0, 8) + '••••••' + k.substring(k.length - 4);
+        html += '<div class="ai-key-card"><span class="ai-key-index">' + (i+1) + '</span><code class="ai-key-masked">' + masked + '</code><button class="ai-key-remove" onclick="removeAiKey(' + i + ')" title="حذف المفتاح"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></div>';
+      });
+      container.innerHTML = html;
+    }
+
+    function updateAiButtonVisibility() {
+      var btn = document.getElementById('btn-ask-ai');
+      if (btn) btn.style.display = isAiEnabled() ? 'inline-flex' : 'none';
+    }
+
+    window.clearAiChat = function() {
+      _aiMessages = [];
+      saveAiChatHistory([]);
+      renderAiChat();
+    };
+
+    // ───── Init ─────
+    function initAiFeature() {
+      updateAiButtonVisibility();
+      // Sync settings UI
+      var toggle = document.getElementById('s-ai-enabled');
+      if (toggle) toggle.checked = isAiEnabled();
+      var modelSel = document.getElementById('s-ai-model');
+      if (modelSel) modelSel.value = loadAiModel();
+      renderAiKeysList();
+    }
+
+    // Init on DOM ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initAiFeature);
+    } else {
+      initAiFeature();
+    }
+
+    // Re-init when settings modal opens (to sync UI)
+    var _origOpenSettings = window.openSettingsModal;
+    window.openSettingsModal = function() {
+      if (typeof _origOpenSettings === 'function') _origOpenSettings();
+      setTimeout(initAiFeature, 50);
+    };
+  })();
+  </script>
 
 </body>
 </html>
