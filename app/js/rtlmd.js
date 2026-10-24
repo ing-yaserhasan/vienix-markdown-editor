@@ -693,6 +693,361 @@
     }
   }
 
+  // ============================================================
+  // تطبيق CSS classes على الجداول التي تملك data-border و data-rounded
+  // ============================================================
+  function applyTableStyles(container) {
+    if (!container) return;
+    container.querySelectorAll('table[data-border]').forEach(function (tbl) {
+      const borderVal = tbl.getAttribute('data-border') || '1';
+      const roundedVal = tbl.getAttribute('data-rounded') === 'true';
+      tbl.classList.remove('tbl-border-0', 'tbl-border-1', 'tbl-border-2', 'tbl-border-3', 'tbl-rounded');
+      tbl.classList.add('tbl-border-' + borderVal);
+      if (roundedVal) tbl.classList.add('tbl-rounded');
+    });
+  }
+
+  // ============================================================
+  // شريط أدوات الجداول العائم الاحترافي في لوحة المعاينة
+  // ============================================================
+  (function setupTableToolbar() {
+    let activeToolbar = null;
+    let activeTable = null;
+
+    function removeToolbar() {
+      if (activeToolbar) {
+        activeToolbar.remove();
+        activeToolbar = null;
+        activeTable = null;
+      }
+    }
+
+    function buildToolbar(table) {
+      removeToolbar();
+      activeTable = table;
+
+      const toolbar = document.createElement('div');
+      toolbar.className = 'table-resizer-toolbar';
+      toolbar.setAttribute('data-vienix-table-toolbar', '1');
+
+      const borderVal = parseInt(table.getAttribute('data-border') || '1', 10);
+      const roundedVal = table.getAttribute('data-rounded') === 'true';
+      const nextBorder = (borderVal + 1) % 4;
+      const borderLabels = ['0 (مخفي)', '1px خفيف', '2px وسط', '3px سميك'];
+
+      const actions = [
+        {
+          icon: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9" rx="3"/></svg>',
+          label: roundedVal ? 'زوايا حادة' : 'زوايا دائرية',
+          title: 'تبديل زوايا الجدول',
+          action: 'toggle-rounded',
+          active: roundedVal
+        },
+        {
+          icon: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="1"/></svg>',
+          label: `إطار: ${borderLabels[nextBorder]}`,
+          title: 'تغيير سماكة إطار الجدول',
+          action: 'cycle-border'
+        },
+        { divider: true },
+        {
+          icon: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
+          label: 'صف فوق',
+          title: 'إضافة صف جديد فوق الموضع الحالي',
+          action: 'add-row-above'
+        },
+        {
+          icon: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
+          label: 'صف تحت',
+          title: 'إضافة صف جديد أسفل الجدول',
+          action: 'add-row-below'
+        },
+        {
+          icon: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>',
+          label: 'عمود يسار',
+          title: 'إضافة عمود على اليسار',
+          action: 'add-col-left'
+        },
+        {
+          icon: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 19l7-7-7-7"/></svg>',
+          label: 'عمود يمين',
+          title: 'إضافة عمود على اليمين',
+          action: 'add-col-right'
+        },
+        { divider: true },
+        {
+          icon: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>',
+          label: 'محاذاة يمين',
+          title: 'محاذاة الجدول لليمين',
+          action: 'align-right'
+        },
+        {
+          icon: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+          label: 'محاذاة وسط',
+          title: 'محاذاة الجدول للوسط',
+          action: 'align-center'
+        },
+        { divider: true },
+        {
+          icon: '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>',
+          label: 'حذف الجدول',
+          title: 'حذف الجدول بالكامل من المستند',
+          action: 'delete-table',
+          danger: true
+        }
+      ];
+
+      actions.forEach(function (item) {
+        if (item.divider) {
+          const sep = document.createElement('div');
+          sep.className = 'tbl-divider';
+          toolbar.appendChild(sep);
+          return;
+        }
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'tbl-btn' + (item.active ? ' active' : '') + (item.danger ? ' btn-danger-action' : '');
+        btn.title = item.title || item.label;
+        btn.innerHTML = `${item.icon}<span>${item.label}</span>`;
+        btn.setAttribute('data-tbl-action', item.action);
+        toolbar.appendChild(btn);
+      });
+
+      toolbar.addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-tbl-action]');
+        if (!btn || !activeTable) return;
+        e.stopPropagation();
+        handleTableToolbarAction(btn.getAttribute('data-tbl-action'), activeTable);
+        removeToolbar();
+      });
+
+      toolbar.addEventListener('mousedown', function (e) {
+        e.stopPropagation();
+      });
+
+      return toolbar;
+    }
+
+    function handleTableToolbarAction(action, table) {
+      const activeEl = (typeof isClassicMode !== 'undefined' && isClassicMode && typeof classicEditor !== 'undefined' && classicEditor) ? classicEditor : editor;
+      if (!activeEl) return;
+
+      const borderVal = parseInt(table.getAttribute('data-border') || '1', 10);
+      const roundedVal = table.getAttribute('data-rounded') === 'true';
+
+      // تحديد موضع الجدول في Markdown وتعديله
+      const mdText = activeEl.value;
+      // ابحث عن HTML comment الخاص بهذا الجدول في نص الـ markdown
+      const tblMetaRegex = /<!--\s*vienix-tbl:border=(\d+),rounded=(true|false)\s*-->/g;
+
+      // عد الجداول في الـ preview لمعرفة index الجدول المستهدف
+      const allTables = Array.from(
+        (table.closest('#preview-content') || table.closest('#classic-output') || document)
+          .querySelectorAll('table[data-border]')
+      );
+      const tableIndex = allTables.indexOf(table);
+
+      if (action === 'toggle-rounded' || action === 'cycle-border') {
+        let matchIdx = 0;
+        const newMdText = mdText.replace(tblMetaRegex, function (full, b, r) {
+          if (matchIdx === tableIndex) {
+            let newBorder = parseInt(b, 10);
+            let newRounded = r === 'true';
+            if (action === 'toggle-rounded') newRounded = !newRounded;
+            if (action === 'cycle-border') newBorder = (newBorder + 1) % 4;
+            matchIdx++;
+            return `<!-- vienix-tbl:border=${newBorder},rounded=${newRounded} -->`;
+          }
+          matchIdx++;
+          return full;
+        });
+        if (newMdText !== mdText) {
+          recordHistorySnapshot(true);
+          const sel = activeEl.selectionStart;
+          activeEl.value = newMdText;
+          try { activeEl.setSelectionRange(sel, sel); } catch (_) {}
+          if (typeof isClassicMode !== 'undefined' && isClassicMode) {
+            if (editor) editor.value = activeEl.value;
+            if (typeof renderClassicMarkdown === 'function') renderClassicMarkdown();
+          } else {
+            if (classicEditor) classicEditor.value = activeEl.value;
+            renderMarkdown();
+          }
+          recordHistorySnapshot(true);
+        }
+        return;
+      }
+
+      if (action === 'delete-table') {
+        // حذف الجدول كاملاً من الـ markdown بما في ذلك الـ comment
+        let matchIdx = 0;
+        let newMdText = mdText.replace(
+          /<!--\s*vienix-tbl:border=\d+,rounded=(?:true|false)\s*-->\n((?:\|[^\n]+\n)+)\n?/g,
+          function (full) {
+            if (matchIdx === tableIndex) { matchIdx++; return ''; }
+            matchIdx++;
+            return full;
+          }
+        );
+        if (newMdText === mdText) {
+          // fallback: حذف بدون comment
+          matchIdx = 0;
+          newMdText = mdText.replace(/((?:\|[^\n]+\n)+)\n?/g, function (full) {
+            if (matchIdx === tableIndex) { matchIdx++; return ''; }
+            matchIdx++;
+            return full;
+          });
+        }
+        if (newMdText !== mdText) {
+          recordHistorySnapshot(true);
+          activeEl.value = newMdText;
+          if (typeof isClassicMode !== 'undefined' && isClassicMode) {
+            if (editor) editor.value = activeEl.value;
+            if (typeof renderClassicMarkdown === 'function') renderClassicMarkdown();
+          } else {
+            if (classicEditor) classicEditor.value = activeEl.value;
+            renderMarkdown();
+          }
+          recordHistorySnapshot(true);
+          if (typeof showToast === 'function') showToast('تم حذف الجدول ✓', 'success');
+        }
+        return;
+      }
+
+      // عمليات إضافة صفوف وأعمدة — نعمل مباشرة على الـ markdown بالبحث عن جدول الـ index
+      let tableCount = 0;
+      const lines = mdText.split('\n');
+      let tableStart = -1, tableEnd = -1;
+      for (let i = 0; i < lines.length; i++) {
+        if (/^\s*\|/.test(lines[i])) {
+          if (tableStart === -1) {
+            if (tableCount === tableIndex) tableStart = i;
+            else tableStart = i; // temp
+          }
+          tableEnd = i;
+        } else if (tableStart !== -1 && tableEnd !== -1) {
+          if (tableCount === tableIndex) break;
+          tableCount++;
+          tableStart = -1;
+          tableEnd = -1;
+        }
+      }
+      if (tableCount === tableIndex && tableStart !== -1) {
+        const tableLines = lines.slice(tableStart, tableEnd + 1);
+        const headerLine = tableLines[0];
+        const colCount = (headerLine.match(/\|/g) || []).length - 1;
+
+        if (action === 'add-row-above' || action === 'add-row-below') {
+          const newRow = '| ' + Array(colCount).fill(' ').join(' | ') + ' |';
+          if (action === 'add-row-above') {
+            tableLines.splice(2, 0, newRow); // بعد header + separator
+          } else {
+            tableLines.push(newRow);
+          }
+          const newLines = [...lines.slice(0, tableStart), ...tableLines, ...lines.slice(tableEnd + 1)];
+          recordHistorySnapshot(true);
+          activeEl.value = newLines.join('\n');
+          if (typeof isClassicMode !== 'undefined' && isClassicMode) {
+            if (editor) editor.value = activeEl.value;
+            if (typeof renderClassicMarkdown === 'function') renderClassicMarkdown();
+          } else {
+            if (classicEditor) classicEditor.value = activeEl.value;
+            renderMarkdown();
+          }
+          recordHistorySnapshot(true);
+          if (typeof showToast === 'function') showToast('تم إضافة صف ✓', 'success');
+        }
+
+        if (action === 'add-col-left' || action === 'add-col-right') {
+          const newTableLines = tableLines.map(function (line, idx) {
+            if (!line.trim().startsWith('|')) return line;
+            const cells = line.split('|');
+            // cells[0] is empty before first |, cells[last] after last |
+            const newCell = idx === 1 ? ' :--- ' : '   ';
+            if (action === 'add-col-right') {
+              // إضافة قبل آخر | (وهو الفاصل الأخير)
+              cells.splice(cells.length - 1, 0, newCell);
+            } else {
+              cells.splice(1, 0, newCell);
+            }
+            return cells.join('|');
+          });
+          const newLines = [...lines.slice(0, tableStart), ...newTableLines, ...lines.slice(tableEnd + 1)];
+          recordHistorySnapshot(true);
+          activeEl.value = newLines.join('\n');
+          if (typeof isClassicMode !== 'undefined' && isClassicMode) {
+            if (editor) editor.value = activeEl.value;
+            if (typeof renderClassicMarkdown === 'function') renderClassicMarkdown();
+          } else {
+            if (classicEditor) classicEditor.value = activeEl.value;
+            renderMarkdown();
+          }
+          recordHistorySnapshot(true);
+          if (typeof showToast === 'function') showToast('تم إضافة عمود ✓', 'success');
+        }
+      }
+
+      // محاذاة (لا تغيير في markdown — تطبيق CSS فقط)
+      if (action === 'align-right' || action === 'align-center') {
+        const align = action === 'align-right' ? 'right' : 'center';
+        table.style.marginInlineStart = align === 'center' ? 'auto' : '0';
+        table.style.marginInlineEnd = 'auto';
+      }
+    }
+
+    // ربط الحدث مع لوحتَي المعاينة
+    function attachTableClick(container) {
+      if (!container) return;
+      container.addEventListener('click', function (e) {
+        const tbl = e.target.closest('table');
+        if (!tbl) { removeToolbar(); return; }
+        if (e.target.closest('[data-vienix-table-toolbar]')) return;
+        e.stopPropagation();
+
+        const toolbar = buildToolbar(tbl);
+        // تثبيت الـ toolbar بالنسبة للـ container
+        const containerRect = container.getBoundingClientRect();
+        const tblRect = tbl.getBoundingClientRect();
+        const scrollTop = container.scrollTop || window.scrollY || 0;
+        toolbar.style.position = 'absolute';
+        toolbar.style.top = (tblRect.top - containerRect.top + scrollTop - 44) + 'px';
+        toolbar.style.right = '0';
+        toolbar.style.left = 'auto';
+        toolbar.style.zIndex = '120';
+
+        // نضع الـ toolbar داخل الـ container relative
+        const relParent = container.style.position === 'relative' ? container : container.parentElement;
+        if (relParent) {
+          relParent.style.position = 'relative';
+          relParent.appendChild(toolbar);
+        }
+        activeToolbar = toolbar;
+      });
+    }
+
+    // إزالة الـ toolbar عند الضغط خارجه
+    document.addEventListener('click', function (e) {
+      if (activeToolbar && !activeToolbar.contains(e.target)) {
+        removeToolbar();
+      }
+    });
+
+    // انتظر اكتمال DOM
+    document.addEventListener('DOMContentLoaded', function () {
+      const pc = document.getElementById('preview-content');
+      const co = document.getElementById('classic-output');
+      attachTableClick(pc);
+      attachTableClick(co);
+    });
+    // أو إذا كان DOM جاهزاً
+    if (document.readyState !== 'loading') {
+      const pc = document.getElementById('preview-content');
+      const co = document.getElementById('classic-output');
+      attachTableClick(pc);
+      attachTableClick(co);
+    }
+  })();
+
   // مزامنة حالة خانة المهمة (Checked / Unchecked) من شاشة المعاينة مباشرة إلى نص الماركداون بالمحرر
   function toggleTaskCheckboxInEditor(taskIndex, isChecked) {
     const activeEl = (typeof isClassicMode !== 'undefined' && isClassicMode && typeof classicEditor !== 'undefined' && classicEditor) ? classicEditor : editor;
@@ -1164,7 +1519,16 @@ function exportDocument(format) {
       html = html.replace(new RegExp(`<p>\\s*${placeholder}\\s*<\\/p>|${placeholder}`, 'g'), replacement);
     });
 
+    // حقن data-border و data-rounded في وسوم <table> من HTML comments قبل وضعها في DOM
+    html = html.replace(/<!--\s*vienix-tbl:border=(\d+),rounded=(true|false)\s*-->\s*(<table)/gi,
+      (full, border, rounded, tblTag) =>
+        `<!-- vienix-tbl:border=${border},rounded=${rounded} -->${tblTag} data-border="${border}" data-rounded="${rounded}"`
+    );
+
     previewContent.innerHTML = html;
+
+    // تطبيق CSS classes بعد الرندر على الجداول التي تملك data-border
+    applyTableStyles(previewContent);
 
     // Render Mermaid diagrams safely
     renderMermaidNodes();
@@ -7403,7 +7767,15 @@ function exportDocument(format) {
     if (!classicEditor || !classicOutput) return;
     const rawText = classicEditor.value;
     if (typeof marked !== 'undefined') {
-      classicOutput.innerHTML = marked.parse(preserveBlankLines(rawText));
+      let cHtml = marked.parse(preserveBlankLines(rawText));
+      // حقن data-border و data-rounded في الجداول كما في renderMarkdown
+      cHtml = cHtml.replace(/<!--\s*vienix-tbl:border=(\d+),rounded=(true|false)\s*-->\s*(<table)/gi,
+        function (full, border, rounded, tblTag) {
+          return '<!-- vienix-tbl:border=' + border + ',rounded=' + rounded + ' -->' + tblTag + ' data-border="' + border + '" data-rounded="' + rounded + '"';
+        }
+      );
+      classicOutput.innerHTML = cHtml;
+      applyTableStyles(classicOutput);
     } else {
       classicOutput.textContent = rawText;
     }
@@ -7712,18 +8084,26 @@ function exportDocument(format) {
   window.confirmInsertTable = function () {
     const colsInput = document.getElementById('table-cols-input');
     const rowsInput = document.getElementById('table-rows-input');
+    const borderInput = document.getElementById('table-border-input');
+    const roundedInput = document.getElementById('table-rounded-input');
     const cols = Math.max(1, Math.min(20, parseInt(colsInput ? colsInput.value : '3', 10) || 3));
     const rows = Math.max(1, Math.min(50, parseInt(rowsInput ? rowsInput.value : '3', 10) || 3));
+    const border = borderInput ? (parseInt(borderInput.value, 10) || 1) : 1;
+    const rounded = roundedInput ? roundedInput.checked : true;
 
     const modal = document.getElementById('insert-table-modal');
     if (modal) modal.style.display = 'none';
 
-    window.generateAndInsertMarkdownTable(cols, rows);
+    window.generateAndInsertMarkdownTable(cols, rows, border, rounded);
   };
 
-  window.generateAndInsertMarkdownTable = function (cols, rows) {
+  window.generateAndInsertMarkdownTable = function (cols, rows, border, rounded) {
     const activeEl = (typeof isClassicMode !== 'undefined' && isClassicMode && typeof classicEditor !== 'undefined' && classicEditor) ? classicEditor : editor;
     if (!activeEl) return;
+
+    // القيم الافتراضية
+    if (border === undefined || border === null) border = 1;
+    if (rounded === undefined || rounded === null) rounded = true;
 
     recordHistorySnapshot(true);
     const start = activeEl.selectionStart;
@@ -7745,7 +8125,10 @@ function exportDocument(format) {
       headers.push(`العمود ${c}`);
       separators.push(':---');
     }
-    let tableMarkdown = `${prefix}| ${headers.join(' | ')} |\n| ${separators.join(' | ')} |\n`;
+
+    // تضمين إعدادات الإطار والزوايا كـ HTML comment محمي قبل الجدول
+    const tblMeta = `<!-- vienix-tbl:border=${border},rounded=${rounded} -->\n`;
+    let tableMarkdown = `${prefix}${tblMeta}| ${headers.join(' | ')} |\n| ${separators.join(' | ')} |\n`;
 
     let cellCounter = 1;
     for (let r = 1; r <= rows; r++) {

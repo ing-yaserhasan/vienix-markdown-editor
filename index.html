@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/earlyaccess/droidarabicnaskh.css">
   <link rel="stylesheet" href="assets/fonts/tajawal.css">
-  <link rel="stylesheet" href="app/css/style.css?v=obsidian57">
+  <link rel="stylesheet" href="app/css/style.css?v=obsidian58">
   <link rel="stylesheet" href="app/css/classic.css?v=obsidian4">
 </head>
 <body>
@@ -575,6 +575,54 @@
           <article class="markdown-body" id="preview-content">
             <!-- Rendered Output -->
           </article>
+          <!-- شريط أدوات الجداول الاحترافي العائم في وضع التحرير المباشر -->
+          <div class="table-resizer-toolbar" id="table-floating-toolbar" style="display: none;" contenteditable="false">
+            <button type="button" class="tbl-btn" onclick="executeTableToolbarAction('add-row-below')" title="إضافة صف جديد لأسفل">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>+ صف لأسفل</span>
+            </button>
+            <button type="button" class="tbl-btn" onclick="executeTableToolbarAction('add-row-above')" title="إضافة صف جديد لأعلى">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>+ صف لأعلى</span>
+            </button>
+            <button type="button" class="tbl-btn btn-danger-action" onclick="executeTableToolbarAction('del-row')" title="حذف الصف الحالي">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              <span>حذف صف</span>
+            </button>
+            <span class="tbl-divider"></span>
+            <button type="button" class="tbl-btn" onclick="executeTableToolbarAction('add-col-after')" title="إضافة عمود بعد">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>+ عمود</span>
+            </button>
+            <button type="button" class="tbl-btn btn-danger-action" onclick="executeTableToolbarAction('del-col')" title="حذف العمود الحالي">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              <span>حذف عمود</span>
+            </button>
+            <span class="tbl-divider"></span>
+            <button type="button" class="tbl-btn btn-toggle-round" id="tbl-btn-round" onclick="executeTableToolbarAction('toggle-rounded')" title="تبديل الزوايا الدائرية (Rounded)">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5" ry="5"></rect></svg>
+              <span>حواف دائرية</span>
+            </button>
+            <button type="button" class="tbl-btn" id="tbl-btn-border" onclick="executeTableToolbarAction('cycle-border')" title="تبديل سماكة الإطار (0 مخفي، 1px، 2px، 3px)">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18"></rect></svg>
+              <span id="tbl-border-label">إطار 1px</span>
+            </button>
+            <span class="tbl-divider"></span>
+            <button type="button" class="tbl-btn" onclick="executeTableToolbarAction('align-right')" title="محاذاة لليمين">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="12" x2="9" y2="12"></line><line x1="21" y1="18" x2="5" y2="18"></line></svg>
+            </button>
+            <button type="button" class="tbl-btn" onclick="executeTableToolbarAction('align-center')" title="محاذاة للوسط">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="6"></line><line x1="21" y1="12" x2="3" y2="12"></line><line x1="18" y1="18" x2="6" y2="18"></line></svg>
+            </button>
+            <button type="button" class="tbl-btn" onclick="executeTableToolbarAction('align-left')" title="محاذاة لليسار">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="15" y1="12" x2="3" y2="12"></line><line x1="19" y1="18" x2="3" y2="18"></line></svg>
+            </button>
+            <span class="tbl-divider"></span>
+            <button type="button" class="tbl-btn btn-danger-action" onclick="executeTableToolbarAction('del-table')" title="حذف الجدول بالكامل">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              <span>حذف</span>
+            </button>
+          </div>
         </div>
       </section>
 
@@ -1390,6 +1438,24 @@
           <div class="book-field" style="flex: 1;">
             <label style="display:block; font-size:0.84rem; font-weight:700; margin-bottom:6px; color:var(--text-primary);">عدد الصفوف (Rows):</label>
             <input type="number" id="table-rows-input" class="book-input" min="1" max="50" value="3" style="width:100%; text-align:center; font-size:1.05rem; font-weight:700;" onkeydown="if(event.key==='Enter')confirmInsertTable()" />
+          </div>
+        </div>
+        <!-- خيارات تصميم وإطار الجدول المخصصة -->
+        <div style="display: flex; gap: 14px; margin-bottom: 14px; align-items: flex-end;">
+          <div class="book-field" style="flex: 1;">
+            <label style="display:block; font-size:0.84rem; font-weight:700; margin-bottom:6px; color:var(--text-primary);">سماكة الإطار (Border):</label>
+            <select id="table-border-input" class="book-input" style="width:100%; font-size:0.86rem; font-weight:600; padding: 7px 10px; height: 38px;">
+              <option value="0">0 — بدون إطار (مخفي)</option>
+              <option value="1" selected>1px — إطار عادي (افتراضي)</option>
+              <option value="2">2px — إطار متوسط</option>
+              <option value="3">3px — إطار سميك وبارز</option>
+            </select>
+          </div>
+          <div class="book-field" style="flex: 1; padding-bottom: 8px;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.85rem; font-weight:700; color:var(--text-primary); margin:0;">
+              <input type="checkbox" id="table-rounded-input" checked style="width:18px; height:18px; accent-color:var(--brand-primary, #2563eb); cursor:pointer;" />
+              <span>زوايا دائرية فاخرة (Rounded)</span>
+            </label>
           </div>
         </div>
         <div style="background: var(--bg-hover, rgba(59,130,246,0.06)); border: 1px dashed var(--border-color, #cbd5e1); border-radius: 6px; padding: 10px 12px; font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5;">

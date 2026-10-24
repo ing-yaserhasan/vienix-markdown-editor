@@ -1144,12 +1144,24 @@ body.is-resizing-workspace .workspace-resizer {
 .markdown-body table,
 #classic-output table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   margin: 1.4em 0;
   font-size: 0.95rem;
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-bottom: 2px solid var(--border-color) !important;
+  border-radius: 0;
+  box-sizing: border-box;
+  transition: border-radius 0.2s ease, border-color 0.2s ease;
+}
+
+/* 1. زوايا دائرية فاخرة (Rounded Corners) - كما بالصورة الأولى */
+.markdown-body table.tbl-rounded,
+.markdown-body table[data-rounded="true"],
+#classic-output table.tbl-rounded,
+#classic-output table[data-rounded="true"] {
+  border-radius: 8px !important;
+  overflow: hidden !important;
 }
 
 .markdown-body th,
@@ -1157,8 +1169,17 @@ body.is-resizing-workspace .workspace-resizer {
 #classic-output th,
 #classic-output td {
   padding: 10px 14px;
-  border: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  border-inline-end: 1px solid var(--border-color);
   text-align: right;
+  transition: background 0.15s ease;
+}
+
+.markdown-body th:last-child,
+.markdown-body td:last-child,
+#classic-output th:last-child,
+#classic-output td:last-child {
+  border-inline-end: none;
 }
 
 .markdown-body th,
@@ -1174,12 +1195,147 @@ body.is-resizing-workspace .workspace-resizer {
   background: var(--bg-hover);
 }
 
-/* ضمان وجود حد سفلي دائماً للجدول وللصف الأخير */
+/* الحد السفلي لآخر صف يندمج دائماً مع الإطار السفلي للجدول */
 .markdown-body tr:last-child td,
 .markdown-body tbody tr:last-child td,
 #classic-output tr:last-child td,
 #classic-output tbody tr:last-child td {
-  border-bottom: 2px solid var(--border-color) !important;
+  border-bottom: none;
+}
+
+/* 2. التحكم بسماكة الإطار (Border Widths) */
+/* درجة 0: بدون إطار تماماً (مخفي) */
+.markdown-body table.tbl-border-0,
+.markdown-body table[data-border="0"],
+#classic-output table.tbl-border-0,
+#classic-output table[data-border="0"] {
+  border: none !important;
+  box-shadow: none !important;
+}
+.markdown-body table.tbl-border-0 th,
+.markdown-body table.tbl-border-0 td,
+.markdown-body table[data-border="0"] th,
+.markdown-body table[data-border="0"] td,
+#classic-output table.tbl-border-0 th,
+#classic-output table.tbl-border-0 td,
+#classic-output table[data-border="0"] th,
+#classic-output table[data-border="0"] td {
+  border: none !important;
+}
+
+/* درجة 1: إطار عادي 1px (افتراضي) */
+.markdown-body table.tbl-border-1,
+.markdown-body table[data-border="1"] {
+  border: 1px solid var(--border-color) !important;
+}
+
+/* درجة 2: إطار متوسط 2px */
+.markdown-body table.tbl-border-2,
+.markdown-body table[data-border="2"] {
+  border: 2px solid var(--border-color) !important;
+}
+.markdown-body table.tbl-border-2 th,
+.markdown-body table.tbl-border-2 td {
+  border-bottom-width: 2px;
+  border-inline-end-width: 2px;
+}
+.markdown-body table.tbl-border-2 tr:last-child td {
+  border-bottom: none;
+}
+.markdown-body table.tbl-border-2 th:last-child,
+.markdown-body table.tbl-border-2 td:last-child {
+  border-inline-end: none;
+}
+
+/* درجة 3: إطار سميك وبارز 3px */
+.markdown-body table.tbl-border-3,
+.markdown-body table[data-border="3"] {
+  border: 3px solid var(--border-color) !important;
+}
+.markdown-body table.tbl-border-3 th,
+.markdown-body table.tbl-border-3 td {
+  border-bottom-width: 2.5px;
+  border-inline-end-width: 2.5px;
+}
+.markdown-body table.tbl-border-3 tr:last-child td {
+  border-bottom: none;
+}
+.markdown-body table.tbl-border-3 th:last-child,
+.markdown-body table.tbl-border-3 td:last-child {
+  border-inline-end: none;
+}
+
+/* ========================================================
+   شريط أدوات الجداول الاحترافي العائم في وضع التحرير المباشر
+   ======================================================== */
+.table-resizer-toolbar {
+  position: absolute;
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 30px;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  z-index: 120;
+  white-space: nowrap;
+  animation: tblToolbarFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  direction: rtl;
+  user-select: none;
+}
+
+@keyframes tblToolbarFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.table-resizer-toolbar .tbl-btn {
+  background: transparent;
+  border: none;
+  color: #f1f5f9;
+  padding: 4px 8px;
+  border-radius: 16px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.table-resizer-toolbar .tbl-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.table-resizer-toolbar .tbl-btn.active {
+  background: var(--brand-primary, #2563eb);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+}
+
+.table-resizer-toolbar .tbl-btn.btn-danger-action:hover {
+  background: rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+}
+
+.table-resizer-toolbar .tbl-divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0 2px;
 }
 
 /* Code & Syntax Highlighting */
