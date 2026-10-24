@@ -1568,11 +1568,11 @@ function exportDocument(format) {
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
         e.preventDefault();
-        insertFormat('**', '**', 'نص عريض');
+        insertFormat('**', '**');
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i') {
         e.preventDefault();
-        insertFormat('*', '*', 'نص مائل');
+        insertFormat('*', '*');
       }
     });
 
@@ -7290,36 +7290,181 @@ function exportDocument(format) {
   // ==========================================
 
   window.insertFormat = function (prefix, suffix, defaultText) {
-    recordHistorySnapshot(true);
-    const start = editor.selectionStart;
-    const end = editor.selectionEnd;
-    const selected = editor.value.substring(start, end) || defaultText || '';
-    const replacement = prefix + selected + suffix;
+    const activeEl = (typeof isClassicMode !== 'undefined' && isClassicMode && typeof classicEditor !== 'undefined' && classicEditor) ? classicEditor : editor;
+    if (!activeEl) return;
 
-    editor.setRangeText(replacement, start, end, 'select');
-    editor.focus();
-    renderMarkdown();
+    recordHistorySnapshot(true);
+    const start = activeEl.selectionStart;
+    const end = activeEl.selectionEnd;
+    const val = activeEl.value;
+    const selected = val.substring(start, end);
+
+    if (selected.length > 0) {
+      const replacement = prefix + selected + (suffix || '');
+      activeEl.setRangeText(replacement, start, end, 'end');
+      const innerStart = start + prefix.length;
+      const innerEnd = innerStart + selected.length;
+      activeEl.setSelectionRange(innerStart, innerEnd);
+    } else {
+      const replacement = prefix + (defaultText || '') + (suffix || '');
+      if (defaultText) {
+        activeEl.setRangeText(replacement, start, end, 'select');
+      } else {
+        activeEl.setRangeText(replacement, start, end, 'end');
+        const midPos = start + prefix.length;
+        activeEl.setSelectionRange(midPos, midPos);
+      }
+    }
+
+    activeEl.focus();
+    if (typeof isClassicMode !== 'undefined' && isClassicMode) {
+      if (editor) editor.value = activeEl.value;
+      renderClassicMarkdown();
+    } else {
+      if (classicEditor) classicEditor.value = activeEl.value;
+      renderMarkdown();
+    }
     recordHistorySnapshot(true);
   };
 
   window.insertHeading = function (level) {
+    const activeEl = (typeof isClassicMode !== 'undefined' && isClassicMode && typeof classicEditor !== 'undefined' && classicEditor) ? classicEditor : editor;
+    if (!activeEl) return;
+
     recordHistorySnapshot(true);
     const hashes = '#'.repeat(level) + ' ';
-    const start = editor.selectionStart;
-    const lineStart = editor.value.lastIndexOf('\n', start - 1) + 1;
-    editor.setRangeText(hashes, lineStart, lineStart, 'end');
-    editor.focus();
-    renderMarkdown();
+    const start = activeEl.selectionStart;
+    const val = activeEl.value;
+    const lineStart = val.lastIndexOf('\n', start - 1) + 1;
+    const lineEnd = val.indexOf('\n', start);
+    const effectiveLineEnd = lineEnd === -1 ? val.length : lineEnd;
+    const lineText = val.substring(lineStart, effectiveLineEnd);
+
+    const match = lineText.match(/^(#{1,6}\s*)/);
+    if (match) {
+      const matchLen = match[0].length;
+      activeEl.setRangeText(hashes, lineStart, lineStart + matchLen, 'end');
+      const diff = hashes.length - matchLen;
+      const newPos = Math.max(lineStart + hashes.length, start + diff);
+      activeEl.setSelectionRange(newPos, newPos);
+    } else {
+      activeEl.setRangeText(hashes, lineStart, lineStart, 'end');
+      const newPos = start + hashes.length;
+      activeEl.setSelectionRange(newPos, newPos);
+    }
+
+    activeEl.focus();
+    if (typeof isClassicMode !== 'undefined' && isClassicMode) {
+      if (editor) editor.value = activeEl.value;
+      renderClassicMarkdown();
+    } else {
+      if (classicEditor) classicEditor.value = activeEl.value;
+      renderMarkdown();
+    }
     recordHistorySnapshot(true);
   };
 
   window.insertList = function (ordered) {
-    const bullet = ordered ? '1. ' : '- ';
-    window.insertFormat(bullet, '', 'عنصر في القائمة');
+    const activeEl = (typeof isClassicMode !== 'undefined' && isClassicMode && typeof classicEditor !== 'undefined' && classicEditor) ? classicEditor : editor;
+    if (!activeEl) return;
+
+    recordHistorySnapshot(true);
+    const start = activeEl.selectionStart;
+    const end = activeEl.selectionEnd;
+    const val = activeEl.value;
+
+    if (start !== end) {
+      const selected = val.substring(start, end);
+      const lines = selected.split('\n');
+      const formatted = lines.map((line, idx) => {
+        const bullet = ordered ? `${idx + 1}. ` : '- ';
+        return line.trim().length > 0 ? `${bullet}${line}` : line;
+      }).join('\n');
+      activeEl.setRangeText(formatted, start, end, 'select');
+    } else {
+      const prevChar = start > 0 ? val[start - 1] : '\n';
+      const bullet = ordered ? '1. ' : '- ';
+      const prefix = prevChar === '\n' ? bullet : `\n${bullet}`;
+      activeEl.setRangeText(prefix, start, end, 'end');
+      const newPos = start + prefix.length;
+      activeEl.setSelectionRange(newPos, newPos);
+    }
+
+    activeEl.focus();
+    if (typeof isClassicMode !== 'undefined' && isClassicMode) {
+      if (editor) editor.value = activeEl.value;
+      renderClassicMarkdown();
+    } else {
+      if (classicEditor) classicEditor.value = activeEl.value;
+      renderMarkdown();
+    }
+    recordHistorySnapshot(true);
   };
 
   window.insertTask = function () {
-    window.insertFormat('- [ ] ', '', 'مهمة جديدة');
+    const activeEl = (typeof isClassicMode !== 'undefined' && isClassicMode && typeof classicEditor !== 'undefined' && classicEditor) ? classicEditor : editor;
+    if (!activeEl) return;
+
+    recordHistorySnapshot(true);
+    const start = activeEl.selectionStart;
+    const end = activeEl.selectionEnd;
+    const val = activeEl.value;
+
+    if (start !== end) {
+      const selected = val.substring(start, end);
+      const lines = selected.split('\n');
+      const formatted = lines.map(line => line.trim().length > 0 ? `- [ ] ${line}` : line).join('\n');
+      activeEl.setRangeText(formatted, start, end, 'select');
+    } else {
+      const prevChar = start > 0 ? val[start - 1] : '\n';
+      const prefix = prevChar === '\n' ? '- [ ] ' : '\n- [ ] ';
+      activeEl.setRangeText(prefix, start, end, 'end');
+      const newPos = start + prefix.length;
+      activeEl.setSelectionRange(newPos, newPos);
+    }
+
+    activeEl.focus();
+    if (typeof isClassicMode !== 'undefined' && isClassicMode) {
+      if (editor) editor.value = activeEl.value;
+      renderClassicMarkdown();
+    } else {
+      if (classicEditor) classicEditor.value = activeEl.value;
+      renderMarkdown();
+    }
+    recordHistorySnapshot(true);
+  };
+
+  window.insertQuote = function () {
+    const activeEl = (typeof isClassicMode !== 'undefined' && isClassicMode && typeof classicEditor !== 'undefined' && classicEditor) ? classicEditor : editor;
+    if (!activeEl) return;
+
+    recordHistorySnapshot(true);
+    const start = activeEl.selectionStart;
+    const end = activeEl.selectionEnd;
+    const val = activeEl.value;
+
+    if (start !== end) {
+      const selected = val.substring(start, end);
+      const lines = selected.split('\n');
+      const quoted = lines.map(line => line.startsWith('> ') ? line : `> ${line}`).join('\n');
+      activeEl.setRangeText(quoted, start, end, 'select');
+    } else {
+      const prevChar = start > 0 ? val[start - 1] : '\n';
+      const prefix = prevChar === '\n' ? '> ' : '\n> ';
+      activeEl.setRangeText(prefix, start, end, 'end');
+      const newPos = start + prefix.length;
+      activeEl.setSelectionRange(newPos, newPos);
+    }
+
+    activeEl.focus();
+    if (typeof isClassicMode !== 'undefined' && isClassicMode) {
+      if (editor) editor.value = activeEl.value;
+      renderClassicMarkdown();
+    } else {
+      if (classicEditor) classicEditor.value = activeEl.value;
+      renderMarkdown();
+    }
+    recordHistorySnapshot(true);
   };
 
   window.insertTable = function () {
@@ -7381,11 +7526,72 @@ function exportDocument(format) {
   };
 
   window.insertHorizontalRule = function () {
-    window.insertFormat('\n---\n', '', '');
+    const activeEl = (typeof isClassicMode !== 'undefined' && isClassicMode && typeof classicEditor !== 'undefined' && classicEditor) ? classicEditor : editor;
+    if (!activeEl) return;
+
+    recordHistorySnapshot(true);
+    const start = activeEl.selectionStart;
+    const end = activeEl.selectionEnd;
+    const val = activeEl.value;
+
+    let prefix = '';
+    if (start > 0) {
+      if (val[start - 1] !== '\n') {
+        prefix = '\n\n';
+      } else if (start > 1 && val[start - 2] !== '\n') {
+        prefix = '\n';
+      }
+    }
+    const hrText = `${prefix}---\n\n`;
+    activeEl.setRangeText(hrText, start, end, 'end');
+    const newPos = start + hrText.length;
+    activeEl.setSelectionRange(newPos, newPos);
+
+    activeEl.focus();
+    if (typeof isClassicMode !== 'undefined' && isClassicMode) {
+      if (editor) editor.value = activeEl.value;
+      renderClassicMarkdown();
+    } else {
+      if (classicEditor) classicEditor.value = activeEl.value;
+      renderMarkdown();
+    }
+    recordHistorySnapshot(true);
   };
 
   window.insertCodeBlock = function () {
-    window.insertFormat('```javascript\n', '\n```', '// اكتب الكود البرمجي هنا');
+    const activeEl = (typeof isClassicMode !== 'undefined' && isClassicMode && typeof classicEditor !== 'undefined' && classicEditor) ? classicEditor : editor;
+    if (!activeEl) return;
+
+    recordHistorySnapshot(true);
+    const start = activeEl.selectionStart;
+    const end = activeEl.selectionEnd;
+    const val = activeEl.value;
+    const selected = val.substring(start, end);
+
+    let prefix = '';
+    if (start > 0 && val[start - 1] !== '\n') {
+      prefix = '\n';
+    }
+
+    if (selected.length > 0) {
+      const codeBlock = `${prefix}\`\`\`javascript\n${selected}\n\`\`\`\n`;
+      activeEl.setRangeText(codeBlock, start, end, 'select');
+    } else {
+      const codeBlock = `${prefix}\`\`\`javascript\n\n\`\`\`\n`;
+      activeEl.setRangeText(codeBlock, start, end, 'end');
+      const insidePos = start + prefix.length + '```javascript\n'.length;
+      activeEl.setSelectionRange(insidePos, insidePos);
+    }
+
+    activeEl.focus();
+    if (typeof isClassicMode !== 'undefined' && isClassicMode) {
+      if (editor) editor.value = activeEl.value;
+      renderClassicMarkdown();
+    } else {
+      if (classicEditor) classicEditor.value = activeEl.value;
+      renderMarkdown();
+    }
+    recordHistorySnapshot(true);
   };
 
   // Diagram Templates Inserter

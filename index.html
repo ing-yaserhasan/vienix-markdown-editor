@@ -196,15 +196,15 @@
     <div class="toolbar-container">
       <div class="toolbar-group">
         <!-- Bold -->
-        <button class="tool-btn" onclick="insertFormat('**', '**', 'نص عريض')" title="عريض (Ctrl+B)">
+        <button class="tool-btn" onclick="insertFormat('**', '**')" title="عريض (Ctrl+B)">
           <strong>B</strong>
         </button>
         <!-- Italic -->
-        <button class="tool-btn" onclick="insertFormat('*', '*', 'نص مائل')" title="مائل (Ctrl+I)">
+        <button class="tool-btn" onclick="insertFormat('*', '*')" title="مائل (Ctrl+I)">
           <em>I</em>
         </button>
         <!-- Strikethrough -->
-        <button class="tool-btn" onclick="insertFormat('~~', '~~', 'نص مشطوب')" title="يتوسطه خط">
+        <button class="tool-btn" onclick="insertFormat('~~', '~~')" title="يتوسطه خط">
           <s>S</s>
         </button>
 
@@ -231,7 +231,7 @@
         <div class="toolbar-divider"></div>
 
         <!-- Blockquote -->
-        <button class="tool-btn" onclick="insertFormat('> ', '', 'اقتباس مميز')" title="اقتباس">
+        <button class="tool-btn" onclick="insertQuote()" title="اقتباس">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path></svg>
         </button>
         <!-- Code block -->
