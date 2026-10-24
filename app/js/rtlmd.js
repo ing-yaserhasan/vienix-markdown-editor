@@ -914,37 +914,49 @@
         return;
       }
 
-      // عمليات إضافة صفوف وأعمدة — نعمل مباشرة على الـ markdown بالبحث عن جدول الـ index
-      let tableCount = 0;
+      // عمليات إضافة صفوف وأعمدة — إيجاد الجدول رقم tableIndex في الـ markdown
       const lines = mdText.split('\n');
       let tableStart = -1, tableEnd = -1;
+      let tblCount = 0;
+      let inTbl = false;
+
       for (let i = 0; i < lines.length; i++) {
-        if (/^\s*\|/.test(lines[i])) {
-          if (tableStart === -1) {
-            if (tableCount === tableIndex) tableStart = i;
-            else tableStart = i; // temp
+        const isTableLine = /^\s*\|/.test(lines[i]);
+        if (isTableLine) {
+          if (!inTbl) {
+            inTbl = true;
+            if (tblCount === tableIndex) tableStart = i;
           }
-          tableEnd = i;
-        } else if (tableStart !== -1 && tableEnd !== -1) {
-          if (tableCount === tableIndex) break;
-          tableCount++;
-          tableStart = -1;
-          tableEnd = -1;
+          if (tblCount === tableIndex) tableEnd = i;
+        } else {
+          if (inTbl) {
+            if (tblCount === tableIndex) break; // وجدنا الجدول المطلوب
+            tblCount++;
+            inTbl = false;
+            tableStart = -1;
+            tableEnd = -1;
+          }
         }
       }
-      if (tableCount === tableIndex && tableStart !== -1) {
+      // حالة الجدول في نهاية الملف
+      if (inTbl && tblCount < tableIndex) { tableStart = -1; tableEnd = -1; }
+
+      if (tableStart !== -1 && tableEnd !== -1) {
         const tableLines = lines.slice(tableStart, tableEnd + 1);
+        // البحث عن الـ header line (أول سطر يبدأ بـ |)
         const headerLine = tableLines[0];
         const colCount = (headerLine.match(/\|/g) || []).length - 1;
 
         if (action === 'add-row-above' || action === 'add-row-below') {
-          const newRow = '| ' + Array(colCount).fill(' ').join(' | ') + ' |';
+          const newRow = '| ' + Array(colCount).fill('   ').join(' | ') + ' |';
+          const mutableLines = tableLines.slice();
           if (action === 'add-row-above') {
-            tableLines.splice(2, 0, newRow); // بعد header + separator
+            // أضف بعد السطر الثاني (separator)
+            mutableLines.splice(2, 0, newRow);
           } else {
-            tableLines.push(newRow);
+            mutableLines.push(newRow);
           }
-          const newLines = [...lines.slice(0, tableStart), ...tableLines, ...lines.slice(tableEnd + 1)];
+          const newLines = [...lines.slice(0, tableStart), ...mutableLines, ...lines.slice(tableEnd + 1)];
           recordHistorySnapshot(true);
           activeEl.value = newLines.join('\n');
           if (typeof isClassicMode !== 'undefined' && isClassicMode) {
@@ -959,13 +971,13 @@
         }
 
         if (action === 'add-col-left' || action === 'add-col-right') {
-          const newTableLines = tableLines.map(function (line, idx) {
+          const newTableLines = tableLines.map(function (line, lineIdx) {
             if (!line.trim().startsWith('|')) return line;
             const cells = line.split('|');
-            // cells[0] is empty before first |, cells[last] after last |
-            const newCell = idx === 1 ? ' :--- ' : '   ';
+            // cells[0] فارغ قبل | الأولى، cells[last] فارغ بعد | الأخيرة
+            const isSeparatorRow = lineIdx === 1; // السطر الثاني هو separator
+            const newCell = isSeparatorRow ? ' :--- ' : '     ';
             if (action === 'add-col-right') {
-              // إضافة قبل آخر | (وهو الفاصل الأخير)
               cells.splice(cells.length - 1, 0, newCell);
             } else {
               cells.splice(1, 0, newCell);
@@ -1005,22 +1017,17 @@
         e.stopPropagation();
 
         const toolbar = buildToolbar(tbl);
-        // تثبيت الـ toolbar بالنسبة للـ container
-        const containerRect = container.getBoundingClientRect();
+        // position: fixed بالنسبة للـ viewport لتجنب أي مشكلة في الـ overflow
         const tblRect = tbl.getBoundingClientRect();
-        const scrollTop = container.scrollTop || window.scrollY || 0;
-        toolbar.style.position = 'absolute';
-        toolbar.style.top = (tblRect.top - containerRect.top + scrollTop - 44) + 'px';
-        toolbar.style.right = '0';
+        const toolbarTop = Math.max(8, tblRect.top - 50);
+        toolbar.style.position = 'fixed';
+        toolbar.style.top = toolbarTop + 'px';
+        // محاذاة يمين الجدول مع إبقائه داخل النافذة
+        const rightEdge = window.innerWidth - tblRect.right;
+        toolbar.style.right = Math.max(8, rightEdge) + 'px';
         toolbar.style.left = 'auto';
-        toolbar.style.zIndex = '120';
-
-        // نضع الـ toolbar داخل الـ container relative
-        const relParent = container.style.position === 'relative' ? container : container.parentElement;
-        if (relParent) {
-          relParent.style.position = 'relative';
-          relParent.appendChild(toolbar);
-        }
+        toolbar.style.zIndex = '9999';
+        document.body.appendChild(toolbar);
         activeToolbar = toolbar;
       });
     }
@@ -8088,7 +8095,8 @@ function exportDocument(format) {
     const roundedInput = document.getElementById('table-rounded-input');
     const cols = Math.max(1, Math.min(20, parseInt(colsInput ? colsInput.value : '3', 10) || 3));
     const rows = Math.max(1, Math.min(50, parseInt(rowsInput ? rowsInput.value : '3', 10) || 3));
-    const border = borderInput ? (parseInt(borderInput.value, 10) || 1) : 1;
+    const borderRaw = borderInput ? parseInt(borderInput.value, 10) : 1;
+    const border = isNaN(borderRaw) ? 1 : borderRaw;
     const rounded = roundedInput ? roundedInput.checked : true;
 
     const modal = document.getElementById('insert-table-modal');
