@@ -13247,6 +13247,29 @@ function exportDocument(format) {
     return safeText.replace(regex, '<mark>$1</mark>');
   }
 
+  function findAllMatches(content, query) {
+    if (!content || !query) return [];
+    const lowerContent = content.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+    const matches = [];
+    let pos = 0;
+    while ((pos = lowerContent.indexOf(lowerQuery, pos)) !== -1) {
+      const lineNum = content.substring(0, pos).split('\n').length;
+      const start = Math.max(0, pos - 35);
+      const end = Math.min(content.length, pos + query.length + 50);
+      const prefix = start > 0 ? '...' : '';
+      const suffix = end < content.length ? '...' : '';
+      const snippet = prefix + content.substring(start, end).replace(/\r?\n/g, ' ') + suffix;
+      matches.push({
+        matchPos: pos,
+        lineNum: lineNum,
+        snippet: snippet
+      });
+      pos += lowerQuery.length;
+    }
+    return matches;
+  }
+
   function renderGlobalSearchResults(query) {
     const container = document.getElementById('global-search-results');
     const countLabel = document.getElementById('global-search-count-label');
@@ -13255,6 +13278,15 @@ function exportDocument(format) {
     const q = (query || '').trim().toLowerCase();
     const results = [];
     selectedGlobalSearchResultIndex = -1;
+
+    // الشرط الأول: يظهر فارغاً تماماً عند الفتح أو إذا كان الإدخال أقل من محرفين اثنين
+    if (q.length < 2) {
+      globalSearchResultsList = [];
+      selectedGlobalSearchResultIndex = -1;
+      if (countLabel) countLabel.textContent = '';
+      container.innerHTML = '';
+      return;
+    }
 
     // 1. تجميع بيانات الحجرات والفصول (Chambers 1-8)
     const chambersData = [];
@@ -13292,99 +13324,48 @@ function exportDocument(format) {
       });
     });
 
-    // حالة البحث الفارغ (Zero-State): عرض الوصول السريع
-    if (!q) {
-      if (currentGlobalSearchFilter === 'all' || currentGlobalSearchFilter === 'chambers') {
-        chambersData.filter(c => c.isFilled || c.isCurrent).forEach(c => {
-          results.push({
-            type: 'chamber',
-            chNum: c.chNum,
-            badge: `حجرة ${c.chNum}`,
-            title: c.title,
-            path: c.isCurrent ? 'الحجرة النشطة حالياً بالمحرر' : `حجرة تخزينية رقم ${c.chNum}`,
-            snippet: (c.content || '').substring(0, 100),
-            iconType: 'file'
-          });
-        });
-      }
-      if (currentGlobalSearchFilter === 'all' || currentGlobalSearchFilter === 'folders') {
-        allFolders.forEach(f => {
-          results.push({
-            type: 'folder',
-            folderKey: f.key,
-            badge: 'مجلد',
-            title: f.name,
-            path: f.desc || 'مجلد فصول ومسودات',
-            snippet: '',
-            iconType: 'folder'
-          });
-        });
-        folderFilesData.slice(0, 8).forEach(f => {
-          results.push({
-            type: 'folder_file',
-            folderKey: f.folderKey,
-            fileId: f.fileId,
-            badge: f.folderName,
-            title: f.title,
-            path: `المستكشف / ${f.folderName}`,
-            snippet: (f.content || '').substring(0, 100),
-            iconType: 'file'
-          });
-        });
-      } else if (currentGlobalSearchFilter === 'content') {
-        folderFilesData.slice(0, 8).forEach(f => {
-          results.push({
-            type: 'folder_file',
-            folderKey: f.folderKey,
-            fileId: f.fileId,
-            badge: f.folderName,
-            title: f.title,
-            path: `مجلد: ${f.folderName}`,
-            snippet: (f.content || '').substring(0, 100),
-            iconType: 'file'
-          });
-        });
-      }
-
-      globalSearchResultsList = results;
-      if (countLabel) countLabel.textContent = `وصول سريع (${results.length} عناصر)`;
-      renderItemsToHtml(container, results, '');
-      return;
-    }
-
-    // مطابقة البحث الفعلي عبر الفئات المحددة:
+    // 3. مطابقة البحث الفعلي عبر الفئات المحددة وعرض المواضع المتعددة
     // أ. مطابقة الفصول والحجرات
     if (currentGlobalSearchFilter === 'all' || currentGlobalSearchFilter === 'chambers' || currentGlobalSearchFilter === 'content' || currentGlobalSearchFilter === 'code') {
       chambersData.forEach(c => {
         const titleMatch = c.title.toLowerCase().includes(q);
-        const contentMatch = c.content.toLowerCase().includes(q);
         const isCodeMermaid = (c.content.includes('```mermaid') || c.content.includes('```')) && (c.content.toLowerCase().includes(q) || titleMatch);
 
         if (currentGlobalSearchFilter === 'code' && !isCodeMermaid) return;
-        if (currentGlobalSearchFilter === 'content' && !contentMatch) return;
-        if (currentGlobalSearchFilter === 'chambers' && !titleMatch && !contentMatch) return;
 
-        if (titleMatch || contentMatch) {
-          let snippet = '';
-          if (contentMatch) {
-            const idx = c.content.toLowerCase().indexOf(q);
-            const start = Math.max(0, idx - 30);
-            const end = Math.min(c.content.length, idx + q.length + 50);
-            snippet = (start > 0 ? '...' : '') + c.content.substring(start, end).replace(/\n/g, ' ') + (end < c.content.length ? '...' : '');
-          }
-
+        // مطابقة في العنوان
+        if (titleMatch && currentGlobalSearchFilter !== 'content') {
           results.push({
             type: 'chamber',
             chNum: c.chNum,
             badge: `حجرة ${c.chNum}`,
             title: c.title,
-            path: c.isCurrent ? 'الحجرة المفتوحة حالياً' : `حجرة رقم ${c.chNum}`,
-            snippet: snippet,
+            path: c.isCurrent ? 'الحجرة المفتوحة حالياً (مطابقة في العنوان)' : `حجرة رقم ${c.chNum} (مطابقة في العنوان)`,
+            snippet: (c.content || '').substring(0, 80).replace(/\r?\n/g, ' '),
             matchQuery: q,
+            matchPos: 0,
             iconType: isCodeMermaid ? 'code' : 'file',
-            isTitleMatch: titleMatch
+            isTitleMatch: true
           });
         }
+
+        // مطابقة في المحتوى النصي الداخلي - دعم كافة المواضع المتعددة
+        const contentMatches = findAllMatches(c.content, q);
+        contentMatches.forEach((m, matchIdx) => {
+          const locBadge = contentMatches.length > 1 ? `موضع ${matchIdx + 1} • سطر ${m.lineNum}` : `سطر ${m.lineNum}`;
+          results.push({
+            type: 'chamber',
+            chNum: c.chNum,
+            badge: `حجرة ${c.chNum}`,
+            title: c.title,
+            path: c.isCurrent ? `الحجرة المفتوحة حالياً • ${locBadge}` : `حجرة رقم ${c.chNum} • ${locBadge}`,
+            snippet: m.snippet,
+            matchQuery: q,
+            matchPos: m.matchPos,
+            iconType: isCodeMermaid ? 'code' : 'file',
+            isTitleMatch: false
+          });
+        });
       });
     }
 
@@ -13392,34 +13373,45 @@ function exportDocument(format) {
     if (currentGlobalSearchFilter === 'all' || currentGlobalSearchFilter === 'folders' || currentGlobalSearchFilter === 'content' || currentGlobalSearchFilter === 'code') {
       folderFilesData.forEach(f => {
         const titleMatch = f.title.toLowerCase().includes(q);
-        const contentMatch = f.content.toLowerCase().includes(q);
         const isCodeMermaid = (f.content.includes('```mermaid') || f.content.includes('```')) && (f.content.toLowerCase().includes(q) || titleMatch);
 
         if (currentGlobalSearchFilter === 'code' && !isCodeMermaid) return;
-        if (currentGlobalSearchFilter === 'content' && !contentMatch) return;
 
-        if (titleMatch || contentMatch) {
-          let snippet = '';
-          if (contentMatch) {
-            const idx = f.content.toLowerCase().indexOf(q);
-            const start = Math.max(0, idx - 30);
-            const end = Math.min(f.content.length, idx + q.length + 50);
-            snippet = (start > 0 ? '...' : '') + f.content.substring(start, end).replace(/\n/g, ' ') + (end < f.content.length ? '...' : '');
-          }
-
+        // مطابقة في عنوان الملف
+        if (titleMatch && currentGlobalSearchFilter !== 'content') {
           results.push({
             type: 'folder_file',
             folderKey: f.folderKey,
             fileId: f.fileId,
             badge: f.folderName,
             title: f.title,
-            path: `المستكشف / ${f.folderName} / ${f.title}`,
-            snippet: snippet,
+            path: `المستكشف / ${f.folderName} (مطابقة في العنوان)`,
+            snippet: (f.content || '').substring(0, 80).replace(/\r?\n/g, ' '),
             matchQuery: q,
+            matchPos: 0,
             iconType: isCodeMermaid ? 'code' : 'file',
-            isTitleMatch: titleMatch
+            isTitleMatch: true
           });
         }
+
+        // مطابقة في محتوى الملف - دعم كافة المواضع المتعددة
+        const contentMatches = findAllMatches(f.content, q);
+        contentMatches.forEach((m, matchIdx) => {
+          const locBadge = contentMatches.length > 1 ? `موضع ${matchIdx + 1} • سطر ${m.lineNum}` : `سطر ${m.lineNum}`;
+          results.push({
+            type: 'folder_file',
+            folderKey: f.folderKey,
+            fileId: f.fileId,
+            badge: f.folderName,
+            title: f.title,
+            path: `المستكشف / ${f.folderName} / ${f.title} • ${locBadge}`,
+            snippet: m.snippet,
+            matchQuery: q,
+            matchPos: m.matchPos,
+            iconType: isCodeMermaid ? 'code' : 'file',
+            isTitleMatch: false
+          });
+        });
       });
     }
 
@@ -13437,6 +13429,7 @@ function exportDocument(format) {
             path: folder.desc || 'مجلد بالمستكشف',
             snippet: '',
             matchQuery: q,
+            matchPos: 0,
             iconType: 'folder',
             isTitleMatch: true
           });
@@ -13455,7 +13448,7 @@ function exportDocument(format) {
       selectedGlobalSearchResultIndex = 0;
     }
     if (countLabel) {
-      countLabel.textContent = `تم العثور على ${results.length} نتيجة`;
+      countLabel.textContent = results.length > 0 ? `تم العثور على ${results.length} نتيجة` : 'لا توجد نتائج';
     }
     renderItemsToHtml(container, results, q);
   }
@@ -13530,18 +13523,22 @@ function exportDocument(format) {
       }
     }
 
-    if (item.matchQuery) {
+    if (item.matchQuery && typeof item.matchPos === 'number') {
       setTimeout(() => {
         const activeEl = (typeof isClassicMode !== 'undefined' && isClassicMode && typeof classicEditor !== 'undefined' && classicEditor) ? classicEditor : (typeof editor !== 'undefined' ? editor : null);
         if (activeEl) {
-          const val = activeEl.value;
-          const matchPos = val.toLowerCase().indexOf(item.matchQuery.toLowerCase());
-          if (matchPos !== -1) {
-            activeEl.focus();
-            activeEl.setSelectionRange(matchPos, matchPos + item.matchQuery.length);
-          }
+          activeEl.focus();
+          const targetStart = item.matchPos;
+          const targetEnd = targetStart + item.matchQuery.length;
+          activeEl.setSelectionRange(targetStart, targetEnd);
+          
+          // التمرير إلى السطر المحدد بدقة
+          const textBefore = activeEl.value.substring(0, targetStart);
+          const lineCount = textBefore.split('\n').length;
+          const approxLineHeight = 26;
+          activeEl.scrollTop = Math.max(0, (lineCount - 4) * approxLineHeight);
         }
-      }, 150);
+      }, 160);
     }
 
     if (typeof showToast === 'function') {
