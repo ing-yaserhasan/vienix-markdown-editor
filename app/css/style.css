@@ -106,7 +106,7 @@ html, body {
   letter-spacing: normal;
 }
 
-/* ضبط تباعد الأحرف للنصوص واللغات اللاتينية فقط لحماية تشابك الحروف العربية */
+/* Ø¶Ø¨Ø· ØªØ¨Ø§Ø¹Ø¯ Ø§Ù„Ø£Ø­Ø±Ù Ù„Ù„Ù†ØµÙˆØµ ÙˆØ§Ù„Ù„ØºØ§Øª Ø§Ù„Ù„Ø§ØªÙŠÙ†ÙŠØ© ÙÙ‚Ø· Ù„Ø­Ù…Ø§ÙŠØ© ØªØ´Ø§Ø¨Ùƒ Ø§Ù„Ø­Ø±ÙˆÙ Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© */
 [dir="ltr"] body,
 html[lang="en"] body,
 html[lang="de"] body,
@@ -116,13 +116,13 @@ html[lang="de"] body,
   letter-spacing: -0.012em;
 }
 
-/* تفعيل خصائص الخط البرمجي والـ Ligatures للأكواد */
+/* ØªÙØ¹ÙŠÙ„ Ø®ØµØ§Ø¦Øµ Ø§Ù„Ø®Ø· Ø§Ù„Ø¨Ø±Ù…Ø¬ÙŠ ÙˆØ§Ù„Ù€ Ligatures Ù„Ù„Ø£ÙƒÙˆØ§Ø¯ */
 code, pre, kbd, samp, .font-mono {
   font-family: var(--font-mono);
   font-feature-settings: "liga" 1, "calt" 1;
 }
 
-/* الأرقام المتساوية العرض (Tabular Numbers) لمنع اهتزاز العدادات والأسطر وجداول البيانات */
+/* Ø§Ù„Ø£Ø±Ù‚Ø§Ù… Ø§Ù„Ù…ØªØ³Ø§ÙˆÙŠØ© Ø§Ù„Ø¹Ø±Ø¶ (Tabular Numbers) Ù„Ù…Ù†Ø¹ Ø§Ù‡ØªØ²Ø§Ø² Ø§Ù„Ø¹Ø¯Ø§Ø¯Ø§Øª ÙˆØ§Ù„Ø£Ø³Ø·Ø± ÙˆØ¬Ø¯Ø§ÙˆÙ„ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª */
 .tabular-nums,
 .status-bar,
 .status-item,
@@ -136,12 +136,12 @@ pre {
   font-variant-numeric: tabular-nums;
 }
 
-/* عزل النصوص ثنائية اللغة لمنع تداخل علامات الترقيم */
+/* Ø¹Ø²Ù„ Ø§Ù„Ù†ØµÙˆØµ Ø«Ù†Ø§Ø¦ÙŠØ© Ø§Ù„Ù„ØºØ© Ù„Ù…Ù†Ø¹ ØªØ¯Ø§Ø®Ù„ Ø¹Ù„Ø§Ù…Ø§Øª Ø§Ù„ØªØ±Ù‚ÙŠÙ… */
 bdi, .bidi-isolate {
   unicode-bidi: isolate;
 }
 
-/* 1. تخصيص لون تظليل النصوص الفاخر (Text Selection) */
+/* 1. ØªØ®ØµÙŠØµ Ù„ÙˆÙ† ØªØ¸Ù„ÙŠÙ„ Ø§Ù„Ù†ØµÙˆØµ Ø§Ù„ÙØ§Ø®Ø± (Text Selection) */
 ::selection {
   background: rgba(59, 130, 246, 0.22);
   color: inherit;
@@ -162,14 +162,14 @@ bdi, .bidi-isolate {
   color: inherit;
 }
 
-/* تظليل نصوص الأكواد البرمجية */
+/* ØªØ¸Ù„ÙŠÙ„ Ù†ØµÙˆØµ Ø§Ù„Ø£ÙƒÙˆØ§Ø¯ Ø§Ù„Ø¨Ø±Ù…Ø¬ÙŠØ© */
 pre code::selection,
 pre::selection {
   background: rgba(59, 130, 246, 0.45);
   color: #ffffff;
 }
 
-/* 2. تحسين مظهر التركيز والتنقل النظيف (Focus-Visible) */
+/* 2. ØªØ­Ø³ÙŠÙ† Ù…Ø¸Ù‡Ø± Ø§Ù„ØªØ±ÙƒÙŠØ² ÙˆØ§Ù„ØªÙ†Ù‚Ù„ Ø§Ù„Ù†Ø¸ÙŠÙ (Focus-Visible) */
 :focus:not(:focus-visible) {
   outline: none;
 }
@@ -179,14 +179,14 @@ pre::selection {
   outline-offset: 2px;
 }
 
-/* استثناء حقول الإدخال ومحرر النصوص من الإطار المزدوج */
+/* Ø§Ø³ØªØ«Ù†Ø§Ø¡ Ø­Ù‚ÙˆÙ„ Ø§Ù„Ø¥Ø¯Ø®Ø§Ù„ ÙˆÙ…Ø­Ø±Ø± Ø§Ù„Ù†ØµÙˆØµ Ù…Ù† Ø§Ù„Ø¥Ø·Ø§Ø± Ø§Ù„Ù…Ø²Ø¯ÙˆØ¬ */
 .editor-textarea:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
   outline: none;
 }
 
-/* 3. احترام تفضيلات المستخدم لتقليل الحركة (Accessibility & Reduced Motion) */
+/* 3. Ø§Ø­ØªØ±Ø§Ù… ØªÙØ¶ÙŠÙ„Ø§Øª Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ù„ØªÙ‚Ù„ÙŠÙ„ Ø§Ù„Ø­Ø±ÙƒØ© (Accessibility & Reduced Motion) */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -593,7 +593,7 @@ textarea:focus-visible {
   min-width: 140px;
 }
 
-/* Workspace Split Resizer Gutter (خط مقبض السحب وتعديل المقاس) */
+/* Workspace Split Resizer Gutter (Ø®Ø· Ù…Ù‚Ø¨Ø¶ Ø§Ù„Ø³Ø­Ø¨ ÙˆØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ù…Ù‚Ø§Ø³) */
 .workspace-resizer {
   width: 7px;
   height: 100%;
@@ -610,7 +610,7 @@ textarea:focus-visible {
   justify-content: center;
 }
 
-/* زيادة مساحة اللمس والسحب لتسهيل الإمساك بالمقبض */
+/* Ø²ÙŠØ§Ø¯Ø© Ù…Ø³Ø§Ø­Ø© Ø§Ù„Ù„Ù…Ø³ ÙˆØ§Ù„Ø³Ø­Ø¨ Ù„ØªØ³Ù‡ÙŠÙ„ Ø§Ù„Ø¥Ù…Ø³Ø§Ùƒ Ø¨Ø§Ù„Ù…Ù‚Ø¨Ø¶ */
 .workspace-resizer::before {
   content: '';
   position: absolute;
@@ -622,7 +622,7 @@ textarea:focus-visible {
   cursor: col-resize;
 }
 
-/* خط الإشارة المرئي الصغير بوسط المقبض */
+/* Ø®Ø· Ø§Ù„Ø¥Ø´Ø§Ø±Ø© Ø§Ù„Ù…Ø±Ø¦ÙŠ Ø§Ù„ØµØºÙŠØ± Ø¨ÙˆØ³Ø· Ø§Ù„Ù…Ù‚Ø¨Ø¶ */
 .workspace-resizer .resizer-handle-line {
   width: 3px;
   height: 32px;
@@ -645,7 +645,7 @@ textarea:focus-visible {
   height: 48px;
 }
 
-/* نمط الخط الرفيع الفاصل (Slim Divider Mode) */
+/* Ù†Ù…Ø· Ø§Ù„Ø®Ø· Ø§Ù„Ø±ÙÙŠØ¹ Ø§Ù„ÙØ§ØµÙ„ (Slim Divider Mode) */
 .workspace-resizer.is-slim {
   width: 2px;
   flex: 0 0 2px;
@@ -668,7 +668,7 @@ textarea:focus-visible {
   box-shadow: 0 0 8px var(--accent-glow);
 }
 
-/* حالة الصفحة أثناء السحب */
+/* Ø­Ø§Ù„Ø© Ø§Ù„ØµÙØ­Ø© Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø³Ø­Ø¨ */
 body.is-resizing-workspace {
   cursor: col-resize !important;
   user-select: none !important;
@@ -707,7 +707,7 @@ body.is-resizing-workspace .workspace-resizer {
   color: var(--text-secondary);
 }
 
-/* ترويسة نافذة المعاينة مع أزرار التحكم للموبايل */
+/* ØªØ±ÙˆÙŠØ³Ø© Ù†Ø§ÙØ°Ø© Ø§Ù„Ù…Ø¹Ø§ÙŠÙ†Ø© Ù…Ø¹ Ø£Ø²Ø±Ø§Ø± Ø§Ù„ØªØ­ÙƒÙ… Ù„Ù„Ù…ÙˆØ¨Ø§ÙŠÙ„ */
 .preview-header-actions {
   display: flex;
   align-items: center;
@@ -715,7 +715,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 .preview-header-btn {
-  display: none; /* مخفي على الكمبيوتر افتراضياً */
+  display: none; /* Ù…Ø®ÙÙŠ Ø¹Ù„Ù‰ Ø§Ù„ÙƒÙ…Ø¨ÙŠÙˆØªØ± Ø§ÙØªØ±Ø§Ø¶ÙŠØ§Ù‹ */
   align-items: center;
   gap: 5px;
   font-size: 0.74rem;
@@ -758,7 +758,7 @@ body.is-resizing-workspace .workspace-resizer {
   color: #ffffff !important;
 }
 
-/* كونتينر الأدوات العائم في شاشة العرض المعاينة عند تفعيل Edit */
+/* ÙƒÙˆÙ†ØªÙŠÙ†Ø± Ø§Ù„Ø£Ø¯ÙˆØ§Øª Ø§Ù„Ø¹Ø§Ø¦Ù… ÙÙŠ Ø´Ø§Ø´Ø© Ø§Ù„Ø¹Ø±Ø¶ Ø§Ù„Ù…Ø¹Ø§ÙŠÙ†Ø© Ø¹Ù†Ø¯ ØªÙØ¹ÙŠÙ„ Edit */
 .preview-floating-dock {
   position: absolute !important;
   bottom: 24px !important;
@@ -800,7 +800,7 @@ body.is-resizing-workspace .workspace-resizer {
   flex: 1;
   position: relative;
   overflow: hidden;
-  overflow-clip-margin: 0;   /* الـ overflow:hidden يقطع المحتوى خارج الحدود */
+  overflow-clip-margin: 0;   /* Ø§Ù„Ù€ overflow:hidden ÙŠÙ‚Ø·Ø¹ Ø§Ù„Ù…Ø­ØªÙˆÙ‰ Ø®Ø§Ø±Ø¬ Ø§Ù„Ø­Ø¯ÙˆØ¯ */
 }
 
 .editor-textarea {
@@ -825,7 +825,7 @@ body.is-resizing-workspace .workspace-resizer {
   color: var(--text-faint);
 }
 
-/* حامل التحرير العائم القابل للسحب */
+/* Ø­Ø§Ù…Ù„ Ø§Ù„ØªØ­Ø±ÙŠØ± Ø§Ù„Ø¹Ø§Ø¦Ù… Ø§Ù„Ù‚Ø§Ø¨Ù„ Ù„Ù„Ø³Ø­Ø¨ */
 .floating-dock-wrapper {
   position: absolute;
   bottom: 20px;
@@ -843,7 +843,7 @@ body.is-resizing-workspace .workspace-resizer {
   cursor: grabbing;
 }
 
-/* أيقونة أعلى شريط الأدوات العائم بدون حدود (clipboard-plus) */
+/* Ø£ÙŠÙ‚ÙˆÙ†Ø© Ø£Ø¹Ù„Ù‰ Ø´Ø±ÙŠØ· Ø§Ù„Ø£Ø¯ÙˆØ§Øª Ø§Ù„Ø¹Ø§Ø¦Ù… Ø¨Ø¯ÙˆÙ† Ø­Ø¯ÙˆØ¯ (clipboard-plus) */
 .floating-dock-top-btn {
   background: transparent;
   border: none;
@@ -875,9 +875,9 @@ body.is-resizing-workspace .workspace-resizer {
   color: #60a5fa;
 }
 
-/* أيقونة مقبض السحب فوق الكونتينر */
+/* Ø£ÙŠÙ‚ÙˆÙ†Ø© Ù…Ù‚Ø¨Ø¶ Ø§Ù„Ø³Ø­Ø¨ ÙÙˆÙ‚ Ø§Ù„ÙƒÙˆÙ†ØªÙŠÙ†Ø± */
 .floating-dock-handle {
-  margin-bottom: 6px;      /* المقبض فوق الكونتينر — بعيد بمسافة بسيطة */
+  margin-bottom: 6px;      /* Ø§Ù„Ù…Ù‚Ø¨Ø¶ ÙÙˆÙ‚ Ø§Ù„ÙƒÙˆÙ†ØªÙŠÙ†Ø± â€” Ø¨Ø¹ÙŠØ¯ Ø¨Ù…Ø³Ø§ÙØ© Ø¨Ø³ÙŠØ·Ø© */
   margin-top: 0;
   color: var(--text-muted, #94a3b8);
   opacity: 0.5;
@@ -907,7 +907,7 @@ body.is-resizing-workspace .workspace-resizer {
   opacity: 1;
 }
 
-/* أدوات التحرير السريعة — بدون position مستقلة (ال wrapper يتحكم بالموضع) */
+/* Ø£Ø¯ÙˆØ§Øª Ø§Ù„ØªØ­Ø±ÙŠØ± Ø§Ù„Ø³Ø±ÙŠØ¹Ø© â€” Ø¨Ø¯ÙˆÙ† position Ù…Ø³ØªÙ‚Ù„Ø© (Ø§Ù„ wrapper ÙŠØªØ­ÙƒÙ… Ø¨Ø§Ù„Ù…ÙˆØ¶Ø¹) */
 .editor-floating-actions {
   display: flex;
   flex-direction: column;
@@ -919,7 +919,7 @@ body.is-resizing-workspace .workspace-resizer {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(8px);
   user-select: none;
-  cursor: default; /* لا يورث ال grab من ال wrapper على البودر نفسه */
+  cursor: default; /* Ù„Ø§ ÙŠÙˆØ±Ø« Ø§Ù„ grab Ù…Ù† Ø§Ù„ wrapper Ø¹Ù„Ù‰ Ø§Ù„Ø¨ÙˆØ¯Ø± Ù†ÙØ³Ù‡ */
 }
 
 .floating-tool-btn {
@@ -1079,7 +1079,7 @@ body.is-resizing-workspace .workspace-resizer {
   margin-bottom: 1.1em;
 }
 
-/* المحافظة على الأسطر والفواصل الفارغة في المعاينة المباشرة والتصدير */
+/* Ø§Ù„Ù…Ø­Ø§ÙØ¸Ø© Ø¹Ù„Ù‰ Ø§Ù„Ø£Ø³Ø·Ø± ÙˆØ§Ù„ÙÙˆØ§ØµÙ„ Ø§Ù„ÙØ§Ø±ØºØ© ÙÙŠ Ø§Ù„Ù…Ø¹Ø§ÙŠÙ†Ø© Ø§Ù„Ù…Ø¨Ø§Ø´Ø±Ø© ÙˆØ§Ù„ØªØµØ¯ÙŠØ± */
 .markdown-body p.md-blank-line,
 #classic-output p.md-blank-line,
 .book-chapter-content p.md-blank-line {
@@ -1209,7 +1209,7 @@ body.is-resizing-workspace .workspace-resizer {
 /* Mermaid Diagrams Container */
 .mermaid-wrapper {
   position: relative;
-  margin: 1.6em auto 1.6em 0; /* محاذاة يسارية تثبت الزاوية اليسارية العليا 100% تحت الماوس */
+  margin: 1.6em auto 1.6em 0; /* Ù…Ø­Ø§Ø°Ø§Ø© ÙŠØ³Ø§Ø±ÙŠØ© ØªØ«Ø¨Øª Ø§Ù„Ø²Ø§ÙˆÙŠØ© Ø§Ù„ÙŠØ³Ø§Ø±ÙŠØ© Ø§Ù„Ø¹Ù„ÙŠØ§ 100% ØªØ­Øª Ø§Ù„Ù…Ø§ÙˆØ³ */
   padding: 30px 24px 22px 24px;
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -1227,7 +1227,7 @@ body.is-resizing-workspace .workspace-resizer {
   transition: width 0.2s ease, max-width 0.2s ease, padding 0.2s ease;
 }
 
-/* أزرار تكبير وتصغير المخطط بالزاوية اليسارية العليا تظهر عند تمرير الماوس */
+/* Ø£Ø²Ø±Ø§Ø± ØªÙƒØ¨ÙŠØ± ÙˆØªØµØºÙŠØ± Ø§Ù„Ù…Ø®Ø·Ø· Ø¨Ø§Ù„Ø²Ø§ÙˆÙŠØ© Ø§Ù„ÙŠØ³Ø§Ø±ÙŠØ© Ø§Ù„Ø¹Ù„ÙŠØ§ ØªØ¸Ù‡Ø± Ø¹Ù†Ø¯ ØªÙ…Ø±ÙŠØ± Ø§Ù„Ù…Ø§ÙˆØ³ */
 .diagram-zoom-controls {
   position: absolute;
   top: 10px;
@@ -1277,7 +1277,7 @@ body.is-resizing-workspace .workspace-resizer {
   transform: scale(0.92);
 }
 
-/* زر نسخ الكود البرمجي بالكامل في خانة الكود */
+/* Ø²Ø± Ù†Ø³Ø® Ø§Ù„ÙƒÙˆØ¯ Ø§Ù„Ø¨Ø±Ù…Ø¬ÙŠ Ø¨Ø§Ù„ÙƒØ§Ù…Ù„ ÙÙŠ Ø®Ø§Ù†Ø© Ø§Ù„ÙƒÙˆØ¯ */
 .code-copy-btn {
   position: absolute;
   top: 8px;
@@ -1337,7 +1337,7 @@ body.is-resizing-workspace .workspace-resizer {
   font-family: var(--font-mono);
 }
 
-/* Task Lists (قوائم المهام التفاعلية) */
+/* Task Lists (Ù‚ÙˆØ§Ø¦Ù… Ø§Ù„Ù…Ù‡Ø§Ù… Ø§Ù„ØªÙØ§Ø¹Ù„ÙŠØ©) */
 .markdown-body ul:has(.task-list-item),
 .markdown-body ul:has(input[type="checkbox"]) {
   list-style: none !important;
@@ -1372,7 +1372,7 @@ body.is-resizing-workspace .workspace-resizer {
   color: var(--text-muted, #94a3b8);
 }
 
-/* تنسيق الصور المدرجة في المعاينة لتكون متجاوبة وأنيقة (باستثناء الإيموجي المضمن) */
+/* ØªÙ†Ø³ÙŠÙ‚ Ø§Ù„ØµÙˆØ± Ø§Ù„Ù…Ø¯Ø±Ø¬Ø© ÙÙŠ Ø§Ù„Ù…Ø¹Ø§ÙŠÙ†Ø© Ù„ØªÙƒÙˆÙ† Ù…ØªØ¬Ø§ÙˆØ¨Ø© ÙˆØ£Ù†ÙŠÙ‚Ø© (Ø¨Ø§Ø³ØªØ«Ù†Ø§Ø¡ Ø§Ù„Ø¥ÙŠÙ…ÙˆØ¬ÙŠ Ø§Ù„Ù…Ø¶Ù…Ù†) */
 .markdown-body img:not(.inline-emoji) {
   max-width: 100% !important;
   height: auto !important;
@@ -1383,7 +1383,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* ==========================================
-   IMAGE RESIZING SYSTEM (مقابض تحجيم وتكبير/تصغير الصور)
+   IMAGE RESIZING SYSTEM (Ù…Ù‚Ø§Ø¨Ø¶ ØªØ­Ø¬ÙŠÙ… ÙˆØªÙƒØ¨ÙŠØ±/ØªØµØºÙŠØ± Ø§Ù„ØµÙˆØ±)
    ========================================== */
 .image-resizer-wrapper {
   position: relative;
@@ -1421,7 +1421,7 @@ body.is-resizing-workspace .workspace-resizer {
   cursor: pointer;
 }
 
-/* إزالة الظلال والحدود عن الإيموجي والستيكرات داخل حاوية التحجيم */
+/* Ø¥Ø²Ø§Ù„Ø© Ø§Ù„Ø¸Ù„Ø§Ù„ ÙˆØ§Ù„Ø­Ø¯ÙˆØ¯ Ø¹Ù† Ø§Ù„Ø¥ÙŠÙ…ÙˆØ¬ÙŠ ÙˆØ§Ù„Ø³ØªÙŠÙƒØ±Ø§Øª Ø¯Ø§Ø®Ù„ Ø­Ø§ÙˆÙŠØ© Ø§Ù„ØªØ­Ø¬ÙŠÙ… */
 .image-resizer-wrapper img.inline-emoji,
 .emoji-resizer-wrapper img {
   border-radius: 0 !important;
@@ -1429,7 +1429,7 @@ body.is-resizing-workspace .workspace-resizer {
   background: transparent !important;
 }
 
-/* حالة التركيز واختيار الصورة العادية */
+/* Ø­Ø§Ù„Ø© Ø§Ù„ØªØ±ÙƒÙŠØ² ÙˆØ§Ø®ØªÙŠØ§Ø± Ø§Ù„ØµÙˆØ±Ø© Ø§Ù„Ø¹Ø§Ø¯ÙŠØ© */
 .image-resizer-wrapper:hover,
 .image-resizer-wrapper.active {
   outline: 2px solid var(--accent-color, #2563eb);
@@ -1437,7 +1437,7 @@ body.is-resizing-workspace .workspace-resizer {
   border-radius: 8px;
 }
 
-/* تنسيق حاوية تحجيم الإيموجي والستيكرات لتكون مدمجة بانسيابية */
+/* ØªÙ†Ø³ÙŠÙ‚ Ø­Ø§ÙˆÙŠØ© ØªØ­Ø¬ÙŠÙ… Ø§Ù„Ø¥ÙŠÙ…ÙˆØ¬ÙŠ ÙˆØ§Ù„Ø³ØªÙŠÙƒØ±Ø§Øª Ù„ØªÙƒÙˆÙ† Ù…Ø¯Ù…Ø¬Ø© Ø¨Ø§Ù†Ø³ÙŠØ§Ø¨ÙŠØ© */
 .image-resizer-wrapper.is-emoji-wrapper {
   display: inline-block;
   margin: 2px 4px;
@@ -1470,8 +1470,8 @@ body.is-resizing-workspace .workspace-resizer {
   vertical-align: middle !important;
 }
 
-/* حالة التركيز للإيموجي والستيكرات: بدون أي إطار أزرق عريض أو ظلال */
-/* حالة التركيز للإيموجي والستيكرات: بدون أي إطار أو خط منقط وبدون أي ظلال نهائياً بناءً على طلب المستخدم */
+/* Ø­Ø§Ù„Ø© Ø§Ù„ØªØ±ÙƒÙŠØ² Ù„Ù„Ø¥ÙŠÙ…ÙˆØ¬ÙŠ ÙˆØ§Ù„Ø³ØªÙŠÙƒØ±Ø§Øª: Ø¨Ø¯ÙˆÙ† Ø£ÙŠ Ø¥Ø·Ø§Ø± Ø£Ø²Ø±Ù‚ Ø¹Ø±ÙŠØ¶ Ø£Ùˆ Ø¸Ù„Ø§Ù„ */
+/* Ø­Ø§Ù„Ø© Ø§Ù„ØªØ±ÙƒÙŠØ² Ù„Ù„Ø¥ÙŠÙ…ÙˆØ¬ÙŠ ÙˆØ§Ù„Ø³ØªÙŠÙƒØ±Ø§Øª: Ø¨Ø¯ÙˆÙ† Ø£ÙŠ Ø¥Ø·Ø§Ø± Ø£Ùˆ Ø®Ø· Ù…Ù†Ù‚Ø· ÙˆØ¨Ø¯ÙˆÙ† Ø£ÙŠ Ø¸Ù„Ø§Ù„ Ù†Ù‡Ø§Ø¦ÙŠØ§Ù‹ Ø¨Ù†Ø§Ø¡Ù‹ Ø¹Ù„Ù‰ Ø·Ù„Ø¨ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… */
 .emoji-resizer-wrapper,
 .emoji-resizer-wrapper:hover,
 .emoji-resizer-wrapper.active,
@@ -1484,7 +1484,7 @@ body.is-resizing-workspace .workspace-resizer {
   box-shadow: none !important;
 }
 
-/* شريط الأدوات المصغر فوق الصورة */
+/* Ø´Ø±ÙŠØ· Ø§Ù„Ø£Ø¯ÙˆØ§Øª Ø§Ù„Ù…ØµØºØ± ÙÙˆÙ‚ Ø§Ù„ØµÙˆØ±Ø© */
 .image-resizer-toolbar {
   position: absolute;
   bottom: calc(100% + 8px);
@@ -1549,7 +1549,7 @@ body.is-resizing-workspace .workspace-resizer {
   font-family: 'Fira Mono', monospace;
 }
 
-/* مقابض التحجيم (Resize Handles) */
+/* Ù…Ù‚Ø§Ø¨Ø¶ Ø§Ù„ØªØ­Ø¬ÙŠÙ… (Resize Handles) */
 .resizer-handle {
   position: absolute;
   width: 12px;
@@ -1568,13 +1568,13 @@ body.is-resizing-workspace .workspace-resizer {
   display: block;
 }
 
-/* الزوايا الأربع */
+/* Ø§Ù„Ø²ÙˆØ§ÙŠØ§ Ø§Ù„Ø£Ø±Ø¨Ø¹ */
 .handle-nw { top: -6px; left: -6px; cursor: nwse-resize; }
 .handle-ne { top: -6px; right: -6px; cursor: nesw-resize; }
 .handle-sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
 .handle-se { bottom: -6px; right: -6px; cursor: nwse-resize; }
 
-/* أطراف الجوانب */
+/* Ø£Ø·Ø±Ø§Ù Ø§Ù„Ø¬ÙˆØ§Ù†Ø¨ */
 .handle-w { top: 50%; left: -6px; transform: translateY(-50%); cursor: ew-resize; height: 18px; border-radius: 6px; }
 .handle-e { top: 50%; right: -6px; transform: translateY(-50%); cursor: ew-resize; height: 18px; border-radius: 6px; }
 
@@ -1626,7 +1626,7 @@ body.is-resizing-workspace .workspace-resizer {
   color: var(--warning-color);
 }
 
-/* Toast Notifications (مخفية كلياً بناءً على طلب المستخدم الصريح) */
+/* Toast Notifications (Ù…Ø®ÙÙŠØ© ÙƒÙ„ÙŠØ§Ù‹ Ø¨Ù†Ø§Ø¡Ù‹ Ø¹Ù„Ù‰ Ø·Ù„Ø¨ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø§Ù„ØµØ±ÙŠØ­) */
 .toast-container,
 .toast {
   display: none !important;
@@ -1717,7 +1717,7 @@ body.is-resizing-workspace .workspace-resizer {
     font-family: 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif !important;
   }
 
-  /* 1. إخفاء كل واجهة التطبيق وشاشة التحرير نهائياً وبشكل قاطع */
+  /* 1. Ø¥Ø®ÙØ§Ø¡ ÙƒÙ„ ÙˆØ§Ø¬Ù‡Ø© Ø§Ù„ØªØ·Ø¨ÙŠÙ‚ ÙˆØ´Ø§Ø´Ø© Ø§Ù„ØªØ­Ø±ÙŠØ± Ù†Ù‡Ø§Ø¦ÙŠØ§Ù‹ ÙˆØ¨Ø´ÙƒÙ„ Ù‚Ø§Ø·Ø¹ */
   .app-header,
   .toolbar-container,
   .panel-editor,
@@ -1749,7 +1749,7 @@ body.is-resizing-workspace .workspace-resizer {
     box-shadow: none !important;
   }
 
-  /* 2. إظهار قسم المعاينة فقط على كامل الصفحة */
+  /* 2. Ø¥Ø¸Ù‡Ø§Ø± Ù‚Ø³Ù… Ø§Ù„Ù…Ø¹Ø§ÙŠÙ†Ø© ÙÙ‚Ø· Ø¹Ù„Ù‰ ÙƒØ§Ù…Ù„ Ø§Ù„ØµÙØ­Ø© */
   .app-wrapper,
   .workspace-container {
     display: block !important;
@@ -1790,7 +1790,7 @@ body.is-resizing-workspace .workspace-resizer {
     margin: 0 !important;
   }
 
-  /* ألوان العناوين الحية والأنيقة */
+  /* Ø£Ù„ÙˆØ§Ù† Ø§Ù„Ø¹Ù†Ø§ÙˆÙŠÙ† Ø§Ù„Ø­ÙŠØ© ÙˆØ§Ù„Ø£Ù†ÙŠÙ‚Ø© */
   .markdown-body h1 {
     color: #1e3a8a !important;
     border-bottom: 2px solid #3b82f6 !important;
@@ -1825,7 +1825,7 @@ body.is-resizing-workspace .workspace-resizer {
     break-after: avoid;
   }
 
-  /* تلوين الأكواد البرمجية بالكامل (Syntax Highlighting) لتعود حية وبألوانها الحقيقية */
+  /* ØªÙ„ÙˆÙŠÙ† Ø§Ù„Ø£ÙƒÙˆØ§Ø¯ Ø§Ù„Ø¨Ø±Ù…Ø¬ÙŠØ© Ø¨Ø§Ù„ÙƒØ§Ù…Ù„ (Syntax Highlighting) Ù„ØªØ¹ÙˆØ¯ Ø­ÙŠØ© ÙˆØ¨Ø£Ù„ÙˆØ§Ù†Ù‡Ø§ Ø§Ù„Ø­Ù‚ÙŠÙ‚ÙŠØ© */
   .markdown-body pre {
     background: #f8fafc !important;
     border: 1px solid #cbd5e1 !important;
@@ -1852,7 +1852,7 @@ body.is-resizing-workspace .workspace-resizer {
   .token.atrule, .token.attr-value, .token.keyword { color: #7c3aed !important; font-weight: bold; }
   .token.function, .token.class-name { color: #2563eb !important; font-weight: 600; }
 
-  /* المخططات فقط هي التي تكون صوراً ثابتة */
+  /* Ø§Ù„Ù…Ø®Ø·Ø·Ø§Øª ÙÙ‚Ø· Ù‡ÙŠ Ø§Ù„ØªÙŠ ØªÙƒÙˆÙ† ØµÙˆØ±Ø§Ù‹ Ø«Ø§Ø¨ØªØ© */
   .mermaid-wrapper {
     background: #ffffff !important;
     border: 1px solid #cbd5e1 !important;
@@ -1875,7 +1875,7 @@ body.is-resizing-workspace .workspace-resizer {
     break-inside: avoid !important;
   }
 
-  /* الجداول منسقة مع الألوان والحواف */
+  /* Ø§Ù„Ø¬Ø¯Ø§ÙˆÙ„ Ù…Ù†Ø³Ù‚Ø© Ù…Ø¹ Ø§Ù„Ø£Ù„ÙˆØ§Ù† ÙˆØ§Ù„Ø­ÙˆØ§Ù */
   .markdown-body table {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
@@ -1967,7 +1967,7 @@ body.is-resizing-workspace .workspace-resizer {
 /* Tablet & Mobile Screens (<= 768px) */
 @media (max-width: 768px) {
 
-  /* ترويسة المعاينة على الموبايل: إظهار زري المستكشف و Edit وإخفاء شارة ميرميد */
+  /* ØªØ±ÙˆÙŠØ³Ø© Ø§Ù„Ù…Ø¹Ø§ÙŠÙ†Ø© Ø¹Ù„Ù‰ Ø§Ù„Ù…ÙˆØ¨Ø§ÙŠÙ„: Ø¥Ø¸Ù‡Ø§Ø± Ø²Ø±ÙŠ Ø§Ù„Ù…Ø³ØªÙƒØ´Ù Ùˆ Edit ÙˆØ¥Ø®ÙØ§Ø¡ Ø´Ø§Ø±Ø© Ù…ÙŠØ±Ù…ÙŠØ¯ */
   .panel-header #preview-mode-badge {
     display: none !important;
   }
@@ -2333,7 +2333,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* ==========================================
-   BOOK EXPORT MODAL (نافذة تصدير الكتاب)
+   BOOK EXPORT MODAL (Ù†Ø§ÙØ°Ø© ØªØµØ¯ÙŠØ± Ø§Ù„ÙƒØªØ§Ø¨)
    ========================================== */
 .book-modal-overlay {
   display: none;
@@ -2640,7 +2640,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* ===================================================
-   CHAMBERS SYSTEM (نظام الحجرات التخزينية والمطابقة)
+   CHAMBERS SYSTEM (Ù†Ø¸Ø§Ù… Ø§Ù„Ø­Ø¬Ø±Ø§Øª Ø§Ù„ØªØ®Ø²ÙŠÙ†ÙŠØ© ÙˆØ§Ù„Ù…Ø·Ø§Ø¨Ù‚Ø©)
    =================================================== */
 
 .chambers-container {
@@ -2681,7 +2681,7 @@ body.is-resizing-workspace .workspace-resizer {
   gap: 4px;
 }
 
-/* مجموعة التنقل للحجرة المتجاوزة لـ 7 (الصورة 2) */
+/* Ù…Ø¬Ù…ÙˆØ¹Ø© Ø§Ù„ØªÙ†Ù‚Ù„ Ù„Ù„Ø­Ø¬Ø±Ø© Ø§Ù„Ù…ØªØ¬Ø§ÙˆØ²Ø© Ù„Ù€ 7 (Ø§Ù„ØµÙˆØ±Ø© 2) */
 .chambers-overflow-nav {
   display: inline-flex;
   align-items: center;
@@ -2693,7 +2693,7 @@ body.is-resizing-workspace .workspace-resizer {
   align-items: center;
 }
 
-/* أسهم التنقل للشريط المتحرك */
+/* Ø£Ø³Ù‡Ù… Ø§Ù„ØªÙ†Ù‚Ù„ Ù„Ù„Ø´Ø±ÙŠØ· Ø§Ù„Ù…ØªØ­Ø±Ùƒ */
 .chamber-nav-arrow {
   display: inline-flex;
   align-items: center;
@@ -2714,7 +2714,7 @@ body.is-resizing-workspace .workspace-resizer {
   pointer-events: none;
 }
 
-/* السهم الأيسر للوضع العادي (<= 7) */
+/* Ø§Ù„Ø³Ù‡Ù… Ø§Ù„Ø£ÙŠØ³Ø± Ù„Ù„ÙˆØ¶Ø¹ Ø§Ù„Ø¹Ø§Ø¯ÙŠ (<= 7) */
 .chamber-nav-end {
   color: var(--text-muted, #94a3b8);
   opacity: 0.75;
@@ -2727,7 +2727,7 @@ body.is-resizing-workspace .workspace-resizer {
   transform: scale(1.1);
 }
 
-/* أسهم الوضع المتجاوز لـ 7 (حول الحجرة النشطة كما في الصورة 2) */
+/* Ø£Ø³Ù‡Ù… Ø§Ù„ÙˆØ¶Ø¹ Ø§Ù„Ù…ØªØ¬Ø§ÙˆØ² Ù„Ù€ 7 (Ø­ÙˆÙ„ Ø§Ù„Ø­Ø¬Ø±Ø© Ø§Ù„Ù†Ø´Ø·Ø© ÙƒÙ…Ø§ ÙÙŠ Ø§Ù„ØµÙˆØ±Ø© 2) */
 .chamber-nav-prev,
 .chamber-nav-next {
   color: var(--accent-color, #4f46e5);
@@ -2777,7 +2777,7 @@ body.is-resizing-workspace .workspace-resizer {
   outline: none;
 }
 
-/* 1. الحجرة الفارغة (Empty Slot) */
+/* 1. Ø§Ù„Ø­Ø¬Ø±Ø© Ø§Ù„ÙØ§Ø±ØºØ© (Empty Slot) */
 .chamber-btn.empty {
   border: 1.5px dashed rgba(148, 163, 184, 0.5);
   color: var(--text-muted, #94a3b8);
@@ -2797,7 +2797,7 @@ body.is-resizing-workspace .workspace-resizer {
   display: none;
 }
 
-/* الحجرة الفارغة القادمة بنمط الإطار المتقطع تماماً كما في قالب صورة المستخدم */
+/* Ø§Ù„Ø­Ø¬Ø±Ø© Ø§Ù„ÙØ§Ø±ØºØ© Ø§Ù„Ù‚Ø§Ø¯Ù…Ø© Ø¨Ù†Ù…Ø· Ø§Ù„Ø¥Ø·Ø§Ø± Ø§Ù„Ù…ØªÙ‚Ø·Ø¹ ØªÙ…Ø§Ù…Ø§Ù‹ ÙƒÙ…Ø§ ÙÙŠ Ù‚Ø§Ù„Ø¨ ØµÙˆØ±Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… */
 .chamber-btn.chamber-btn-dashed {
   position: relative;
   width: 28px;
@@ -2832,7 +2832,7 @@ body.is-resizing-workspace .workspace-resizer {
   display: none !important;
 }
 
-/* 2. الحجرة الممتلئة (Filled Slot) */
+/* 2. Ø§Ù„Ø­Ø¬Ø±Ø© Ø§Ù„Ù…Ù…ØªÙ„Ø¦Ø© (Filled Slot) */
 .chamber-btn.filled {
   border: 1.5px solid rgba(59, 130, 246, 0.45);
   color: var(--text-primary, #1e293b);
@@ -2853,7 +2853,7 @@ body.is-resizing-workspace .workspace-resizer {
   transform: translateY(-1px);
 }
 
-/* علامة/نقطة المحتوى بالحجرة الممتلئة (أعلى يمين الحجرة) */
+/* Ø¹Ù„Ø§Ù…Ø©/Ù†Ù‚Ø·Ø© Ø§Ù„Ù…Ø­ØªÙˆÙ‰ Ø¨Ø§Ù„Ø­Ø¬Ø±Ø© Ø§Ù„Ù…Ù…ØªÙ„Ø¦Ø© (Ø£Ø¹Ù„Ù‰ ÙŠÙ…ÙŠÙ† Ø§Ù„Ø­Ø¬Ø±Ø©) */
 .chamber-dot {
   position: absolute;
   top: 2px;
@@ -2865,7 +2865,7 @@ body.is-resizing-workspace .workspace-resizer {
   box-shadow: 0 0 4px rgba(16, 185, 129, 0.7);
 }
 
-/* 3. الحجرة النشطة المحددة حالياً (Active Slot) */
+/* 3. Ø§Ù„Ø­Ø¬Ø±Ø© Ø§Ù„Ù†Ø´Ø·Ø© Ø§Ù„Ù…Ø­Ø¯Ø¯Ø© Ø­Ø§Ù„ÙŠØ§Ù‹ (Active Slot) */
 .chamber-btn.active {
   background: var(--accent-color, #5c67f2) !important;
   color: #ffffff !important;
@@ -2881,7 +2881,7 @@ body.is-resizing-workspace .workspace-resizer {
   box-shadow: 0 0 5px rgba(255, 255, 255, 0.9);
 }
 
-/* زر المقارنة والمطابقة */
+/* Ø²Ø± Ø§Ù„Ù…Ù‚Ø§Ø±Ù†Ø© ÙˆØ§Ù„Ù…Ø·Ø§Ø¨Ù‚Ø© */
 .chamber-diff-btn {
   height: 26px;
   padding: 0 8px;
@@ -2910,7 +2910,7 @@ body.is-resizing-workspace .workspace-resizer {
   display: inline-block;
 }
 
-/* زر مجلد الويندوز الأصفر (Windows Yellow Folder Button) */
+/* Ø²Ø± Ù…Ø¬Ù„Ø¯ Ø§Ù„ÙˆÙŠÙ†Ø¯ÙˆØ² Ø§Ù„Ø£ØµÙØ± (Windows Yellow Folder Button) */
 .win-folder-btn {
   height: 26px;
   padding: 0 8px;
@@ -3034,7 +3034,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* ===================================================
-   CHAMBERS & FOLDERS EXPLORER DRAWER (درج مستكشف الفصول والمجلدات)
+   CHAMBERS & FOLDERS EXPLORER DRAWER (Ø¯Ø±Ø¬ Ù…Ø³ØªÙƒØ´Ù Ø§Ù„ÙØµÙˆÙ„ ÙˆØ§Ù„Ù…Ø¬Ù„Ø¯Ø§Øª)
    =================================================== */
 
 .explorer-drawer-overlay {
@@ -3084,7 +3084,7 @@ body.is-resizing-workspace .workspace-resizer {
   right: 0;
 }
 
-/* الرأس الهادئ بنمط أوبسيديان Obsidian Header */
+/* Ø§Ù„Ø±Ø£Ø³ Ø§Ù„Ù‡Ø§Ø¯Ø¦ Ø¨Ù†Ù…Ø· Ø£ÙˆØ¨Ø³ÙŠØ¯ÙŠØ§Ù† Obsidian Header */
 .obsidian-header {
   height: 42px;
   padding: 0 12px;
@@ -3167,7 +3167,7 @@ body.is-resizing-workspace .workspace-resizer {
   animation: spin 0.6s linear infinite;
 }
 
-/* حقل البحث والتصفية الهادئ بنمط أوبسيديان */
+/* Ø­Ù‚Ù„ Ø§Ù„Ø¨Ø­Ø« ÙˆØ§Ù„ØªØµÙÙŠØ© Ø§Ù„Ù‡Ø§Ø¯Ø¦ Ø¨Ù†Ù…Ø· Ø£ÙˆØ¨Ø³ÙŠØ¯ÙŠØ§Ù† */
 .obsidian-search {
   margin: 8px 12px 6px 12px;
   display: flex;
@@ -3238,7 +3238,7 @@ body.is-resizing-workspace .workspace-resizer {
   color: #ef4444;
 }
 
-/* شجرة التفرعات بنمط أوبسيديان Obsidian Tree View */
+/* Ø´Ø¬Ø±Ø© Ø§Ù„ØªÙØ±Ø¹Ø§Øª Ø¨Ù†Ù…Ø· Ø£ÙˆØ¨Ø³ÙŠØ¯ÙŠØ§Ù† Obsidian Tree View */
 .obsidian-tree {
   flex: 1;
   overflow-y: auto;
@@ -3248,7 +3248,7 @@ body.is-resizing-workspace .workspace-resizer {
   gap: 2px;
 }
 
-/* مجلد أوبسيديان بدون كروت مفرغة وبدون حواف ثقيلة */
+/* Ù…Ø¬Ù„Ø¯ Ø£ÙˆØ¨Ø³ÙŠØ¯ÙŠØ§Ù† Ø¨Ø¯ÙˆÙ† ÙƒØ±ÙˆØª Ù…ÙØ±ØºØ© ÙˆØ¨Ø¯ÙˆÙ† Ø­ÙˆØ§Ù Ø«Ù‚ÙŠÙ„Ø© */
 .obsidian-folder {
   margin-bottom: 2px;
 }
@@ -3288,7 +3288,7 @@ body.is-resizing-workspace .workspace-resizer {
   flex-shrink: 0;
 }
 
-/* سهم المجلد: 90 درجة للمفتوح، 180 أو 0 للمطوي */
+/* Ø³Ù‡Ù… Ø§Ù„Ù…Ø¬Ù„Ø¯: 90 Ø¯Ø±Ø¬Ø© Ù„Ù„Ù…ÙØªÙˆØ­ØŒ 180 Ø£Ùˆ 0 Ù„Ù„Ù…Ø·ÙˆÙŠ */
 .obsidian-folder.collapsed .obsidian-folder-arrow {
   transform: rotate(180deg);
 }
@@ -3320,7 +3320,7 @@ body.is-resizing-workspace .workspace-resizer {
   padding: 0 4px;
 }
 
-/* خط التفرع الشجري اللطيف (Indentation Guide Line) */
+/* Ø®Ø· Ø§Ù„ØªÙØ±Ø¹ Ø§Ù„Ø´Ø¬Ø±ÙŠ Ø§Ù„Ù„Ø·ÙŠÙ (Indentation Guide Line) */
 .obsidian-folder-children {
   margin-right: 12px;
   padding-right: 8px;
@@ -3341,7 +3341,7 @@ body.is-resizing-workspace .workspace-resizer {
   display: none;
 }
 
-/* المجلدات الفرعية المتفرعة (Sub-folders inside Tree) */
+/* Ø§Ù„Ù…Ø¬Ù„Ø¯Ø§Øª Ø§Ù„ÙØ±Ø¹ÙŠØ© Ø§Ù„Ù…ØªÙØ±Ø¹Ø© (Sub-folders inside Tree) */
 .obsidian-folder.sub-folder {
   margin-top: 2px;
   margin-bottom: 2px;
@@ -3361,7 +3361,7 @@ body.is-resizing-workspace .workspace-resizer {
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* عنصر الحجرة الشجري بنمط أوبسيديان Obsidian Tree Item */
+/* Ø¹Ù†ØµØ± Ø§Ù„Ø­Ø¬Ø±Ø© Ø§Ù„Ø´Ø¬Ø±ÙŠ Ø¨Ù†Ù…Ø· Ø£ÙˆØ¨Ø³ÙŠØ¯ÙŠØ§Ù† Obsidian Tree Item */
 .obsidian-tree-item {
   display: flex;
   align-items: center;
@@ -3382,7 +3382,7 @@ body.is-resizing-workspace .workspace-resizer {
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* سحب وإفلات الملفات لتغيير ترتيبها ومجلدها Drag and Drop */
+/* Ø³Ø­Ø¨ ÙˆØ¥ÙÙ„Ø§Øª Ø§Ù„Ù…Ù„ÙØ§Øª Ù„ØªØºÙŠÙŠØ± ØªØ±ØªÙŠØ¨Ù‡Ø§ ÙˆÙ…Ø¬Ù„Ø¯Ù‡Ø§ Drag and Drop */
 .obsidian-tree-item[draggable="true"] {
   cursor: grab;
 }
@@ -3410,7 +3410,7 @@ body.is-resizing-workspace .workspace-resizer {
   border-radius: 4px;
 }
 
-/* سحب وإفلات المجلدات (Folder Drag & Drop) */
+/* Ø³Ø­Ø¨ ÙˆØ¥ÙÙ„Ø§Øª Ø§Ù„Ù…Ø¬Ù„Ø¯Ø§Øª (Folder Drag & Drop) */
 .obsidian-folder-header[draggable="true"] {
   cursor: grab;
 }
@@ -3431,7 +3431,7 @@ body.is-resizing-workspace .workspace-resizer {
   outline-offset: -2px;
 }
 
-/* شارة الحجرة المتزامنة حياً */
+/* Ø´Ø§Ø±Ø© Ø§Ù„Ø­Ø¬Ø±Ø© Ø§Ù„Ù…ØªØ²Ø§Ù…Ù†Ø© Ø­ÙŠØ§Ù‹ */
 .obsidian-link-badge {
   font-size: 0.68rem;
   font-weight: 600;
@@ -3449,7 +3449,7 @@ body.is-resizing-workspace .workspace-resizer {
   background: rgba(59, 130, 246, 0.18);
 }
 
-/* تمييز الحجرة النشطة بالنمط الهادئ */
+/* ØªÙ…ÙŠÙŠØ² Ø§Ù„Ø­Ø¬Ø±Ø© Ø§Ù„Ù†Ø´Ø·Ø© Ø¨Ø§Ù„Ù†Ù…Ø· Ø§Ù„Ù‡Ø§Ø¯Ø¦ */
 .obsidian-tree-item.active {
   background: rgba(37, 99, 235, 0.08);
 }
@@ -3569,7 +3569,7 @@ body.is-resizing-workspace .workspace-resizer {
   opacity: 0.5;
 }
 
-/* أزرار الإجراءات السريعة (تظهر عند التحويم فقط دون تشويش) */
+/* Ø£Ø²Ø±Ø§Ø± Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª Ø§Ù„Ø³Ø±ÙŠØ¹Ø© (ØªØ¸Ù‡Ø± Ø¹Ù†Ø¯ Ø§Ù„ØªØ­ÙˆÙŠÙ… ÙÙ‚Ø· Ø¯ÙˆÙ† ØªØ´ÙˆÙŠØ´) */
 .obsidian-item-actions {
   display: flex;
   align-items: center;
@@ -3623,7 +3623,7 @@ body.is-resizing-workspace .workspace-resizer {
   color: #f87171;
 }
 
-/* إدخال إعادة التسمية المباشرة النظيف */
+/* Ø¥Ø¯Ø®Ø§Ù„ Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„ØªØ³Ù…ÙŠØ© Ø§Ù„Ù…Ø¨Ø§Ø´Ø±Ø© Ø§Ù„Ù†Ø¸ÙŠÙ */
 .obsidian-inline-edit-box {
   display: flex;
   align-items: center;
@@ -3674,7 +3674,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* ===================================================
-   CHAMBERS MINI MODALS (نوافذ المسودة الجديدة ونقل المجلد)
+   CHAMBERS MINI MODALS (Ù†ÙˆØ§ÙØ° Ø§Ù„Ù…Ø³ÙˆØ¯Ø© Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø© ÙˆÙ†Ù‚Ù„ Ø§Ù„Ù…Ø¬Ù„Ø¯)
    =================================================== */
 
 .chamber-modal-overlay {
@@ -3846,7 +3846,7 @@ body.is-resizing-workspace .workspace-resizer {
   background: rgba(96, 165, 250, 0.15);
 }
 
-/* تذييل المستكشف الهادئ بنمط أوبسيديان Obsidian Footer */
+/* ØªØ°ÙŠÙŠÙ„ Ø§Ù„Ù…Ø³ØªÙƒØ´Ù Ø§Ù„Ù‡Ø§Ø¯Ø¦ Ø¨Ù†Ù…Ø· Ø£ÙˆØ¨Ø³ÙŠØ¯ÙŠØ§Ù† Obsidian Footer */
 .obsidian-footer {
   padding: 10px 12px;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
@@ -3900,7 +3900,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* ===================================================
-   DIFF & COMPARISON MODAL (نافذة مطابقة الحجرات)
+   DIFF & COMPARISON MODAL (Ù†Ø§ÙØ°Ø© Ù…Ø·Ø§Ø¨Ù‚Ø© Ø§Ù„Ø­Ø¬Ø±Ø§Øª)
    =================================================== */
 
 .diff-modal-overlay {
@@ -4249,7 +4249,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* ===================================================
-   BOOK MODAL CHAMBERS SCOPE (خيارات الحجرات في الكتاب)
+   BOOK MODAL CHAMBERS SCOPE (Ø®ÙŠØ§Ø±Ø§Øª Ø§Ù„Ø­Ø¬Ø±Ø§Øª ÙÙŠ Ø§Ù„ÙƒØªØ§Ø¨)
    =================================================== */
 
 .book-scope-options {
@@ -4361,13 +4361,13 @@ body.is-resizing-workspace .workspace-resizer {
    =================================================== */
 
 @media (max-width: 768px) {
-  /* 1. شريط الحجرات على الموبايل */
+  /* 1. Ø´Ø±ÙŠØ· Ø§Ù„Ø­Ø¬Ø±Ø§Øª Ø¹Ù„Ù‰ Ø§Ù„Ù…ÙˆØ¨Ø§ÙŠÙ„ */
   .chambers-container {
     padding: 2px 5px;
     gap: 3px;
   }
 
-  /* إخفاء كلمة "الحجرات:" لتوفير المساحة للشاشة الصغيرة */
+  /* Ø¥Ø®ÙØ§Ø¡ ÙƒÙ„Ù…Ø© "Ø§Ù„Ø­Ø¬Ø±Ø§Øª:" Ù„ØªÙˆÙÙŠØ± Ø§Ù„Ù…Ø³Ø§Ø­Ø© Ù„Ù„Ø´Ø§Ø´Ø© Ø§Ù„ØµØºÙŠØ±Ø© */
   .chambers-label {
     display: none;
   }
@@ -4380,7 +4380,7 @@ body.is-resizing-workspace .workspace-resizer {
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* زر مجلد الويندوز على الموبايل */
+  /* Ø²Ø± Ù…Ø¬Ù„Ø¯ Ø§Ù„ÙˆÙŠÙ†Ø¯ÙˆØ² Ø¹Ù„Ù‰ Ø§Ù„Ù…ÙˆØ¨Ø§ÙŠÙ„ */
   .win-folder-btn {
     height: 28px;
     padding: 0 6px;
@@ -4391,21 +4391,21 @@ body.is-resizing-workspace .workspace-resizer {
     display: none;
   }
 
-  /* درج المستكشف على الموبايل */
+  /* Ø¯Ø±Ø¬ Ø§Ù„Ù…Ø³ØªÙƒØ´Ù Ø¹Ù„Ù‰ Ø§Ù„Ù…ÙˆØ¨Ø§ÙŠÙ„ */
   .explorer-drawer {
     width: 92vw;
     max-width: 92vw;
     right: -95vw;
   }
 
-  /* زر المطابقة على الموبايل */
+  /* Ø²Ø± Ø§Ù„Ù…Ø·Ø§Ø¨Ù‚Ø© Ø¹Ù„Ù‰ Ø§Ù„Ù…ÙˆØ¨Ø§ÙŠÙ„ */
   .chamber-diff-btn {
     height: 28px;
     padding: 0 6px;
     font-size: 0.75rem;
   }
 
-  /* 2. نافذة المطابقة والمقارنة على الموبايل */
+  /* 2. Ù†Ø§ÙØ°Ø© Ø§Ù„Ù…Ø·Ø§Ø¨Ù‚Ø© ÙˆØ§Ù„Ù…Ù‚Ø§Ø±Ù†Ø© Ø¹Ù„Ù‰ Ø§Ù„Ù…ÙˆØ¨Ø§ÙŠÙ„ */
   .diff-modal {
     width: 98%;
     height: 94vh;
@@ -4444,7 +4444,7 @@ body.is-resizing-workspace .workspace-resizer {
     padding: 6px 8px;
   }
 
-  /* العرض جنباً إلى جنب يتحول لعمودي مريح في الموبايل */
+  /* Ø§Ù„Ø¹Ø±Ø¶ Ø¬Ù†Ø¨Ø§Ù‹ Ø¥Ù„Ù‰ Ø¬Ù†Ø¨ ÙŠØªØ­ÙˆÙ„ Ù„Ø¹Ù…ÙˆØ¯ÙŠ Ù…Ø±ÙŠØ­ ÙÙŠ Ø§Ù„Ù…ÙˆØ¨Ø§ÙŠÙ„ */
   .diff-split-container {
     flex-direction: column;
   }
@@ -4483,7 +4483,7 @@ body.is-resizing-workspace .workspace-resizer {
     justify-content: center;
   }
 
-  /* 3. خيارات الحجرات في نافذة تصدير الكتاب */
+  /* 3. Ø®ÙŠØ§Ø±Ø§Øª Ø§Ù„Ø­Ø¬Ø±Ø§Øª ÙÙŠ Ù†Ø§ÙØ°Ø© ØªØµØ¯ÙŠØ± Ø§Ù„ÙƒØªØ§Ø¨ */
   .book-scope-options {
     flex-direction: column;
   }
@@ -4505,7 +4505,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* ===================================================
-   LEGAL PAGES & DROPDOWN & MODAL (الصفحات القانونية لـ AdSense)
+   LEGAL PAGES & DROPDOWN & MODAL (Ø§Ù„ØµÙØ­Ø§Øª Ø§Ù„Ù‚Ø§Ù†ÙˆÙ†ÙŠØ© Ù„Ù€ AdSense)
    =================================================== */
 
 .status-left-group {
@@ -4567,7 +4567,7 @@ body.is-resizing-workspace .workspace-resizer {
   transform: rotate(180deg);
 }
 
-/* Popover Menu (تنبثق للأعلى Drop-up) */
+/* Popover Menu (ØªÙ†Ø¨Ø«Ù‚ Ù„Ù„Ø£Ø¹Ù„Ù‰ Drop-up) */
 .legal-popover {
   position: absolute;
   bottom: calc(100% + 10px);
@@ -4683,7 +4683,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* ===================================================
-   LEGAL MODAL READER (نافذة قراءة الصفحات داخل الموقع)
+   LEGAL MODAL READER (Ù†Ø§ÙØ°Ø© Ù‚Ø±Ø§Ø¡Ø© Ø§Ù„ØµÙØ­Ø§Øª Ø¯Ø§Ø®Ù„ Ø§Ù„Ù…ÙˆÙ‚Ø¹)
    =================================================== */
 
 .legal-modal-overlay {
@@ -4904,10 +4904,10 @@ body.is-resizing-workspace .workspace-resizer {
 
 /* =========================================================
    Mermaid Diagrams - Node Text Clipping Fix
-   يمنع اقتصاص النص خاصة السطر الثاني بعد <br/>
+   ÙŠÙ…Ù†Ø¹ Ø§Ù‚ØªØµØ§Øµ Ø§Ù„Ù†Øµ Ø®Ø§ØµØ© Ø§Ù„Ø³Ø·Ø± Ø§Ù„Ø«Ø§Ù†ÙŠ Ø¨Ø¹Ø¯ <br/>
    ========================================================= */
 
-/* تطبيق خط التطبيق على كل عناصر Mermaid */
+/* ØªØ·Ø¨ÙŠÙ‚ Ø®Ø· Ø§Ù„ØªØ·Ø¨ÙŠÙ‚ Ø¹Ù„Ù‰ ÙƒÙ„ Ø¹Ù†Ø§ØµØ± Mermaid */
 .mermaid,
 .mermaid svg,
 .mermaid svg text,
@@ -4917,13 +4917,13 @@ body.is-resizing-workspace .workspace-resizer {
   font-family: 'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
 }
 
-/* إصلاح foreignObject داخل عقد Mermaid - السبب الرئيسي للاقتصاص */
+/* Ø¥ØµÙ„Ø§Ø­ foreignObject Ø¯Ø§Ø®Ù„ Ø¹Ù‚Ø¯ Mermaid - Ø§Ù„Ø³Ø¨Ø¨ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ Ù„Ù„Ø§Ù‚ØªØµØ§Øµ */
 .mermaid svg .node foreignObject,
 .mermaid svg foreignObject {
   overflow: visible !important;
 }
 
-/* إصلاح div و p داخل foreignObject */
+/* Ø¥ØµÙ„Ø§Ø­ div Ùˆ p Ø¯Ø§Ø®Ù„ foreignObject */
 .mermaid svg .node foreignObject > *,
 .mermaid svg .node foreignObject div,
 .mermaid svg .node foreignObject p,
@@ -4938,7 +4938,7 @@ body.is-resizing-workspace .workspace-resizer {
   line-height: 1.5;
 }
 
-/* إصلاح تسمية العقدة (nodeLabel) */
+/* Ø¥ØµÙ„Ø§Ø­ ØªØ³Ù…ÙŠØ© Ø§Ù„Ø¹Ù‚Ø¯Ø© (nodeLabel) */
 .mermaid svg .nodeLabel,
 .mermaid svg .label {
   font-family: 'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
@@ -4947,7 +4947,7 @@ body.is-resizing-workspace .workspace-resizer {
   text-overflow: clip !important;
 }
 
-/* ضمان عدم قص النص في أي عقدة */
+/* Ø¶Ù…Ø§Ù† Ø¹Ø¯Ù… Ù‚Øµ Ø§Ù„Ù†Øµ ÙÙŠ Ø£ÙŠ Ø¹Ù‚Ø¯Ø© */
 .mermaid svg .node rect,
 .mermaid svg .node polygon,
 .mermaid svg .node circle,
@@ -4955,13 +4955,13 @@ body.is-resizing-workspace .workspace-resizer {
   overflow: visible !important;
 }
 
-/* مجموعة العقدة الكاملة */
+/* Ù…Ø¬Ù…ÙˆØ¹Ø© Ø§Ù„Ø¹Ù‚Ø¯Ø© Ø§Ù„ÙƒØ§Ù…Ù„Ø© */
 .mermaid svg .nodes .node,
 .mermaid svg g.node {
   overflow: visible !important;
 }
 
-/* مخطط الانسياب - wrapper */
+/* Ù…Ø®Ø·Ø· Ø§Ù„Ø§Ù†Ø³ÙŠØ§Ø¨ - wrapper */
 .mermaid-wrapper {
   text-align: center;
   margin: 24px 0;
@@ -4986,8 +4986,8 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* ========================================================
-   زر تحرير المعاينة المباشر (Neumorphic WYSIWYG Toggle Button)
-   مستوحى من تصميم زر PUSH النيومورفي بالكامل
+   Ø²Ø± ØªØ­Ø±ÙŠØ± Ø§Ù„Ù…Ø¹Ø§ÙŠÙ†Ø© Ø§Ù„Ù…Ø¨Ø§Ø´Ø± (Neumorphic WYSIWYG Toggle Button)
+   Ù…Ø³ØªÙˆØ­Ù‰ Ù…Ù† ØªØµÙ…ÙŠÙ… Ø²Ø± PUSH Ø§Ù„Ù†ÙŠÙˆÙ…ÙˆØ±ÙÙŠ Ø¨Ø§Ù„ÙƒØ§Ù…Ù„
    ======================================================== */
 .wysiwyg-preview-btn {
   position: relative;
@@ -5000,7 +5000,7 @@ body.is-resizing-workspace .workspace-resizer {
   background: #efefef;
   border: none;
   border-radius: 7px;
-  /* تظليل نيومورفي ناعم ومطابق لزر PUSH: ضوء أبيض علوي-يساري وظل رمادي سفلي-يميني */
+  /* ØªØ¸Ù„ÙŠÙ„ Ù†ÙŠÙˆÙ…ÙˆØ±ÙÙŠ Ù†Ø§Ø¹Ù… ÙˆÙ…Ø·Ø§Ø¨Ù‚ Ù„Ø²Ø± PUSH: Ø¶ÙˆØ¡ Ø£Ø¨ÙŠØ¶ Ø¹Ù„ÙˆÙŠ-ÙŠØ³Ø§Ø±ÙŠ ÙˆØ¸Ù„ Ø±Ù…Ø§Ø¯ÙŠ Ø³ÙÙ„ÙŠ-ÙŠÙ…ÙŠÙ†ÙŠ */
   box-shadow: -2.5px -2.5px 6px rgba(255, 255, 255, 0.95), 2.5px 2.5px 5.5px rgba(0, 0, 0, 0.12);
   cursor: pointer;
   user-select: none;
@@ -5010,7 +5010,7 @@ body.is-resizing-workspace .workspace-resizer {
   outline: none;
   line-height: 1;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  color: #515151; /* لون الخط الخاص بزر PUSH تماماً */
+  color: #515151; /* Ù„ÙˆÙ† Ø§Ù„Ø®Ø· Ø§Ù„Ø®Ø§Øµ Ø¨Ø²Ø± PUSH ØªÙ…Ø§Ù…Ø§Ù‹ */
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.35px;
@@ -5021,11 +5021,11 @@ body.is-resizing-workspace .workspace-resizer {
   box-shadow: -3px -3px 7px rgba(255, 255, 255, 1), 3px 3px 7px rgba(0, 0, 0, 0.15);
 }
 
-/* حالة التفعيل: لا يتغير شكله أبداً (بدون غؤور ولا إطار)، فقط لون الخط والظل يتحولان للأزرق */
+/* Ø­Ø§Ù„Ø© Ø§Ù„ØªÙØ¹ÙŠÙ„: Ù„Ø§ ÙŠØªØºÙŠØ± Ø´ÙƒÙ„Ù‡ Ø£Ø¨Ø¯Ø§Ù‹ (Ø¨Ø¯ÙˆÙ† ØºØ¤ÙˆØ± ÙˆÙ„Ø§ Ø¥Ø·Ø§Ø±)ØŒ ÙÙ‚Ø· Ù„ÙˆÙ† Ø§Ù„Ø®Ø· ÙˆØ§Ù„Ø¸Ù„ ÙŠØªØ­ÙˆÙ„Ø§Ù† Ù„Ù„Ø£Ø²Ø±Ù‚ */
 .wysiwyg-preview-btn.active {
   background: #efefef;
-  color: #2563eb; /* تحول لون الكتابة للأزرق */
-  box-shadow: -2.5px -2.5px 6px rgba(255, 255, 255, 0.95), 2.5px 2.5px 7.5px rgba(37, 99, 235, 0.42); /* تحول الظل للأزرق */
+  color: #2563eb; /* ØªØ­ÙˆÙ„ Ù„ÙˆÙ† Ø§Ù„ÙƒØªØ§Ø¨Ø© Ù„Ù„Ø£Ø²Ø±Ù‚ */
+  box-shadow: -2.5px -2.5px 6px rgba(255, 255, 255, 0.95), 2.5px 2.5px 7.5px rgba(37, 99, 235, 0.42); /* ØªØ­ÙˆÙ„ Ø§Ù„Ø¸Ù„ Ù„Ù„Ø£Ø²Ø±Ù‚ */
 }
 
 .wysiwyg-preview-btn.active:hover {
@@ -5040,7 +5040,7 @@ body.is-resizing-workspace .workspace-resizer {
   pointer-events: none;
 }
 
-/* دعم الوضع الليلي */
+/* Ø¯Ø¹Ù… Ø§Ù„ÙˆØ¶Ø¹ Ø§Ù„Ù„ÙŠÙ„ÙŠ */
 [data-theme="dark"] .wysiwyg-preview-btn {
   background: #232730;
   color: #cbd5e1;
@@ -5054,8 +5054,8 @@ body.is-resizing-workspace .workspace-resizer {
 
 [data-theme="dark"] .wysiwyg-preview-btn.active {
   background: #232730;
-  color: #60a5fa; /* تحول لون الخط للأزرق الفاتح في الوضع الليلي */
-  box-shadow: -2px -2px 5px rgba(255, 255, 255, 0.05), 2px 2px 8px rgba(96, 165, 250, 0.55); /* تحول الظل للأزرق في الوضع الليلي */
+  color: #60a5fa; /* ØªØ­ÙˆÙ„ Ù„ÙˆÙ† Ø§Ù„Ø®Ø· Ù„Ù„Ø£Ø²Ø±Ù‚ Ø§Ù„ÙØ§ØªØ­ ÙÙŠ Ø§Ù„ÙˆØ¶Ø¹ Ø§Ù„Ù„ÙŠÙ„ÙŠ */
+  box-shadow: -2px -2px 5px rgba(255, 255, 255, 0.05), 2px 2px 8px rgba(96, 165, 250, 0.55); /* ØªØ­ÙˆÙ„ Ø§Ù„Ø¸Ù„ Ù„Ù„Ø£Ø²Ø±Ù‚ ÙÙŠ Ø§Ù„ÙˆØ¶Ø¹ Ø§Ù„Ù„ÙŠÙ„ÙŠ */
 }
 
 [data-theme="dark"] .wysiwyg-preview-btn.active:hover {
@@ -5065,7 +5065,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* ========================================================
-   تنسيقات منطقة المعاينة عند تفعيل التحرير المباشر
+   ØªÙ†Ø³ÙŠÙ‚Ø§Øª Ù…Ù†Ø·Ù‚Ø© Ø§Ù„Ù…Ø¹Ø§ÙŠÙ†Ø© Ø¹Ù†Ø¯ ØªÙØ¹ÙŠÙ„ Ø§Ù„ØªØ­Ø±ÙŠØ± Ø§Ù„Ù…Ø¨Ø§Ø´Ø±
    ======================================================== */
 #preview-content.preview-editable {
   outline: none;
@@ -5121,7 +5121,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* ========================================================
-   شريط التنسيق العائم (Floating Formatting Toolbar)
+   Ø´Ø±ÙŠØ· Ø§Ù„ØªÙ†Ø³ÙŠÙ‚ Ø§Ù„Ø¹Ø§Ø¦Ù… (Floating Formatting Toolbar)
    ======================================================== */
 .wysiwyg-floating-toolbar {
   position: fixed;
@@ -5189,7 +5189,7 @@ body.is-resizing-workspace .workspace-resizer {
   margin: 0 3px;
 }
 
-/* أيقونة زر لون الخط (A مع مؤشر لوني سفلي) */
+/* Ø£ÙŠÙ‚ÙˆÙ†Ø© Ø²Ø± Ù„ÙˆÙ† Ø§Ù„Ø®Ø· (A Ù…Ø¹ Ù…Ø¤Ø´Ø± Ù„ÙˆÙ†ÙŠ Ø³ÙÙ„ÙŠ) */
 .wysiwyg-color-icon-a {
   display: inline-flex;
   flex-direction: column;
@@ -5215,7 +5215,7 @@ body.is-resizing-workspace .workspace-resizer {
   box-shadow: 0 0 2px rgba(0, 0, 0, 0.4);
 }
 
-/* لوحة الألوان المنبثقة للشريط العائم (Color Palette Popover) */
+/* Ù„ÙˆØ­Ø© Ø§Ù„Ø£Ù„ÙˆØ§Ù† Ø§Ù„Ù…Ù†Ø¨Ø«Ù‚Ø© Ù„Ù„Ø´Ø±ÙŠØ· Ø§Ù„Ø¹Ø§Ø¦Ù… (Color Palette Popover) */
 .wysiwyg-color-popover {
   position: fixed;
   z-index: 10060;
@@ -5326,7 +5326,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* ========================================================
-   أيقونات وإيموجي فلات ملونة (Rich Flat Emoji & Badges)
+   Ø£ÙŠÙ‚ÙˆÙ†Ø§Øª ÙˆØ¥ÙŠÙ…ÙˆØ¬ÙŠ ÙÙ„Ø§Øª Ù…Ù„ÙˆÙ†Ø© (Rich Flat Emoji & Badges)
    ======================================================== */
 .inline-emoji,
 .markdown-body img.inline-emoji:not([width]):not([style*="width"]),
@@ -5346,7 +5346,7 @@ body.is-resizing-workspace .workspace-resizer {
   object-fit: contain;
 }
 
-/* احترام أي حجم مخصص محدد على الأيقونة بالماركداون أو بأداة التحجيم */
+/* Ø§Ø­ØªØ±Ø§Ù… Ø£ÙŠ Ø­Ø¬Ù… Ù…Ø®ØµØµ Ù…Ø­Ø¯Ø¯ Ø¹Ù„Ù‰ Ø§Ù„Ø£ÙŠÙ‚ÙˆÙ†Ø© Ø¨Ø§Ù„Ù…Ø§Ø±ÙƒØ¯Ø§ÙˆÙ† Ø£Ùˆ Ø¨Ø£Ø¯Ø§Ø© Ø§Ù„ØªØ­Ø¬ÙŠÙ… */
 .inline-emoji[width],
 .inline-emoji[style*="width"],
 #preview-content img.inline-emoji[width],
@@ -5364,7 +5364,7 @@ body.is-resizing-workspace .workspace-resizer {
   background: transparent !important;
 }
 
-/* داخل حاوية التحجيم تملأ الأيقونة حجم الحاوية وتتحكم بها بسلاسة */
+/* Ø¯Ø§Ø®Ù„ Ø­Ø§ÙˆÙŠØ© Ø§Ù„ØªØ­Ø¬ÙŠÙ… ØªÙ…Ù„Ø£ Ø§Ù„Ø£ÙŠÙ‚ÙˆÙ†Ø© Ø­Ø¬Ù… Ø§Ù„Ø­Ø§ÙˆÙŠØ© ÙˆØªØªØ­ÙƒÙ… Ø¨Ù‡Ø§ Ø¨Ø³Ù„Ø§Ø³Ø© */
 .image-resizer-wrapper img.inline-emoji,
 .image-resizer-wrapper.is-emoji-wrapper img {
   width: 100% !important;
@@ -5374,7 +5374,7 @@ body.is-resizing-workspace .workspace-resizer {
   background: transparent !important;
 }
 
-/* لوحة منتقي الأيقونات والإيموجي الملونة (Emoji Popover) */
+/* Ù„ÙˆØ­Ø© Ù…Ù†ØªÙ‚ÙŠ Ø§Ù„Ø£ÙŠÙ‚ÙˆÙ†Ø§Øª ÙˆØ§Ù„Ø¥ÙŠÙ…ÙˆØ¬ÙŠ Ø§Ù„Ù…Ù„ÙˆÙ†Ø© (Emoji Popover) */
 .emoji-picker-popover {
   position: fixed;
   z-index: 10065;
@@ -5541,7 +5541,7 @@ body.is-resizing-workspace .workspace-resizer {
 
 
 /* ==========================================================================
-   SETTINGS MODAL — شاشة الإعدادات الاحترافية
+   SETTINGS MODAL â€” Ø´Ø§Ø´Ø© Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ø§Ø­ØªØ±Ø§ÙÙŠØ©
    ========================================================================== */
 
 /* Gear Button Animation */
@@ -6197,7 +6197,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* ==========================================================================
-   PRONUNCIATION ASSISTANT — مساعد النطق في المعاينة
+   PRONUNCIATION ASSISTANT â€” Ù…Ø³Ø§Ø¹Ø¯ Ø§Ù„Ù†Ø·Ù‚ ÙÙŠ Ø§Ù„Ù…Ø¹Ø§ÙŠÙ†Ø©
    ========================================================================== */
 
 /* Isolated phrase wrapper with strict LTR direction - strictly on baseline */
@@ -6317,7 +6317,7 @@ body.is-resizing-workspace .workspace-resizer {
   height: 12px;
 }
 
-/* Translation icon button (文A) - Beautiful rounded rectangle */
+/* Translation icon button (æ–‡A) - Beautiful rounded rectangle */
 .pronunciation-trans-btn {
   display: inline-flex;
   align-items: center;
@@ -6407,7 +6407,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* ==========================================================================
-   PRONUNCIATION SPEAKER CONTEXT MENU (قائمة زر الماوس الأيمن لمساعد النطق)
+   PRONUNCIATION SPEAKER CONTEXT MENU (Ù‚Ø§Ø¦Ù…Ø© Ø²Ø± Ø§Ù„Ù…Ø§ÙˆØ³ Ø§Ù„Ø£ÙŠÙ…Ù† Ù„Ù…Ø³Ø§Ø¹Ø¯ Ø§Ù„Ù†Ø·Ù‚)
    ========================================================================== */
 
 .pronunciation-context-menu {
@@ -6734,7 +6734,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 
-/* إخفاء كونتينر أدوات المعاينة على الكمبيوتر (مخصص لوضع الموبايل فقط) */
+/* Ø¥Ø®ÙØ§Ø¡ ÙƒÙˆÙ†ØªÙŠÙ†Ø± Ø£Ø¯ÙˆØ§Øª Ø§Ù„Ù…Ø¹Ø§ÙŠÙ†Ø© Ø¹Ù„Ù‰ Ø§Ù„ÙƒÙ…Ø¨ÙŠÙˆØªØ± (Ù…Ø®ØµØµ Ù„ÙˆØ¶Ø¹ Ø§Ù„Ù…ÙˆØ¨Ø§ÙŠÙ„ ÙÙ‚Ø·) */
 @media (min-width: 769px) {
   .preview-floating-dock {
     display: none !important;
@@ -6748,7 +6748,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 
-/* تنبيه ذكي عند قيود النطق في متصفحات الموبايل (مثل متصفح شاومي) */
+/* ØªÙ†Ø¨ÙŠÙ‡ Ø°ÙƒÙŠ Ø¹Ù†Ø¯ Ù‚ÙŠÙˆØ¯ Ø§Ù„Ù†Ø·Ù‚ ÙÙŠ Ù…ØªØµÙØ­Ø§Øª Ø§Ù„Ù…ÙˆØ¨Ø§ÙŠÙ„ (Ù…Ø«Ù„ Ù…ØªØµÙØ­ Ø´Ø§ÙˆÙ…ÙŠ) */
 .speech-alert-toast {
   position: fixed;
   bottom: 80px;
@@ -6811,7 +6811,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 
-/* زر Edit النيومورفي في ترويسة المعاينة بحجم أصغر متناسق */
+/* Ø²Ø± Edit Ø§Ù„Ù†ÙŠÙˆÙ…ÙˆØ±ÙÙŠ ÙÙŠ ØªØ±ÙˆÙŠØ³Ø© Ø§Ù„Ù…Ø¹Ø§ÙŠÙ†Ø© Ø¨Ø­Ø¬Ù… Ø£ØµØºØ± Ù…ØªÙ†Ø§Ø³Ù‚ */
 .preview-wysiwyg-btn {
   height: 24px !important;
   min-width: 28px !important;
@@ -6849,7 +6849,7 @@ body.is-resizing-workspace .workspace-resizer {
 
 
 /* =========================================================
-   فقاعة الترجمة الفورية الهجينة للكلمات (Word Translation Bubble)
+   ÙÙ‚Ø§Ø¹Ø© Ø§Ù„ØªØ±Ø¬Ù…Ø© Ø§Ù„ÙÙˆØ±ÙŠØ© Ø§Ù„Ù‡Ø¬ÙŠÙ†Ø© Ù„Ù„ÙƒÙ„Ù…Ø§Øª (Word Translation Bubble)
    ========================================================= */
 .word-trans-bubble {
   position: fixed;
@@ -7053,7 +7053,7 @@ body.is-resizing-workspace .workspace-resizer {
 
 
 /* =========================================================
-   Unified SVG UI Icon Standard (نظام أيقونات الواجهة الموحد)
+   Unified SVG UI Icon Standard (Ù†Ø¸Ø§Ù… Ø£ÙŠÙ‚ÙˆÙ†Ø§Øª Ø§Ù„ÙˆØ§Ø¬Ù‡Ø© Ø§Ù„Ù…ÙˆØ­Ø¯)
    ========================================================= */
 .ui-icon {
   display: inline-flex;
@@ -7099,8 +7099,8 @@ body.is-resizing-workspace .workspace-resizer {
 
 
 /* =========================================================
-   نظام النطق والترجمة الطافي (Floating Pronunciation & Translation Pill)
-   عناصر طافية عائمة لا تؤثر في المحتوى ولا تشوه الماركداون
+   Ù†Ø¸Ø§Ù… Ø§Ù„Ù†Ø·Ù‚ ÙˆØ§Ù„ØªØ±Ø¬Ù…Ø© Ø§Ù„Ø·Ø§ÙÙŠ (Floating Pronunciation & Translation Pill)
+   Ø¹Ù†Ø§ØµØ± Ø·Ø§ÙÙŠØ© Ø¹Ø§Ø¦Ù…Ø© Ù„Ø§ ØªØ¤Ø«Ø± ÙÙŠ Ø§Ù„Ù…Ø­ØªÙˆÙ‰ ÙˆÙ„Ø§ ØªØ´ÙˆÙ‡ Ø§Ù„Ù…Ø§Ø±ÙƒØ¯Ø§ÙˆÙ†
    ========================================================= */
 
 .pronunciation-floating-pill {
@@ -7208,7 +7208,7 @@ body.is-resizing-workspace .workspace-resizer {
   color: var(--text-muted, #64748b);
 }
 
-/* شارات الترجمة الفورية للمقال دون تشويه التنسيق */
+/* Ø´Ø§Ø±Ø§Øª Ø§Ù„ØªØ±Ø¬Ù…Ø© Ø§Ù„ÙÙˆØ±ÙŠØ© Ù„Ù„Ù…Ù‚Ø§Ù„ Ø¯ÙˆÙ† ØªØ´ÙˆÙŠÙ‡ Ø§Ù„ØªÙ†Ø³ÙŠÙ‚ */
 .bilingual-trans-tag {
   display: inline-block;
   font-size: 0.72rem;
@@ -7231,7 +7231,7 @@ body.is-resizing-workspace .workspace-resizer {
   border-color: rgba(16, 185, 129, 0.35);
 }
 
-/* زر الترجمة الشاملة في شريط الأدوات */
+/* Ø²Ø± Ø§Ù„ØªØ±Ø¬Ù…Ø© Ø§Ù„Ø´Ø§Ù…Ù„Ø© ÙÙŠ Ø´Ø±ÙŠØ· Ø§Ù„Ø£Ø¯ÙˆØ§Øª */
 .global-trans-tool-btn.active,
 .global-trans-tool-btn.is-active {
   background: #dcfce7 !important;
@@ -7249,7 +7249,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* =========================================================
-   كارت الترجمة المنزلق المزدوج للمقال (Bilingual Inline Translation Box)
+   ÙƒØ§Ø±Øª Ø§Ù„ØªØ±Ø¬Ù…Ø© Ø§Ù„Ù…Ù†Ø²Ù„Ù‚ Ø§Ù„Ù…Ø²Ø¯ÙˆØ¬ Ù„Ù„Ù…Ù‚Ø§Ù„ (Bilingual Inline Translation Box)
    ========================================================= */
 
 .inline-translation-box {
@@ -7393,14 +7393,14 @@ body.is-resizing-workspace .workspace-resizer {
 
 
 /* =========================================================
-   ترقيات حاوية التحجيم للإيموجي والصور: تحريك حر، تدوير، ومنع اقتطاع الفقاعة
+   ØªØ±Ù‚ÙŠØ§Øª Ø­Ø§ÙˆÙŠØ© Ø§Ù„ØªØ­Ø¬ÙŠÙ… Ù„Ù„Ø¥ÙŠÙ…ÙˆØ¬ÙŠ ÙˆØ§Ù„ØµÙˆØ±: ØªØ­Ø±ÙŠÙƒ Ø­Ø±ØŒ ØªØ¯ÙˆÙŠØ±ØŒ ÙˆÙ…Ù†Ø¹ Ø§Ù‚ØªØ·Ø§Ø¹ Ø§Ù„ÙÙ‚Ø§Ø¹Ø©
    ========================================================= */
 
 .image-resizer-wrapper {
   overflow: visible !important;
 }
 
-/* شريط الأدوات المصغر فوق الصورة - محسّن ليظل دائماً داخل الإطار المرئي */
+/* Ø´Ø±ÙŠØ· Ø§Ù„Ø£Ø¯ÙˆØ§Øª Ø§Ù„Ù…ØµØºØ± ÙÙˆÙ‚ Ø§Ù„ØµÙˆØ±Ø© - Ù…Ø­Ø³Ù‘Ù† Ù„ÙŠØ¸Ù„ Ø¯Ø§Ø¦Ù…Ø§Ù‹ Ø¯Ø§Ø®Ù„ Ø§Ù„Ø¥Ø·Ø§Ø± Ø§Ù„Ù…Ø±Ø¦ÙŠ */
 .image-resizer-toolbar {
   position: absolute;
   bottom: calc(100% + 12px);
@@ -7426,7 +7426,7 @@ body.is-resizing-workspace .workspace-resizer {
   display: flex !important;
 }
 
-/* وضع التحريك الحر فوق العناصر (Free Floating Mode) - نظيف بدون أي ظلال أو إطارات */
+/* ÙˆØ¶Ø¹ Ø§Ù„ØªØ­Ø±ÙŠÙƒ Ø§Ù„Ø­Ø± ÙÙˆÙ‚ Ø§Ù„Ø¹Ù†Ø§ØµØ± (Free Floating Mode) - Ù†Ø¸ÙŠÙ Ø¨Ø¯ÙˆÙ† Ø£ÙŠ Ø¸Ù„Ø§Ù„ Ø£Ùˆ Ø¥Ø·Ø§Ø±Ø§Øª */
 .image-resizer-wrapper.is-floating {
   position: relative !important;
   z-index: 60 !important;
@@ -7441,7 +7441,7 @@ body.is-resizing-workspace .workspace-resizer {
   cursor: grabbing !important;
 }
 
-/* مقبض تدوير بجانب الزاوية لتدوير يدوي حر على مزاج المستخدم */
+/* Ù…Ù‚Ø¨Ø¶ ØªØ¯ÙˆÙŠØ± Ø¨Ø¬Ø§Ù†Ø¨ Ø§Ù„Ø²Ø§ÙˆÙŠØ© Ù„ØªØ¯ÙˆÙŠØ± ÙŠØ¯ÙˆÙŠ Ø­Ø± Ø¹Ù„Ù‰ Ù…Ø²Ø§Ø¬ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… */
 .resizer-corner-rotate-handle {
   position: absolute;
   top: -16px;
@@ -7482,7 +7482,7 @@ body.is-resizing-workspace .workspace-resizer {
   display: flex !important;
 }
 
-/* زر التحريك الحر النشط وزر التدوير */
+/* Ø²Ø± Ø§Ù„ØªØ­Ø±ÙŠÙƒ Ø§Ù„Ø­Ø± Ø§Ù„Ù†Ø´Ø· ÙˆØ²Ø± Ø§Ù„ØªØ¯ÙˆÙŠØ± */
 .resizer-btn.active-tool {
   background: #6366f1 !important;
   color: #ffffff !important;
@@ -8069,7 +8069,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* ==========================================================================
-   منتقي الأسهم الموجهة التفاعلي (Rich Arrows Picker - 36 Directions)
+   Ù…Ù†ØªÙ‚ÙŠ Ø§Ù„Ø£Ø³Ù‡Ù… Ø§Ù„Ù…ÙˆØ¬Ù‡Ø© Ø§Ù„ØªÙØ§Ø¹Ù„ÙŠ (Rich Arrows Picker - 36 Directions)
    ========================================================================== */
 .arrow-picker-popover {
   width: 380px !important;
@@ -8261,7 +8261,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* ==========================================================================
-   حاوية السهم التفاعلية وشريط التحكم في شاشة العرض (Arrow Interactive Resizer)
+   Ø­Ø§ÙˆÙŠØ© Ø§Ù„Ø³Ù‡Ù… Ø§Ù„ØªÙØ§Ø¹Ù„ÙŠØ© ÙˆØ´Ø±ÙŠØ· Ø§Ù„ØªØ­ÙƒÙ… ÙÙŠ Ø´Ø§Ø´Ø© Ø§Ù„Ø¹Ø±Ø¶ (Arrow Interactive Resizer)
    ========================================================================== */
 .arrow-resizer-wrapper {
   position: relative;
@@ -8289,7 +8289,7 @@ body.is-resizing-workspace .workspace-resizer {
   filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.7));
 }
 
-/* الحاوية المرجعية للسهم في تدفق النص */
+/* Ø§Ù„Ø­Ø§ÙˆÙŠØ© Ø§Ù„Ù…Ø±Ø¬Ø¹ÙŠØ© Ù„Ù„Ø³Ù‡Ù… ÙÙŠ ØªØ¯ÙÙ‚ Ø§Ù„Ù†Øµ */
 .arrow-anchor {
   display: inline;
 }
@@ -8452,10 +8452,10 @@ body.is-resizing-workspace .workspace-resizer {
 
 
 /* ==========================================================================
-   AI INTEGRATION STYLES — Vienix AI Engine
+   AI INTEGRATION STYLES â€” Vienix AI Engine
    ========================================================================== */
 
-/* ── 1. Ask AI Pill Button (Dribbble Modern Pill) ── */
+/* â”€â”€ 1. Ask AI Pill Button (Dribbble Modern Pill) â”€â”€ */
 .ai-assist-pill-btn {
   position: relative;
   display: inline-flex;
@@ -8505,7 +8505,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 .ai-sparkle-svg { flex-shrink: 0; }
 
-/* Dark Mode — Pill Button */
+/* Dark Mode â€” Pill Button */
 [data-theme='dark'] .ai-assist-pill-btn {
   background-image:
     linear-gradient(var(--bg-primary, #0f172a), var(--bg-primary, #0f172a)),
@@ -8528,7 +8528,7 @@ body.is-resizing-workspace .workspace-resizer {
   background-clip: text;
 }
 
-/* ── 2. AI Chat Modal ── */
+/* â”€â”€ 2. AI Chat Modal â”€â”€ */
 .ai-chat-overlay {
   position: fixed;
   inset: 0;
@@ -8834,7 +8834,7 @@ body.is-resizing-workspace .workspace-resizer {
   cursor: not-allowed;
 }
 
-/* ── 3. Settings — AI Toggle Switch ── */
+/* â”€â”€ 3. Settings â€” AI Toggle Switch â”€â”€ */
 .settings-toggle-row {
   display: flex;
   align-items: center;
@@ -8880,7 +8880,7 @@ body.is-resizing-workspace .workspace-resizer {
   transform: translateX(22px);
 }
 
-/* ── 4. Settings — AI Key Cards ── */
+/* â”€â”€ 4. Settings â€” AI Key Cards â”€â”€ */
 .ai-key-card {
   display: flex;
   align-items: center;
@@ -8938,7 +8938,7 @@ body.is-resizing-workspace .workspace-resizer {
   color: #ef4444;
 }
 
-/* ── 5. AI Toast Notification ── */
+/* â”€â”€ 5. AI Toast Notification â”€â”€ */
 .ai-toast {
   position: fixed;
   bottom: 24px;
@@ -8993,7 +8993,7 @@ body.is-resizing-workspace .workspace-resizer {
   flex-shrink: 0;
 }
 
-/* ── 6. Animations ── */
+/* â”€â”€ 6. Animations â”€â”€ */
 @keyframes aiBubbleFadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -9003,7 +9003,7 @@ body.is-resizing-workspace .workspace-resizer {
   40% { transform: scale(1.1); opacity: 1; }
 }
 
-/* ── 7. Dark Mode overrides ── */
+/* â”€â”€ 7. Dark Mode overrides â”€â”€ */
 [data-theme='dark'] .ai-chat-modal {
   background: var(--bg-primary, #0f172a);
   border-color: var(--border-color, #1e293b);
@@ -9032,7 +9032,7 @@ body.is-resizing-workspace .workspace-resizer {
   border-color: var(--border-color, #334155);
 }
 
-/* ── 8. Responsive ── */
+/* â”€â”€ 8. Responsive â”€â”€ */
 @media (max-width: 640px) {
   .ai-chat-modal {
     width: 96%;
@@ -9047,7 +9047,7 @@ body.is-resizing-workspace .workspace-resizer {
   .ai-sparkle-svg { width: 15px; height: 15px; }
 }
 
-/* ── 9. Context-Aware AI Button (Inside Preview Content) ── */
+/* â”€â”€ 9. Context-Aware AI Button (Inside Preview Content) â”€â”€ */
 .ai-context-pill-btn {
   position: relative;
   display: inline-flex;
@@ -9115,7 +9115,7 @@ body.is-resizing-workspace .workspace-resizer {
   background-clip: text;
 }
 
-/* ── 10. Scanning / Content Absorb Animation ── */
+/* â”€â”€ 10. Scanning / Content Absorb Animation â”€â”€ */
 .ai-scan-container {
   text-align: center;
   padding: 30px 24px;
@@ -9183,12 +9183,12 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* =========================================================
-   أشرطة الأدوات العائمة على وضع الموبايل: الالتفاف في سطرين أو 3 بدون سكرول أفقي
+   Ø£Ø´Ø±Ø·Ø© Ø§Ù„Ø£Ø¯ÙˆØ§Øª Ø§Ù„Ø¹Ø§Ø¦Ù…Ø© Ø¹Ù„Ù‰ ÙˆØ¶Ø¹ Ø§Ù„Ù…ÙˆØ¨Ø§ÙŠÙ„: Ø§Ù„Ø§Ù„ØªÙØ§Ù ÙÙŠ Ø³Ø·Ø±ÙŠÙ† Ø£Ùˆ 3 Ø¨Ø¯ÙˆÙ† Ø³ÙƒØ±ÙˆÙ„ Ø£ÙÙ‚ÙŠ
    (Floating Toolbars Responsive Multi-Line Wrapping: 2 to 3 rows)
-   يشمل: شريط الصور والإيموجي، شريط الأسهم، وشريط تنسيق النصوص عند التعديل Edit
+   ÙŠØ´Ù…Ù„: Ø´Ø±ÙŠØ· Ø§Ù„ØµÙˆØ± ÙˆØ§Ù„Ø¥ÙŠÙ…ÙˆØ¬ÙŠØŒ Ø´Ø±ÙŠØ· Ø§Ù„Ø£Ø³Ù‡Ù…ØŒ ÙˆØ´Ø±ÙŠØ· ØªÙ†Ø³ÙŠÙ‚ Ø§Ù„Ù†ØµÙˆØµ Ø¹Ù†Ø¯ Ø§Ù„ØªØ¹Ø¯ÙŠÙ„ Edit
    ========================================================= */
 @media (max-width: 768px) {
-  /* 1. شريط تحجيم الصور والإيموجي / الستيكرات */
+  /* 1. Ø´Ø±ÙŠØ· ØªØ­Ø¬ÙŠÙ… Ø§Ù„ØµÙˆØ± ÙˆØ§Ù„Ø¥ÙŠÙ…ÙˆØ¬ÙŠ / Ø§Ù„Ø³ØªÙŠÙƒØ±Ø§Øª */
   .image-resizer-toolbar {
     flex-wrap: wrap !important;
     white-space: normal !important;
@@ -9227,7 +9227,7 @@ body.is-resizing-workspace .workspace-resizer {
     white-space: nowrap !important;
   }
 
-  /* 2. شريط تحجيم وتعديل الأسهم */
+  /* 2. Ø´Ø±ÙŠØ· ØªØ­Ø¬ÙŠÙ… ÙˆØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø£Ø³Ù‡Ù… */
   .arrow-resizer-toolbar {
     flex-wrap: wrap !important;
     white-space: normal !important;
@@ -9256,7 +9256,7 @@ body.is-resizing-workspace .workspace-resizer {
     align-self: center !important;
   }
 
-  /* 3. شريط تنسيق النصوص العائم عند تحرير النص بعد تشغيل زر edit */
+  /* 3. Ø´Ø±ÙŠØ· ØªÙ†Ø³ÙŠÙ‚ Ø§Ù„Ù†ØµÙˆØµ Ø§Ù„Ø¹Ø§Ø¦Ù… Ø¹Ù†Ø¯ ØªØ­Ø±ÙŠØ± Ø§Ù„Ù†Øµ Ø¨Ø¹Ø¯ ØªØ´ØºÙŠÙ„ Ø²Ø± edit */
   .wysiwyg-floating-toolbar {
     flex-wrap: wrap !important;
     white-space: normal !important;
@@ -9285,7 +9285,7 @@ body.is-resizing-workspace .workspace-resizer {
   }
 }
 
-/* شاشات الهواتف الأصغر (أقل من 380px) للالتفاف السلس في 3 أسطر متناسقة */
+/* Ø´Ø§Ø´Ø§Øª Ø§Ù„Ù‡ÙˆØ§ØªÙ Ø§Ù„Ø£ØµØºØ± (Ø£Ù‚Ù„ Ù…Ù† 380px) Ù„Ù„Ø§Ù„ØªÙØ§Ù Ø§Ù„Ø³Ù„Ø³ ÙÙŠ 3 Ø£Ø³Ø·Ø± Ù…ØªÙ†Ø§Ø³Ù‚Ø© */
 @media (max-width: 380px) {
   .image-resizer-toolbar,
   .arrow-resizer-toolbar,
@@ -9309,9 +9309,9 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* =========================================================================
-   GLOBAL SPOTLIGHT SEARCH (منظومة البحث الشامل الفوري في كل الملفات والمجلدات)
+   GLOBAL SPOTLIGHT SEARCH (Ù…Ù†Ø¸ÙˆÙ…Ø© Ø§Ù„Ø¨Ø­Ø« Ø§Ù„Ø´Ø§Ù…Ù„ Ø§Ù„ÙÙˆØ±ÙŠ ÙÙŠ ÙƒÙ„ Ø§Ù„Ù…Ù„ÙØ§Øª ÙˆØ§Ù„Ù…Ø¬Ù„Ø¯Ø§Øª)
    ========================================================================= */
-/* زر البحث الشامل - Spotlight Icon Style (مستوحى من Raycast) */
+/* Ø²Ø± Ø§Ù„Ø¨Ø­Ø« Ø§Ù„Ø´Ø§Ù…Ù„ - Spotlight Icon Style (Ù…Ø³ØªÙˆØ­Ù‰ Ù…Ù† Raycast) */
 .btn-spotlight-search {
   background: transparent;
   border: none;
@@ -9350,52 +9350,60 @@ body.is-resizing-workspace .workspace-resizer {
   box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.2), 0 0 10px rgba(99, 102, 241, 0.15);
 }
 
-/* Search Overlay & Dialog */
+/* =========================================================================
+   GLOBAL SPOTLIGHT SEARCH â€” ÙˆØ¶Ø¹ Ø§Ù„Ù†Ù‡Ø§Ø± (Base / Light)
+   ========================================================================= */
+
+/* Overlay */
 .global-search-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.65);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   z-index: 999999;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 10vh 16px 24px;
-  animation: searchFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 9vh 16px 24px;
+  animation: searchFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes searchFadeIn {
-  from { opacity: 0; transform: scale(0.98); }
-  to { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
 }
 
+/* Dialog */
 .global-search-dialog {
-  background: var(--bg-surface-elevated, #ffffff);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e0e7ff;
+  border-radius: 18px;
   width: 100%;
-  max-width: 680px;
+  max-width: 700px;
   max-height: 80vh;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 0 0 1px rgba(99, 102, 241, 0.08),
+    0 24px 60px rgba(0, 0, 0, 0.18),
+    0 4px 16px rgba(99, 102, 241, 0.06);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   direction: rtl;
 }
 
-/* Search Input Bar */
+/* Search Input */
 .search-input-wrapper {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-surface-elevated, #ffffff);
+  padding: 18px 20px;
+  border-bottom: 1px solid #e8ecff;
+  background: transparent;
 }
 
 .search-input-icon {
-  color: var(--accent-color, #2563eb);
+  color: #6366f1;
   flex-shrink: 0;
 }
 
@@ -9404,25 +9412,26 @@ body.is-resizing-workspace .workspace-resizer {
   background: transparent;
   border: none;
   outline: none;
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-size: 1.08rem;
+  font-weight: 500;
+  color: #1e293b;
   font-family: inherit;
   direction: rtl;
+  caret-color: #6366f1;
 }
 
 .global-search-input::placeholder {
-  color: var(--text-muted);
+  color: rgba(100, 116, 139, 0.55);
   font-weight: 400;
 }
 
 .search-clear-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
+  background: #f0f0ff;
+  border: 1px solid #ddd6fe;
+  color: #6366f1;
   cursor: pointer;
   padding: 4px;
-  border-radius: 50%;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -9430,55 +9439,87 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 .search-clear-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: #ede9fe;
+  color: #4f46e5;
 }
 
 .search-esc-badge {
-  background: var(--bg-toolbar, #f1f5f9);
-  border: 1px solid var(--border-color);
-  color: var(--text-muted);
-  font-size: 0.72rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 0.7rem;
   font-family: var(--font-mono, monospace);
   font-weight: 600;
-  padding: 3px 6px;
-  border-radius: 5px;
-}
-
-/* Filter Chips Tabs */
-.search-filters-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: var(--bg-toolbar, #f8fafc);
-  border-bottom: 1px solid var(--border-color);
-  overflow-x: auto;
-  white-space: nowrap;
-}
-
-.search-filter-chip {
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--text-secondary);
-  font-size: 0.78rem;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 20px;
+  padding: 3px 7px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
+.search-esc-badge:hover {
+  background: #f1f5f9;
+  color: #374151;
+}
+
+/* Filter Chips */
+.search-filters-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: #fafbff;
+  border-bottom: 1px solid #e8ecff;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+
+.search-filters-bar::-webkit-scrollbar { display: none; }
+
+.search-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 5px 11px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.17s ease;
+  white-space: nowrap;
+}
+
 .search-filter-chip:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: #f0f0ff;
+  border-color: #c7d2fe;
+  color: #4f46e5;
 }
 
 .search-filter-chip.active {
-  background: var(--accent-color, #2563eb);
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  border-color: transparent;
   color: #ffffff;
-  border-color: var(--accent-color, #2563eb);
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.35);
 }
+
+.search-filter-chip svg { flex-shrink: 0; }
+
+/* Ø£Ù„ÙˆØ§Ù† Ø£ÙŠÙ‚ÙˆÙ†Ø§Øª Ø§Ù„ÙÙ„Ø§ØªØ± â€” ÙˆØ¶Ø¹ Ø§Ù„Ù†Ù‡Ø§Ø± */
+.chip-icon-all      { color: #7c3aed; }
+.chip-icon-chambers { color: #3b82f6; }
+.chip-icon-folders  { color: #f59e0b; }
+.chip-icon-content  { color: #10b981; }
+.chip-icon-code     { color: #ec4899; }
+
+/* Ø¹Ù†Ø¯Ù…Ø§ ÙŠÙƒÙˆÙ† Ø§Ù„Ù€ chip Ù†Ø´Ø·Ø§Ù‹ ØªØµØ¨Ø­ Ø§Ù„Ø£ÙŠÙ‚ÙˆÙ†Ø© Ø¨ÙŠØ¶Ø§Ø¡ */
+.search-filter-chip.active .chip-icon-all,
+.search-filter-chip.active .chip-icon-chambers,
+.search-filter-chip.active .chip-icon-folders,
+.search-filter-chip.active .chip-icon-content,
+.search-filter-chip.active .chip-icon-code { color: #ffffff; }
 
 /* Results Container */
 .search-results-container {
@@ -9486,12 +9527,21 @@ body.is-resizing-workspace .workspace-resizer {
   overflow-y: auto;
   padding: 8px;
   max-height: 52vh;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.2) transparent;
+}
+
+.search-results-container::-webkit-scrollbar { width: 4px; }
+.search-results-container::-webkit-scrollbar-track { background: transparent; }
+.search-results-container::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.25);
+  border-radius: 4px;
 }
 
 .search-results-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .search-result-item {
@@ -9499,137 +9549,176 @@ body.is-resizing-workspace .workspace-resizer {
   align-items: flex-start;
   gap: 12px;
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: 11px;
   cursor: pointer;
   transition: all 0.15s ease;
   border: 1px solid transparent;
+  position: relative;
+}
+
+.search-result-item::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: transparent;
+  transition: background 0.15s ease;
 }
 
 .search-result-item:hover,
 .search-result-item.selected {
-  background: var(--bg-hover, rgba(59, 130, 246, 0.08));
-  border-color: var(--border-color);
+  background: #f5f3ff;
+  border-color: #ddd6fe;
+}
+
+.search-result-item:hover::before,
+.search-result-item.selected::before {
+  background: linear-gradient(to bottom, #6366f1, #818cf8);
 }
 
 .search-result-item.selected {
-  border-color: rgba(37, 99, 235, 0.35);
-  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.2);
+  background: #ede9fe;
+  border-color: #c4b5fd;
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.12);
 }
 
 .search-result-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  background: var(--bg-toolbar, #f1f5f9);
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--accent-color, #2563eb);
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
-.search-result-info {
-  flex: 1;
-  min-width: 0;
+.search-result-icon.icon-chamber {
+  background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(37,99,235,0.08));
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
 }
+
+.search-result-icon.icon-folder {
+  background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(217,119,6,0.08));
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+.search-result-icon.icon-content {
+  background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.08));
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.search-result-icon.icon-code {
+  background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(139,92,246,0.08));
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  color: #a855f7;
+}
+
+.search-result-info { flex: 1; min-width: 0; }
 
 .search-result-header-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 2px;
+  margin-bottom: 3px;
 }
 
 .search-result-title {
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #1e293b;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .search-result-badge {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 700;
   padding: 2px 7px;
   border-radius: 12px;
-  background: var(--bg-toolbar, #f1f5f9);
-  color: var(--text-muted);
-  border: 1px solid var(--border-color);
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  white-space: nowrap;
 }
 
 .search-result-path {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  margin-bottom: 4px;
+  font-size: 0.73rem;
+  color: #94a3b8;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .search-result-snippet {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  line-height: 1.4;
-  background: var(--bg-app, #f8fafc);
-  padding: 4px 8px;
-  border-radius: 6px;
-  border-right: 2px solid var(--accent-color, #2563eb);
+  font-size: 0.78rem;
+  color: #64748b;
+  line-height: 1.5;
+  background: #f8fafc;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border-right: 2px solid rgba(99, 102, 241, 0.5);
 }
 
 .search-result-snippet mark,
 .search-result-title mark {
-  background: rgba(250, 204, 21, 0.35);
-  color: inherit;
+  background: rgba(99, 102, 241, 0.15);
+  color: #4f46e5;
   font-weight: 700;
-  border-radius: 2px;
+  border-radius: 3px;
   padding: 0 2px;
 }
 
-/* Empty & Zero State */
+/* Empty State */
 .search-empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 36px 16px;
+  padding: 40px 16px;
   text-align: center;
-  color: var(--text-muted);
+  color: #94a3b8;
 }
 
-.search-empty-state svg {
-  margin-bottom: 12px;
-  opacity: 0.6;
-}
+.search-empty-state svg { margin-bottom: 14px; opacity: 0.5; }
 
 .search-empty-state h5 {
   margin: 0 0 6px;
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #334155;
 }
 
 .search-empty-state p {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 
-/* Footer Instructions */
+/* Footer */
 .search-dialog-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 10px 18px;
-  background: var(--bg-toolbar, #f8fafc);
-  border-top: 1px solid var(--border-color);
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  background: #fafbff;
+  border-top: 1px solid #e8ecff;
+  font-size: 0.73rem;
+  color: #94a3b8;
 }
 
 .search-shortcuts-hints {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
 .search-shortcuts-hints span {
@@ -9639,18 +9728,172 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 .search-shortcuts-hints kbd {
-  background: var(--bg-surface-elevated, #ffffff);
-  border: 1px solid var(--border-color);
-  padding: 2px 4px;
-  border-radius: 4px;
-  font-size: 0.68rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  padding: 2px 5px;
+  border-radius: 5px;
+  font-size: 0.65rem;
   font-family: var(--font-mono, monospace);
   font-weight: 700;
+  color: #475569;
 }
 
+/* =========================================================================
+   GLOBAL SPOTLIGHT SEARCH â€” ÙˆØ¶Ø¹ Ø§Ù„Ù„ÙŠÙ„ [data-theme="dark"]
+   ========================================================================= */
+
+[data-theme="dark"] .global-search-overlay {
+  background: rgba(4, 2, 12, 0.78);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+[data-theme="dark"] .global-search-dialog {
+  background: rgba(22, 13, 45, 0.96);
+  border-color: rgba(139, 92, 246, 0.3);
+  box-shadow:
+    0 0 0 1px rgba(139, 92, 246, 0.18),
+    0 30px 80px rgba(0, 0, 0, 0.8),
+    0 0 100px rgba(109, 40, 217, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .search-input-wrapper {
+  border-bottom-color: rgba(139, 92, 246, 0.15);
+}
+
+[data-theme="dark"] .search-input-icon {
+  color: #a78bfa;
+  filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.5));
+}
+
+[data-theme="dark"] .global-search-input {
+  color: #e2e8f0;
+  caret-color: #a78bfa;
+}
+
+[data-theme="dark"] .global-search-input::placeholder {
+  color: rgba(148, 163, 184, 0.5);
+}
+
+[data-theme="dark"] .search-clear-btn {
+  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(139, 92, 246, 0.2);
+  color: #a78bfa;
+}
+
+[data-theme="dark"] .search-clear-btn:hover {
+  background: rgba(139, 92, 246, 0.25);
+  color: #c4b5fd;
+}
+
+[data-theme="dark"] .search-esc-badge {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(148, 163, 184, 0.7);
+}
+
+[data-theme="dark"] .search-esc-badge:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .search-filters-bar {
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom-color: rgba(139, 92, 246, 0.1);
+}
+
+[data-theme="dark"] .search-filter-chip {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(148, 163, 184, 0.8);
+}
+
+[data-theme="dark"] .search-filter-chip:hover {
+  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(139, 92, 246, 0.3);
+  color: #c4b5fd;
+}
+
+[data-theme="dark"] .search-filter-chip.active {
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  box-shadow: 0 2px 12px rgba(124, 58, 237, 0.4);
+}
+
+/* Ø£Ù„ÙˆØ§Ù† Ø£ÙŠÙ‚ÙˆÙ†Ø§Øª Ø§Ù„ÙÙ„Ø§ØªØ± â€” ÙˆØ¶Ø¹ Ø§Ù„Ù„ÙŠÙ„ (Ø£ÙØªØ­ Ù‚Ù„ÙŠÙ„Ø§Ù‹ Ù„Ù„Ø¸Ù„Ø§Ù…) */
+[data-theme="dark"] .chip-icon-all      { color: #a78bfa; }
+[data-theme="dark"] .chip-icon-chambers { color: #60a5fa; }
+[data-theme="dark"] .chip-icon-folders  { color: #fbbf24; }
+[data-theme="dark"] .chip-icon-content  { color: #34d399; }
+[data-theme="dark"] .chip-icon-code     { color: #f472b6; }
+
+[data-theme="dark"] .search-results-container {
+  scrollbar-color: rgba(139, 92, 246, 0.3) transparent;
+}
+
+[data-theme="dark"] .search-results-container::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.35);
+}
+
+[data-theme="dark"] .search-result-item:hover,
+[data-theme="dark"] .search-result-item.selected {
+  background: rgba(139, 92, 246, 0.1);
+  border-color: rgba(139, 92, 246, 0.2);
+}
+
+[data-theme="dark"] .search-result-item:hover::before,
+[data-theme="dark"] .search-result-item.selected::before {
+  background: linear-gradient(to bottom, #7c3aed, #a78bfa);
+}
+
+[data-theme="dark"] .search-result-item.selected {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.35);
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.15);
+}
+
+[data-theme="dark"] .search-result-title { color: #e2e8f0; }
+
+[data-theme="dark"] .search-result-badge {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(148, 163, 184, 0.7);
+}
+
+[data-theme="dark"] .search-result-path { color: rgba(148, 163, 184, 0.5); }
+
+[data-theme="dark"] .search-result-snippet {
+  background: rgba(255, 255, 255, 0.04);
+  border-right-color: rgba(139, 92, 246, 0.6);
+  color: rgba(148, 163, 184, 0.75);
+}
+
+[data-theme="dark"] .search-result-snippet mark,
+[data-theme="dark"] .search-result-title mark {
+  background: rgba(167, 139, 250, 0.25);
+  color: #c4b5fd;
+}
+
+[data-theme="dark"] .search-empty-state { color: rgba(148, 163, 184, 0.5); }
+[data-theme="dark"] .search-empty-state h5 { color: rgba(226, 232, 240, 0.7); }
+
+[data-theme="dark"] .search-dialog-footer {
+  background: rgba(255, 255, 255, 0.02);
+  border-top-color: rgba(139, 92, 246, 0.12);
+  color: rgba(148, 163, 184, 0.5);
+}
+
+[data-theme="dark"] .search-shortcuts-hints kbd {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(226, 232, 240, 0.7);
+}
+
+/* =========================================================================
+   Responsive
+   ========================================================================= */
 @media (max-width: 640px) {
   .global-search-overlay {
     padding-top: 4vh;
   }
 }
-
