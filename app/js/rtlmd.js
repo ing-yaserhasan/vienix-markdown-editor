@@ -675,12 +675,83 @@
         return out;
       };
 
+      // دعم قوائم المهام التفاعلية والقابلة للتحديد (Interactive Task Lists) بدون disabled وبدون نقطة تعداد مزدوجة
+      renderer.listitem = function (text, task, checked) {
+        if (task) {
+          const cleanText = text.replace(/<input[^>]*>/gi, '').trim();
+          const checkedAttr = checked ? ' checked' : '';
+          return `<li class="task-list-item"><input type="checkbox" class="task-checkbox"${checkedAttr}> <span>${cleanText}</span></li>\n`;
+        }
+        return `<li>${text}</li>\n`;
+      };
+
       marked.setOptions({
         gfm: true,
         breaks: true,
         renderer: renderer
       });
     }
+  }
+
+  // مزامنة حالة خانة المهمة (Checked / Unchecked) من شاشة المعاينة مباشرة إلى نص الماركداون بالمحرر
+  function toggleTaskCheckboxInEditor(taskIndex, isChecked) {
+    const activeEl = (typeof isClassicMode !== 'undefined' && isClassicMode && typeof classicEditor !== 'undefined' && classicEditor) ? classicEditor : editor;
+    if (!activeEl) return;
+
+    const val = activeEl.value;
+    const taskRegex = /^(\s*[-*+]|\s*\d+\.)\s+\[([ xX])\]/gm;
+    let match;
+    let currentIndex = 0;
+    let targetMatch = null;
+
+    while ((match = taskRegex.exec(val)) !== null) {
+      if (currentIndex === taskIndex) {
+        targetMatch = match;
+        break;
+      }
+      currentIndex++;
+    }
+
+    if (targetMatch) {
+      recordHistorySnapshot(true);
+      const bracketPos = targetMatch.index + targetMatch[0].indexOf('[');
+      const newChar = isChecked ? 'x' : ' ';
+      const newText = val.substring(0, bracketPos + 1) + newChar + val.substring(bracketPos + 2);
+
+      const selStart = activeEl.selectionStart;
+      const selEnd = activeEl.selectionEnd;
+      activeEl.value = newText;
+      try {
+        activeEl.setSelectionRange(selStart, selEnd);
+      } catch (_) {}
+
+      if (typeof isClassicMode !== 'undefined' && isClassicMode) {
+        if (editor) editor.value = activeEl.value;
+        renderClassicMarkdown();
+      } else {
+        if (classicEditor) classicEditor.value = activeEl.value;
+        renderMarkdown();
+      }
+      recordHistorySnapshot(true);
+    }
+  }
+
+  function handleTaskCheckboxChange(e) {
+    if (e.target && e.target.classList.contains('task-checkbox')) {
+      const container = e.target.closest('#preview-content') || e.target.closest('#classic-output') || previewContent;
+      if (!container) return;
+      const allCheckboxes = Array.from(container.querySelectorAll('.task-checkbox'));
+      const index = allCheckboxes.indexOf(e.target);
+      if (index === -1) return;
+      toggleTaskCheckboxInEditor(index, e.target.checked);
+    }
+  }
+
+  if (previewContent) {
+    previewContent.addEventListener('change', handleTaskCheckboxChange);
+  }
+  if (classicOutput) {
+    classicOutput.addEventListener('change', handleTaskCheckboxChange);
   }
 
   // Safe localStorage & IndexedDB helper to prevent quota exceeded exceptions from interrupting app execution

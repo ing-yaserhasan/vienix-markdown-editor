@@ -1337,12 +1337,39 @@ body.is-resizing-workspace .workspace-resizer {
   font-family: var(--font-mono);
 }
 
-/* Task Lists */
+/* Task Lists (قوائم المهام التفاعلية) */
+.markdown-body ul:has(.task-list-item),
+.markdown-body ul:has(input[type="checkbox"]) {
+  list-style: none !important;
+  padding-right: 0 !important;
+}
+
+.markdown-body li.task-list-item,
+.markdown-body li:has(input[type="checkbox"]) {
+  list-style: none !important;
+  list-style-type: none !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding-right: 0;
+}
+
+.markdown-body input[type="checkbox"].task-checkbox,
 .markdown-body input[type="checkbox"] {
-  margin-left: 8px;
+  width: 17px;
+  height: 17px;
+  margin: 0 0 0 6px;
   vertical-align: middle;
   cursor: pointer;
-  accent-color: var(--accent-color);
+  accent-color: var(--accent-color, #2563eb);
+  flex-shrink: 0;
+}
+
+.markdown-body li.task-list-item:has(input:checked) span,
+.markdown-body li:has(input:checked) > span {
+  text-decoration: line-through;
+  color: var(--text-muted, #94a3b8);
 }
 
 /* تنسيق الصور المدرجة في المعاينة لتكون متجاوبة وأنيقة (باستثناء الإيموجي المضمن) */
