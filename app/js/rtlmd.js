@@ -13236,6 +13236,424 @@ function exportDocument(format) {
     });
   }
 
+  // =========================================================================
+  // GLOBAL SPOTLIGHT SEARCH ENGINE (منظومة البحث الشامل الفوري في كل الملفات والمجلدات)
+  // =========================================================================
+  let currentGlobalSearchFilter = 'all';
+  let globalSearchResultsList = [];
+  let selectedGlobalSearchResultIndex = -1;
+
+  window.openGlobalSearchModal = function () {
+    const modal = document.getElementById('global-search-modal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    const input = document.getElementById('global-search-input');
+    if (input) {
+      input.value = '';
+      setTimeout(() => input.focus(), 60);
+    }
+    const clearBtn = document.getElementById('btn-clear-global-search');
+    if (clearBtn) clearBtn.style.display = 'none';
+
+    window.setGlobalSearchFilter('all', false);
+    renderGlobalSearchResults('');
+  };
+
+  window.closeGlobalSearchModal = function (e) {
+    if (e && e.target && e.target !== e.currentTarget && !e.target.classList.contains('search-esc-badge')) {
+      return;
+    }
+    const modal = document.getElementById('global-search-modal');
+    if (modal) modal.style.display = 'none';
+    const activeEl = (typeof isClassicMode !== 'undefined' && isClassicMode && typeof classicEditor !== 'undefined' && classicEditor) ? classicEditor : editor;
+    if (activeEl) activeEl.focus();
+  };
+
+  window.clearGlobalSearchInput = function () {
+    const input = document.getElementById('global-search-input');
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+    const clearBtn = document.getElementById('btn-clear-global-search');
+    if (clearBtn) clearBtn.style.display = 'none';
+    renderGlobalSearchResults('');
+  };
+
+  window.setGlobalSearchFilter = function (filterKey, shouldRerender = true) {
+    currentGlobalSearchFilter = filterKey || 'all';
+    document.querySelectorAll('.search-filter-chip').forEach(chip => {
+      if (chip.getAttribute('data-filter') === currentGlobalSearchFilter) {
+        chip.classList.add('active');
+      } else {
+        chip.classList.remove('active');
+      }
+    });
+    if (shouldRerender) {
+      const input = document.getElementById('global-search-input');
+      renderGlobalSearchResults(input ? input.value : '');
+    }
+  };
+
+  window.handleGlobalSearchInput = function (query) {
+    const clearBtn = document.getElementById('btn-clear-global-search');
+    if (clearBtn) {
+      clearBtn.style.display = query && query.length > 0 ? 'flex' : 'none';
+    }
+    renderGlobalSearchResults(query);
+  };
+
+  window.handleGlobalSearchKeydown = function (e) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      window.closeGlobalSearchModal();
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (globalSearchResultsList.length === 0) return;
+      selectedGlobalSearchResultIndex = (selectedGlobalSearchResultIndex + 1) % globalSearchResultsList.length;
+      updateSelectedGlobalSearchItemUI();
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (globalSearchResultsList.length === 0) return;
+      selectedGlobalSearchResultIndex = (selectedGlobalSearchResultIndex - 1 + globalSearchResultsList.length) % globalSearchResultsList.length;
+      updateSelectedGlobalSearchItemUI();
+      return;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (selectedGlobalSearchResultIndex >= 0 && selectedGlobalSearchResultIndex < globalSearchResultsList.length) {
+        window.selectGlobalSearchResult(selectedGlobalSearchResultIndex);
+      }
+      return;
+    }
+  };
+
+  function updateSelectedGlobalSearchItemUI() {
+    const items = document.querySelectorAll('.search-result-item');
+    items.forEach((item, idx) => {
+      if (idx === selectedGlobalSearchResultIndex) {
+        item.classList.add('selected');
+        item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } else {
+        item.classList.remove('selected');
+      }
+    });
+  }
+
+  function highlightSearchQuery(text, query) {
+    if (!text) return '';
+    const safeText = escapeHtml(text);
+    if (!query || !query.trim()) return safeText;
+    const cleanQ = query.trim();
+    const escapedQ = cleanQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escapedQ})`, 'gi');
+    return safeText.replace(regex, '<mark>$1</mark>');
+  }
+
+  function renderGlobalSearchResults(query) {
+    const container = document.getElementById('global-search-results');
+    const countLabel = document.getElementById('global-search-count-label');
+    if (!container) return;
+
+    const q = (query || '').trim().toLowerCase();
+    const results = [];
+    selectedGlobalSearchResultIndex = -1;
+
+    // 1. تجميع بيانات الحجرات والفصول (Chambers 1-8)
+    const chambersData = [];
+    for (let i = 1; i <= TOTAL_CHAMBERS; i++) {
+      const content = getChamberContent(i);
+      const title = getChamberTitle(i);
+      const isFilled = content.trim().length > 0;
+      chambersData.push({
+        type: 'chamber',
+        chNum: i,
+        title: title || `حجرة ${i}`,
+        content: content,
+        isFilled: isFilled,
+        isCurrent: (i === activeChamber)
+      });
+    }
+
+    // 2. تجميع المجلدات وملفاتها
+    const allFolders = typeof getAppFolders === 'function' ? getAppFolders() : [];
+    const folderFilesData = [];
+    allFolders.forEach(folder => {
+      const files = typeof getFolderFiles === 'function' ? getFolderFiles(folder.key) : [];
+      files.forEach(f => {
+        folderFilesData.push({
+          type: 'folder_file',
+          folderKey: folder.key,
+          folderName: folder.name,
+          fileId: f.id,
+          num: f.num,
+          title: f.title || `ملف ${f.num}`,
+          content: f.content || '',
+          linkedChamber: f.linkedChamber
+        });
+      });
+    });
+
+    // حالة البحث الفارغ (Zero-State): عرض الفصول الممتلئة والأحدث للوصول السريع
+    if (!q) {
+      if (currentGlobalSearchFilter === 'all' || currentGlobalSearchFilter === 'chambers') {
+        chambersData.filter(c => c.isFilled || c.isCurrent).forEach(c => {
+          results.push({
+            type: 'chamber',
+            chNum: c.chNum,
+            badge: `حجرة ${c.chNum}`,
+            title: c.title,
+            path: c.isCurrent ? 'الحجرة النشطة حالياً بالمحرر' : `حجرة تخزينية رقم ${c.chNum}`,
+            snippet: (c.content || '').substring(0, 100),
+            iconType: 'file'
+          });
+        });
+      }
+      if (currentGlobalSearchFilter === 'all' || currentGlobalSearchFilter === 'folders') {
+        allFolders.forEach(f => {
+          results.push({
+            type: 'folder',
+            folderKey: f.key,
+            badge: 'مجلد',
+            title: f.name,
+            path: f.desc || 'مجلد فصول ومسودات',
+            snippet: '',
+            iconType: 'folder'
+          });
+        });
+      }
+      if (currentGlobalSearchFilter === 'all' || currentGlobalSearchFilter === 'content') {
+        folderFilesData.slice(0, 8).forEach(f => {
+          results.push({
+            type: 'folder_file',
+            folderKey: f.folderKey,
+            fileId: f.fileId,
+            badge: f.folderName,
+            title: f.title,
+            path: `مجلد: ${f.folderName}`,
+            snippet: (f.content || '').substring(0, 100),
+            iconType: 'file'
+          });
+        });
+      }
+
+      globalSearchResultsList = results;
+      if (countLabel) countLabel.textContent = `وصول سريع (${results.length} عناصر)`;
+      renderItemsToHtml(container, results, '');
+      return;
+    }
+
+    // مطابقة البحث الفعلي عبر كل الفئات:
+    // أ. مطابقة الفصول والحجرات
+    if (currentGlobalSearchFilter === 'all' || currentGlobalSearchFilter === 'chambers' || currentGlobalSearchFilter === 'content' || currentGlobalSearchFilter === 'code') {
+      chambersData.forEach(c => {
+        const titleMatch = c.title.toLowerCase().includes(q);
+        const contentMatch = c.content.toLowerCase().includes(q);
+        const isCodeMermaid = (c.content.includes('```mermaid') || c.content.includes('```')) && (c.content.toLowerCase().includes(q) || titleMatch);
+
+        if (currentGlobalSearchFilter === 'code' && !isCodeMermaid) return;
+        if (currentGlobalSearchFilter === 'chambers' && !titleMatch) return;
+        if (currentGlobalSearchFilter === 'content' && !contentMatch) return;
+
+        if (titleMatch || contentMatch) {
+          let snippet = '';
+          if (contentMatch) {
+            const idx = c.content.toLowerCase().indexOf(q);
+            const start = Math.max(0, idx - 30);
+            const end = Math.min(c.content.length, idx + q.length + 50);
+            snippet = (start > 0 ? '...' : '') + c.content.substring(start, end).replace(/\n/g, ' ') + (end < c.content.length ? '...' : '');
+          }
+
+          results.push({
+            type: 'chamber',
+            chNum: c.chNum,
+            badge: `حجرة ${c.chNum}`,
+            title: c.title,
+            path: c.isCurrent ? 'الحجرة المفتوحة حالياً' : `حجرة رقم ${c.chNum}`,
+            snippet: snippet,
+            matchQuery: q,
+            iconType: isCodeMermaid ? 'code' : 'file',
+            isTitleMatch: titleMatch
+          });
+        }
+      });
+    }
+
+    // ب. مطابقة ملفات المجلدات
+    if (currentGlobalSearchFilter === 'all' || currentGlobalSearchFilter === 'chambers' || currentGlobalSearchFilter === 'content' || currentGlobalSearchFilter === 'code') {
+      folderFilesData.forEach(f => {
+        const titleMatch = f.title.toLowerCase().includes(q);
+        const contentMatch = f.content.toLowerCase().includes(q);
+        const isCodeMermaid = (f.content.includes('```mermaid') || f.content.includes('```')) && (f.content.toLowerCase().includes(q) || titleMatch);
+
+        if (currentGlobalSearchFilter === 'code' && !isCodeMermaid) return;
+        if (currentGlobalSearchFilter === 'chambers' && !titleMatch) return;
+        if (currentGlobalSearchFilter === 'content' && !contentMatch) return;
+
+        if (titleMatch || contentMatch) {
+          let snippet = '';
+          if (contentMatch) {
+            const idx = f.content.toLowerCase().indexOf(q);
+            const start = Math.max(0, idx - 30);
+            const end = Math.min(f.content.length, idx + q.length + 50);
+            snippet = (start > 0 ? '...' : '') + f.content.substring(start, end).replace(/\n/g, ' ') + (end < f.content.length ? '...' : '');
+          }
+
+          results.push({
+            type: 'folder_file',
+            folderKey: f.folderKey,
+            fileId: f.fileId,
+            badge: f.folderName,
+            title: f.title,
+            path: `المستكشف / ${f.folderName} / ${f.title}`,
+            snippet: snippet,
+            matchQuery: q,
+            iconType: isCodeMermaid ? 'code' : 'file',
+            isTitleMatch: titleMatch
+          });
+        }
+      });
+    }
+
+    // ج. مطابقة المجلدات
+    if (currentGlobalSearchFilter === 'all' || currentGlobalSearchFilter === 'folders') {
+      allFolders.forEach(folder => {
+        const nameMatch = folder.name.toLowerCase().includes(q);
+        const descMatch = (folder.desc || '').toLowerCase().includes(q);
+        if (nameMatch || descMatch) {
+          results.push({
+            type: 'folder',
+            folderKey: folder.key,
+            badge: 'مجلد',
+            title: folder.name,
+            path: folder.desc || 'مجلد بالمستكشف',
+            snippet: '',
+            matchQuery: q,
+            iconType: 'folder',
+            isTitleMatch: true
+          });
+        }
+      });
+    }
+
+    results.sort((a, b) => {
+      if (a.isTitleMatch && !b.isTitleMatch) return -1;
+      if (!a.isTitleMatch && b.isTitleMatch) return 1;
+      return 0;
+    });
+
+    globalSearchResultsList = results;
+    if (results.length > 0) {
+      selectedGlobalSearchResultIndex = 0;
+    }
+    if (countLabel) {
+      countLabel.textContent = `تم العثور على ${results.length} نتيجة`;
+    }
+    renderItemsToHtml(container, results, q);
+  }
+
+  function renderItemsToHtml(container, items, query) {
+    if (items.length === 0) {
+      container.innerHTML = `
+        <div class="search-empty-state">
+          <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            <line x1="8" y1="11" x2="14" y2="11"></line>
+          </svg>
+          <h5>لا توجد نتائج مطابقة لـ "${escapeHtml(query)}"</h5>
+          <p>تأكد من كتابة الكلمات بشكل صحيح أو اختر تبويباً آخر للتصفية.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const html = items.map((item, idx) => {
+      const isSelected = (idx === selectedGlobalSearchResultIndex);
+      let iconSvg = '';
+      if (item.iconType === 'folder') {
+        iconSvg = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#d97706" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>';
+      } else if (item.iconType === 'code') {
+        iconSvg = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#8b5cf6" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>';
+      } else {
+        iconSvg = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#2563eb" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>';
+      }
+
+      const highlightedTitle = highlightSearchQuery(item.title, query);
+      const highlightedSnippet = item.snippet ? highlightSearchQuery(item.snippet, query) : '';
+
+      return `
+        <div class="search-result-item ${isSelected ? 'selected' : ''}" data-index="${idx}" onclick="selectGlobalSearchResult(${idx})">
+          <div class="search-result-icon">
+            ${iconSvg}
+          </div>
+          <div class="search-result-info">
+            <div class="search-result-header-row">
+              <span class="search-result-title">${highlightedTitle}</span>
+              <span class="search-result-badge">${escapeHtml(item.badge || '')}</span>
+            </div>
+            <div class="search-result-path">${escapeHtml(item.path || '')}</div>
+            ${highlightedSnippet ? `<div class="search-result-snippet">${highlightedSnippet}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = `<div class="search-results-list">${html}</div>`;
+  }
+
+  window.selectGlobalSearchResult = function (idx) {
+    if (idx < 0 || idx >= globalSearchResultsList.length) return;
+    const item = globalSearchResultsList[idx];
+    const modal = document.getElementById('global-search-modal');
+    if (modal) modal.style.display = 'none';
+
+    if (item.type === 'chamber') {
+      window.switchChamber(item.chNum);
+    } else if (item.type === 'folder_file') {
+      if (typeof window.handleFolderFileClick === 'function') {
+        window.handleFolderFileClick(item.folderKey, item.fileId);
+      }
+    } else if (item.type === 'folder') {
+      if (typeof window.toggleChambersExplorer === 'function') {
+        window.toggleChambersExplorer(true);
+      }
+    }
+
+    if (item.matchQuery) {
+      setTimeout(() => {
+        const activeEl = (typeof isClassicMode !== 'undefined' && isClassicMode && typeof classicEditor !== 'undefined' && classicEditor) ? classicEditor : editor;
+        if (activeEl) {
+          const val = activeEl.value;
+          const matchPos = val.toLowerCase().indexOf(item.matchQuery.toLowerCase());
+          if (matchPos !== -1) {
+            activeEl.focus();
+            activeEl.setSelectionRange(matchPos, matchPos + item.matchQuery.length);
+          }
+        }
+      }, 150);
+    }
+
+    showToast(`تم الانتقال إلى: "${item.title}" ✓`, 'success', 1800);
+  };
+
+  // الاستماع لاختصارات لوحة المفاتيح: دعم كلا من Ctrl+F و Ctrl+K للبحث الشامل
+  window.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'f' || e.key.toLowerCase() === 'k')) {
+      e.preventDefault();
+      const modal = document.getElementById('global-search-modal');
+      if (modal && modal.style.display === 'flex') {
+        window.closeGlobalSearchModal();
+      } else {
+        window.openGlobalSearchModal();
+      }
+    }
+  });
+
   function initDrag() {
     makeDraggable('floating-dock-wrapper',         'vienix_dock_pos');
     makeDraggable('preview-floating-dock-wrapper', 'vienix_preview_dock_pos');
