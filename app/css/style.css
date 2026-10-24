@@ -425,6 +425,10 @@ textarea:focus-visible {
   animation: fadeInDown 0.15s ease-out;
 }
 
+.dropdown-container.open {
+  z-index: 1050;
+}
+
 .dropdown-container.open .dropdown-menu {
   display: flex;
 }
@@ -479,6 +483,8 @@ textarea:focus-visible {
 
 /* Secondary Toolbar (Formatting & View controls) */
 .toolbar-container {
+  position: relative;
+  z-index: 45;
   background: var(--bg-toolbar);
   border-bottom: 1px solid var(--border-color);
   padding: 6px 14px;
@@ -486,8 +492,7 @@ textarea:focus-visible {
   align-items: center;
   justify-content: space-between;
   flex-wrap: nowrap !important;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: visible;
   gap: 8px;
 }
 
@@ -2064,6 +2069,8 @@ body.is-resizing-workspace .workspace-resizer {
 
   /* Toolbar: Single Horizontal Scrollable Row */
   .toolbar-container {
+    position: relative;
+    z-index: 45;
     padding: 6px 10px;
     gap: 4px;
     overflow-x: auto;

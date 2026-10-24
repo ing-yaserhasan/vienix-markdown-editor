@@ -1576,18 +1576,160 @@ function exportDocument(format) {
       }
     });
 
-    // Tab key inserts tab character instead of moving focus
-    editor.addEventListener('keydown', (e) => {
+    // التنقل الذكي بمفتاح Tab داخل حجرات وخلايا الجداول، أو إدراج مسافة Tab عادية
+    function handleTableTabNavigation(activeEl, isShift) {
+      if (!activeEl) return false;
+      const val = activeEl.value;
+      const pos = activeEl.selectionStart;
+      const lineStart = val.lastIndexOf('\n', pos - 1) + 1;
+      const lineEndIdx = val.indexOf('\n', pos);
+      const lineEnd = lineEndIdx === -1 ? val.length : lineEndIdx;
+      const line = val.substring(lineStart, lineEnd);
+
+      const trimmedLine = line.trim();
+      if (!trimmedLine.startsWith('|') || trimmedLine.indexOf('|', 1) === -1) {
+        return false;
+      }
+
+      const lines = val.split('\n');
+      let currentLineIndex = 0;
+      let charCount = 0;
+      for (let i = 0; i < lines.length; i++) {
+        if (charCount <= lineStart && lineStart <= charCount + lines[i].length) {
+          currentLineIndex = i;
+          break;
+        }
+        charCount += lines[i].length + 1;
+      }
+
+      let tableStartLine = currentLineIndex;
+      while (tableStartLine > 0 && lines[tableStartLine - 1].trim().startsWith('|')) {
+        tableStartLine--;
+      }
+      let tableEndLine = currentLineIndex;
+      while (tableEndLine < lines.length - 1 && lines[tableEndLine + 1].trim().startsWith('|')) {
+        tableEndLine++;
+      }
+
+      const cells = [];
+      let lineOffset = 0;
+      for (let i = 0; i < tableStartLine; i++) {
+        lineOffset += lines[i].length + 1;
+      }
+
+      for (let i = tableStartLine; i <= tableEndLine; i++) {
+        const curLine = lines[i];
+        const isSep = /^\|\s*([:\s-]+\|)+$/.test(curLine.trim());
+        if (!isSep) {
+          const pipePositions = [];
+          for (let c = 0; c < curLine.length; c++) {
+            if (curLine[c] === '|') pipePositions.push(c);
+          }
+          for (let p = 0; p < pipePositions.length - 1; p++) {
+            const colStart = pipePositions[p] + 1;
+            const colEnd = pipePositions[p + 1];
+            const rawContent = curLine.substring(colStart, colEnd);
+            const leadingSpace = (rawContent.match(/^\s*/) || [''])[0].length;
+            const trailingSpace = (rawContent.match(/\s*$/) || [''])[0].length;
+
+            let cellSelStart = lineOffset + colStart + leadingSpace;
+            let cellSelEnd = lineOffset + colEnd - trailingSpace;
+            if (cellSelStart > cellSelEnd) {
+              cellSelStart = lineOffset + colStart + (rawContent.length > 0 ? 1 : 0);
+              cellSelEnd = cellSelStart;
+            }
+            cells.push({
+              start: cellSelStart,
+              end: cellSelEnd,
+              colStart: lineOffset + colStart,
+              colEnd: lineOffset + colEnd,
+              lineIndex: i,
+              colIndex: p
+            });
+          }
+        }
+        lineOffset += curLine.length + 1;
+      }
+
+      if (cells.length === 0) return false;
+
+      let activeCellIdx = -1;
+      for (let i = 0; i < cells.length; i++) {
+        if (pos >= cells[i].colStart && pos <= cells[i].colEnd) {
+          activeCellIdx = i;
+          break;
+        }
+      }
+
+      if (activeCellIdx === -1) {
+        for (let i = 0; i < cells.length; i++) {
+          if (cells[i].start >= pos) {
+            activeCellIdx = i;
+            break;
+          }
+        }
+        if (activeCellIdx === -1) activeCellIdx = cells.length - 1;
+      }
+
+      if (!isShift) {
+        const nextIdx = activeCellIdx + 1;
+        if (nextIdx < cells.length) {
+          activeEl.focus();
+          activeEl.setSelectionRange(cells[nextIdx].start, cells[nextIdx].end);
+          return true;
+        } else {
+          // إضافة صف جديد تلقائياً عند الضغط على Tab في آخر خلية بالجدول
+          recordHistorySnapshot(true);
+          const firstRowCells = cells.filter(c => c.lineIndex === cells[0].lineIndex);
+          const colCount = Math.max(1, firstRowCells.length);
+          const newRowText = '| ' + Array(colCount).fill(' ').join(' | ') + ' |\n';
+
+          let endOffset = 0;
+          for (let i = 0; i <= tableEndLine; i++) {
+            endOffset += lines[i].length + 1;
+          }
+          if (endOffset > val.length) endOffset = val.length;
+
+          activeEl.setRangeText(newRowText, endOffset, endOffset, 'end');
+          const firstNewCell = endOffset + 2;
+          activeEl.focus();
+          activeEl.setSelectionRange(firstNewCell, firstNewCell);
+          if (typeof renderMarkdown === 'function') renderMarkdown();
+          recordHistorySnapshot(true);
+          return true;
+        }
+      } else {
+        const prevIdx = activeCellIdx - 1;
+        if (prevIdx >= 0) {
+          activeEl.focus();
+          activeEl.setSelectionRange(cells[prevIdx].start, cells[prevIdx].end);
+          return true;
+        }
+      }
+      return true;
+    }
+
+    function handleEditorTabKey(e) {
       if (e.key === 'Tab') {
         e.preventDefault();
+        const activeEl = e.target;
+        if (handleTableTabNavigation(activeEl, e.shiftKey)) {
+          if (typeof renderMarkdown === 'function') renderMarkdown();
+          return;
+        }
         recordHistorySnapshot(true);
-        const start = editor.selectionStart;
-        const end = editor.selectionEnd;
-        editor.setRangeText('\t', start, end, 'end');
-        renderMarkdown();
+        const start = activeEl.selectionStart;
+        const end = activeEl.selectionEnd;
+        activeEl.setRangeText('\t', start, end, 'end');
+        if (typeof renderMarkdown === 'function') renderMarkdown();
         recordHistorySnapshot(true);
       }
-    });
+    }
+
+    editor.addEventListener('keydown', handleEditorTabKey);
+    if (classicEditor) {
+      classicEditor.addEventListener('keydown', handleEditorTabKey);
+    }
 
     // معالجة لصق الصور من الحافظة (Ctrl+V) كصور مدمجة ومحسنة في الماركداون
     async function handleImagePaste(e) {
@@ -7467,9 +7609,96 @@ function exportDocument(format) {
     recordHistorySnapshot(true);
   };
 
+  // فتح نافذة إدراج جدول احترافي ومخصص بعدد أعمدة وصفوف محدد
   window.insertTable = function () {
-    const tableTemplate = `\n| العمود الأول | العمود الثاني | العمود الثالث |\n| :--- | :---: | :---: |\n| بيانات 1 | بيانات 2 | بيانات 3 |\n| بيانات 4 | بيانات 5 | بيانات 6 |\n\n`;
-    window.insertFormat('', '', tableTemplate);
+    const modal = document.getElementById('insert-table-modal');
+    if (modal) {
+      modal.style.display = 'flex';
+      const colsInput = document.getElementById('table-cols-input');
+      if (colsInput) {
+        setTimeout(() => {
+          colsInput.focus();
+          colsInput.select();
+        }, 50);
+      }
+    } else {
+      const colsStr = prompt('كم عدد الأعمدة المطلوبة؟', '3');
+      if (!colsStr) return;
+      const rowsStr = prompt('كم عدد الصفوف المطلوبة؟', '3');
+      if (!rowsStr) return;
+      window.generateAndInsertMarkdownTable(parseInt(colsStr, 10) || 3, parseInt(rowsStr, 10) || 3);
+    }
+  };
+
+  window.closeInsertTableModal = function (e) {
+    if (e && e.target && e.target !== e.currentTarget && !e.target.classList.contains('diff-modal-close')) {
+      return;
+    }
+    const modal = document.getElementById('insert-table-modal');
+    if (modal) modal.style.display = 'none';
+  };
+
+  window.confirmInsertTable = function () {
+    const colsInput = document.getElementById('table-cols-input');
+    const rowsInput = document.getElementById('table-rows-input');
+    const cols = Math.max(1, Math.min(20, parseInt(colsInput ? colsInput.value : '3', 10) || 3));
+    const rows = Math.max(1, Math.min(50, parseInt(rowsInput ? rowsInput.value : '3', 10) || 3));
+
+    const modal = document.getElementById('insert-table-modal');
+    if (modal) modal.style.display = 'none';
+
+    window.generateAndInsertMarkdownTable(cols, rows);
+  };
+
+  window.generateAndInsertMarkdownTable = function (cols, rows) {
+    const activeEl = (typeof isClassicMode !== 'undefined' && isClassicMode && typeof classicEditor !== 'undefined' && classicEditor) ? classicEditor : editor;
+    if (!activeEl) return;
+
+    recordHistorySnapshot(true);
+    const start = activeEl.selectionStart;
+    const end = activeEl.selectionEnd;
+    const val = activeEl.value;
+
+    let prefix = '';
+    if (start > 0) {
+      if (val[start - 1] !== '\n') {
+        prefix = '\n\n';
+      } else if (start > 1 && val[start - 2] !== '\n') {
+        prefix = '\n';
+      }
+    }
+
+    const headers = [];
+    const separators = [];
+    for (let c = 1; c <= cols; c++) {
+      headers.push(`العمود ${c}`);
+      separators.push(':---');
+    }
+    let tableMarkdown = `${prefix}| ${headers.join(' | ')} |\n| ${separators.join(' | ')} |\n`;
+
+    for (let r = 1; r <= rows; r++) {
+      const rowCells = Array(cols).fill(' ');
+      tableMarkdown += `| ${rowCells.join(' | ')} |\n`;
+    }
+    tableMarkdown += '\n';
+
+    activeEl.setRangeText(tableMarkdown, start, end, 'end');
+
+    const firstCellText = 'العمود 1';
+    const firstCellStart = start + prefix.length + 2;
+    const firstCellEnd = firstCellStart + firstCellText.length;
+    activeEl.focus();
+    activeEl.setSelectionRange(firstCellStart, firstCellEnd);
+
+    if (typeof isClassicMode !== 'undefined' && isClassicMode) {
+      if (editor) editor.value = activeEl.value;
+      renderClassicMarkdown();
+    } else {
+      if (classicEditor) classicEditor.value = activeEl.value;
+      renderMarkdown();
+    }
+    recordHistorySnapshot(true);
+    showToast(`تم إدراج جدول بنجاح (${cols} أعمدة × ${rows} صفوف) ✓`, 'success');
   };
 
   window.insertLink = function () {
