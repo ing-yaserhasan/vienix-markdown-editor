@@ -7747,8 +7747,12 @@ function exportDocument(format) {
     }
     let tableMarkdown = `${prefix}| ${headers.join(' | ')} |\n| ${separators.join(' | ')} |\n`;
 
+    let cellCounter = 1;
     for (let r = 1; r <= rows; r++) {
-      const rowCells = Array(cols).fill(' ');
+      const rowCells = [];
+      for (let c = 1; c <= cols; c++) {
+        rowCells.push(cellCounter++);
+      }
       tableMarkdown += `| ${rowCells.join(' | ')} |\n`;
     }
     tableMarkdown += '\n';
