@@ -1141,32 +1141,45 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* Tables */
-.markdown-body table {
+.markdown-body table,
+#classic-output table {
   width: 100%;
   border-collapse: collapse;
   margin: 1.4em 0;
   font-size: 0.95rem;
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+  border-bottom: 2px solid var(--border-color) !important;
 }
 
 .markdown-body th,
-.markdown-body td {
+.markdown-body td,
+#classic-output th,
+#classic-output td {
   padding: 10px 14px;
   border: 1px solid var(--border-color);
   text-align: right;
 }
 
-.markdown-body th {
+.markdown-body th,
+#classic-output th {
   background: var(--bg-hover);
   font-weight: 700;
   color: var(--text-primary);
+  border-bottom: 2px solid var(--border-color);
 }
 
-.markdown-body tr:nth-child(even) {
+.markdown-body tr:nth-child(even),
+#classic-output tr:nth-child(even) {
   background: var(--bg-hover);
+}
+
+/* ضمان وجود حد سفلي دائماً للجدول وللصف الأخير */
+.markdown-body tr:last-child td,
+.markdown-body tbody tr:last-child td,
+#classic-output tr:last-child td,
+#classic-output tbody tr:last-child td {
+  border-bottom: 2px solid var(--border-color) !important;
 }
 
 /* Code & Syntax Highlighting */
@@ -1900,6 +1913,12 @@ body.is-resizing-workspace .workspace-resizer {
 
   .markdown-body tr:nth-child(even) td {
     background: #f8fafc !important;
+  }
+
+  .markdown-body table,
+  .markdown-body tr:last-child td,
+  .markdown-body tbody tr:last-child td {
+    border-bottom: 2px solid #cbd5e1 !important;
   }
 
   .markdown-body blockquote {
