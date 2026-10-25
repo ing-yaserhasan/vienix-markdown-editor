@@ -7572,12 +7572,12 @@ body.is-resizing-workspace .workspace-resizer {
 
 /* الغلاف الخارجي الذي يحتوي الكارت والأيقونات معاً */
 .itb-outer-wrapper {
-  display: flex;
-  flex-direction: row;
-  direction: ltr; /* يضمن وضع الكارت على اليسار والأيقونات على اليمين محاذية لحد الترجمة الأخضر كما في صورة المرجع */
-  align-items: center;
+  display: flex !important;
+  flex-direction: row !important;
+  direction: ltr !important; /* يضمن وضع الكارت على اليسار والأيقونات على اليمين محاذية لحد الترجمة الأخضر */
+  align-items: center !important;
   gap: 0;
-  width: 100%;
+  width: 100% !important;
   clear: both;
   box-sizing: border-box;
   margin: 0;
@@ -7588,63 +7588,64 @@ body.is-resizing-workspace .workspace-resizer {
 
 /* عندما يكون الكارت مفتوحاً */
 .itb-outer-wrapper.is-card-open {
-  gap: 10px;
-  margin: 8px 0 14px 0;
-  overflow: visible;
+  gap: 12px !important;
+  margin: 10px 0 16px 0 !important;
+  overflow: visible !important;
 }
 
 /* الكارت يأخذ كامل المساحة المتبقية داخل الغلاف */
 .itb-outer-wrapper .inline-translation-box {
-  flex: 1;
-  min-width: 0;
-  margin: 0;
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+  width: auto !important;
+  margin: 0 !important;
 }
 
-/* لوحة الأيقونتين الجانبية (تظهر على يمين الكارت محاذية للحافة الخضراء) */
+/* لوحة الأيقونتين الجانبية (عمودية دائماً فوق بعض: النسخ بالأعلى واسأل AI بالأسفل) */
 .itb-side-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  display: flex !important;
+  flex-direction: column !important; /* عمودي دائماً على جميع الشاشات */
+  gap: 10px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
   pointer-events: none;
   opacity: 0;
+  width: 0;
   max-width: 0;
-  max-height: 0;
   overflow: hidden;
   transform: scale(0.85);
   transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
               transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-              max-width 0.22s ease,
-              max-height 0.22s ease;
+              width 0.22s ease,
+              max-width 0.22s ease;
 }
 
-/* تظهر الأيقونات بسلاسة عند فتح الكارت */
+/* تظهر الأيقونات بسلاسة عمودياً عند فتح الكارت */
 .itb-outer-wrapper.is-card-open .itb-side-actions {
-  pointer-events: auto;
-  opacity: 1;
-  max-width: 44px;
-  max-height: 100px;
-  overflow: visible;
-  transform: scale(1);
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  width: 38px !important;
+  max-width: 38px !important;
+  overflow: visible !important;
+  transform: scale(1) !important;
 }
 
 /* الزر الأساسي المشترك للأيقونتين - بدون إطار ثقيل، أيقونة عائمة نظيفة مطابقة للصورة المرفقة */
 .itb-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  min-height: 32px;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
   border-radius: 9px;
-  border: 1px solid transparent;
-  background: transparent;
+  border: none !important;
+  background: transparent !important;
   cursor: pointer;
   padding: 0;
-  box-shadow: none;
+  box-shadow: none !important;
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
   touch-action: manipulation;
@@ -7656,7 +7657,7 @@ body.is-resizing-workspace .workspace-resizer {
 
 .itb-action-btn:hover {
   transform: scale(1.15);
-  background: rgba(99, 102, 241, 0.09);
+  background: rgba(99, 102, 241, 0.09) !important;
 }
 
 .itb-action-btn:active {
@@ -7668,7 +7669,7 @@ body.is-resizing-workspace .workspace-resizer {
   outline-offset: 2px;
 }
 
-/* === أيقونة النسخ (أزرق نيلي نقي) === */
+/* === أيقونة النسخ (أزرق نيلي نقي بحواف واضحة) === */
 .itb-copy-action-btn svg {
   color: #6366f1;
   stroke: #6366f1;
@@ -7681,17 +7682,17 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 .itb-copy-action-btn.copied {
-  background: #f0fdf4;
+  background: #f0fdf4 !important;
 }
 
 .itb-copy-action-btn.copied svg {
-  color: #10b981;
-  stroke: #10b981;
+  color: #10b981 !important;
+  stroke: #10b981 !important;
 }
 
-/* === أيقونة Ask AI (سماوي / نيلي) === */
+/* === أيقونة Ask AI (فقاعة بنفسجية ونجمة سماوية) === */
 .itb-ask-ai-btn:hover {
-  background: rgba(56, 189, 248, 0.09);
+  background: rgba(147, 51, 234, 0.09) !important;
 }
 
 .itb-ask-ai-btn svg {
@@ -7702,17 +7703,17 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 .itb-ask-ai-btn:hover svg {
-  transform: rotate(-5deg) scale(1.08);
+  transform: rotate(-6deg) scale(1.08);
 }
 
 /* Dark mode */
 [data-theme="dark"] .itb-action-btn {
-  background: transparent;
-  border-color: transparent;
+  background: transparent !important;
+  border-color: transparent !important;
 }
 
 [data-theme="dark"] .itb-action-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.08) !important;
 }
 
 [data-theme="dark"] .itb-copy-action-btn svg {
@@ -7721,7 +7722,7 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 [data-theme="dark"] .itb-ask-ai-btn:hover {
-  background: rgba(56, 189, 248, 0.14);
+  background: rgba(168, 85, 247, 0.14) !important;
 }
 
 /* === توستر صغير لتأكيد النسخ فوق الأيقونة === */
@@ -7850,23 +7851,6 @@ body.is-resizing-workspace .workspace-resizer {
 
 [data-theme="dark"] .itb-ai-disabled-tip-msg { color: #f1f5f9; }
 [data-theme="dark"] .itb-ai-disabled-tip-sub  { color: #94a3b8; }
-
-/* في الشاشات الصغيرة جداً، اخفِ الأيقونتين وادمجهما داخل الكارت */
-@media (max-width: 400px) {
-  .itb-side-actions {
-    position: static;
-    flex-direction: row;
-    justify-content: flex-end;
-    opacity: 1;
-    pointer-events: auto;
-    transform: none;
-    margin-top: 6px;
-    display: none; /* تُخفى وتظهر بداخل الكارت بدلاً */
-  }
-  .itb-outer-wrapper.is-card-open .itb-side-actions {
-    display: flex;
-  }
-}
 
 /* =========================================================
    ØªØ±Ù‚ÙŠØ§Øª Ø­Ø§ÙˆÙŠØ© Ø§Ù„ØªØ­Ø¬ÙŠÙ… Ù„Ù„Ø¥ÙŠÙ…ÙˆØ¬ÙŠ ÙˆØ§Ù„ØµÙˆØ±: ØªØ­Ø±ÙŠÙƒ Ø­Ø±ØŒ ØªØ¯ÙˆÙŠØ±ØŒ ÙˆÙ…Ù†Ø¹ Ø§Ù‚ØªØ·Ø§Ø¹ Ø§Ù„ÙÙ‚Ø§Ø¹Ø©

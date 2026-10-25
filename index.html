@@ -3004,8 +3004,17 @@
     }
 
     window.openAiChatWithPhrase = function(phraseText, triggerBtn) {
-      // ── حالة 1: الذكاء الاصطناعي غير مفعّل ──
-      if (!isAiEnabled()) {
+      // التحقق: هل الذكاء الاصطناعي مفعل وهل يوجد مفتاح API شغال؟
+      var hasKey = false;
+      try {
+        var keys = loadAiKeys();
+        hasKey = Array.isArray(keys) && keys.length > 0;
+      } catch(e) {}
+
+      var aiReady = isAiEnabled() && hasKey;
+
+      // ── في حال كان النطق الصوتي فعال دون وضع الذكاء الاصطناعي (أو بدون مفتاح شغال) تظهر الرسالة للمستخدم ──
+      if (!aiReady) {
         // أغلق أي تلميح مفتوح مسبقاً
         _closeItbAiDisabledTip();
 
@@ -3014,13 +3023,17 @@
         tip.className = 'itb-ai-disabled-tip';
         tip.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
 
+        var msgSub = !isAiEnabled()
+          ? 'عمل هذه الميزة مرتبط بتفعيل ميزة الذكاء الاصطناعي من قسم الإعدادات.'
+          : 'عمل هذه الميزة مرتبط بإضافة مفتاح Gemini API شغال من قسم الإعدادات.';
+
         tip.innerHTML =
           '<button class="itb-ai-disabled-tip-close" title="إغلاق" onclick="(function(el){el.style.opacity=\'0\';el.style.transform=\'scale(0.92) translateY(6px)\';setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},200);})(this.closest(\'.itb-ai-disabled-tip\'))">✕</button>' +
           '<div class="itb-ai-disabled-tip-icon">✨</div>' +
           '<div class="itb-ai-disabled-tip-msg">ميزة «اسأل AI» غير مفعلة</div>' +
-          '<div class="itb-ai-disabled-tip-sub">عمل هذه الميزة مرتبط بتفعيل ميزة الذكاء الاصطناعي من قسم الإعدادات.</div>' +
+          '<div class="itb-ai-disabled-tip-sub">' + msgSub + '</div>' +
           '<button class="itb-ai-disabled-tip-btn" onclick="openSettingsModal();if(typeof switchSettingsTab===\'function\'){switchSettingsTab(\'ai\');}(function(el){el.style.opacity=\'0\';setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},200);})(this.closest(\'.itb-ai-disabled-tip\'))">' +
-          '⚙️ تفعيل الذكاء الاصطناعي' +
+          '⚙️ فتح الإعدادات (قسم AI)' +
           '</button>';
 
         document.body.appendChild(tip);

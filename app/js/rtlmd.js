@@ -13424,9 +13424,9 @@ function exportDocument(format) {
           copyBtn.className = 'itb-action-btn itb-copy-action-btn';
           copyBtn.title = 'نسخ الترجمة';
           copyBtn.setAttribute('aria-label', 'نسخ الترجمة');
-          copyBtn.innerHTML = `<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#6366f1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="8" y="8" width="13" height="13" rx="3"></rect>
-            <path d="M4 16c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2h9c1.1 0 2 .9 2 2"></path>
+          copyBtn.innerHTML = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#6366f1" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="8" y="8" width="13" height="13" rx="3.5" ry="3.5"></rect>
+            <path d="M4 16c-1.1 0-2-.9-2-2V4.5C2 3.4 2.9 2.5 4 2.5h9.5c1.1 0 2 .9 2 2v1"></path>
           </svg>
           <span class="itb-copy-toast">تم النسخ ✓</span>`;
 
@@ -13479,20 +13479,14 @@ function exportDocument(format) {
           askAiBtn.className = 'itb-action-btn itb-ask-ai-btn';
           askAiBtn.title = 'اسأل AI عن هذا النص';
           askAiBtn.setAttribute('aria-label', 'اسأل AI عن هذا النص');
-          // أيقونة فقاعة محادثة وبداخلها نجمة لمعة أنيقة متناسقة مع صورة المرجع
-          askAiBtn.innerHTML = `<svg viewBox="0 0 24 24" width="21" height="21" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="itbAiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#818cf8"/>
-                <stop offset="100%" stop-color="#38bdf8"/>
-              </linearGradient>
-            </defs>
-            <!-- فقاعة المحادثة -->
-            <path d="M21 11.5C21 16.19 16.97 20 12 20C10.53 20 9.14 19.67 7.9 19.08L3.5 20.5L4.95 16.32C3.73 14.97 3 13.31 3 11.5C3 6.81 7.03 3 12 3C16.97 3 21 6.81 21 11.5Z" 
-                  stroke="url(#itbAiGrad)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            <!-- نجمة لمعة متمركزة بالوسط -->
-            <path d="M12 7.5 Q12 11.5 15.5 11.5 Q12 11.5 12 15.5 Q12 11.5 8.5 11.5 Q12 11.5 12 7.5 Z" 
-                  fill="url(#itbAiGrad)"/>
+          // فقاعة محادثة باللون البنفسجي الواضح، بداخلها نجمة لمعة باللون السماوي الفاقع
+          askAiBtn.innerHTML = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- فقاعة المحادثة باللون البنفسجي -->
+            <path d="M20.5 11.5C20.5 16 16.5 19.5 11.5 19.5C10.2 19.5 9 19.2 7.9 18.7L3.5 20L4.8 16.1C3.7 14.8 3 13.2 3 11.5C3 7 6.8 3.5 11.5 3.5C16.5 3.5 20.5 7 20.5 11.5Z" 
+                  stroke="#9333ea" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- النجمة اللامعة باللون السماوي الفاقع في المنتصف -->
+            <path d="M11.5 7 Q11.5 11.5 15.5 11.5 Q11.5 11.5 11.5 16 Q11.5 11.5 7.5 11.5 Q11.5 11.5 11.5 7 Z" 
+                  fill="#00d2ff"/>
           </svg>`;
 
           askAiBtn.addEventListener('click', function (e) {
