@@ -38,6 +38,7 @@
   const SETTINGS_DEFAULTS = {
     // Appearance
     theme: 'dark',
+    comfortReadingMode: true, // وضع القراءة المريح فائق الأناقة (مفعّل افتراضياً)
     previewFontSize: '16',
     editorFontSize: '15',
     accentColor: '#6366f1',
@@ -159,6 +160,10 @@
         if (editor) editor.dir = value === 'auto' ? 'auto' : value;
         break;
 
+      case 'comfortReadingMode':
+        applyComfortReadingMode(!!value);
+        break;
+
       case 'pronunciationEnabled':
       case 'targetLanguage':
       case 'dottedUnderline':
@@ -169,6 +174,51 @@
         updateGlobalBilingualBtnVisibility();
         renderMarkdown();
         break;
+    }
+  }
+
+  window.applyComfortReadingMode = function (enabled) {
+    const isComfort = enabled !== false;
+    document.body.classList.toggle('comfort-reading-mode', isComfort);
+    const wrapper = document.getElementById('modern-app-wrapper');
+    if (wrapper) wrapper.classList.toggle('comfort-reading-mode', isComfort);
+    const prev = document.getElementById('preview-output');
+    if (prev) prev.classList.toggle('comfort-reading-mode', isComfort);
+  };
+
+  window.toggleZenReadingMode = function () {
+    const isZen = document.body.classList.toggle('zen-reading-mode');
+    const btn = document.getElementById('btn-toggle-zen-reading');
+    if (btn) {
+      const enterIcon = btn.querySelector('.zen-icon-enter');
+      const exitIcon = btn.querySelector('.zen-icon-exit');
+      const textSpan = btn.querySelector('.zen-btn-text');
+      if (enterIcon) enterIcon.style.display = isZen ? 'none' : 'inline-block';
+      if (exitIcon) exitIcon.style.display = isZen ? 'inline-block' : 'none';
+      if (textSpan) textSpan.textContent = isZen ? 'إنهاء التركيز' : 'وضع التركيز';
+      btn.title = isZen ? 'إنهاء نمط ملء الشاشة (Esc)' : 'نمط القراءة بملء الشاشة والتركيز (Zen Mode)';
+    }
+
+    if (isZen && typeof showToast === 'function') {
+      showToast('تم تفعيل نمط القراءة بملء الشاشة (Zen Mode) • انقر الزر العائم أو اضغط Esc للخروج', 'info', 2500);
+    }
+  };
+
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && document.body.classList.contains('zen-reading-mode')) {
+      window.toggleZenReadingMode();
+    }
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      if (typeof window.applyComfortReadingMode === 'function') {
+        window.applyComfortReadingMode(vienixSettings.comfortReadingMode !== false);
+      }
+    });
+  } else {
+    if (typeof window.applyComfortReadingMode === 'function') {
+      window.applyComfortReadingMode(vienixSettings.comfortReadingMode !== false);
     }
   }
 
@@ -190,6 +240,9 @@
     }
     if (vienixSettings.accentColor) {
       document.documentElement.style.setProperty('--accent-color', vienixSettings.accentColor);
+    }
+    if (typeof applyComfortReadingMode === 'function') {
+      applyComfortReadingMode(vienixSettings.comfortReadingMode !== false);
     }
     if (typeof updateGlobalBilingualBtnVisibility === 'function') {
       updateGlobalBilingualBtnVisibility();
@@ -11894,6 +11947,10 @@ function exportDocument(format) {
 
   function syncSettingsUI() {
     const s = vienixSettings;
+
+    // Comfort reading mode
+    const comfortChk = document.getElementById('s-comfort-reading-mode');
+    if (comfortChk) comfortChk.checked = s.comfortReadingMode !== false;
 
     // Theme
     const themeRadio = document.querySelector(`input[name="s-theme"][value="${s.theme}"]`);

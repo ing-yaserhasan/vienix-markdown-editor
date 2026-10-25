@@ -15,10 +15,10 @@
   <!-- Typography & Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/earlyaccess/droidarabicnaskh.css">
   <link rel="stylesheet" href="assets/fonts/tajawal.css">
-  <link rel="stylesheet" href="app/css/style.css?v=obsidian58">
+  <link rel="stylesheet" href="app/css/style.css?v=obsidian59">
   <link rel="stylesheet" href="app/css/classic.css?v=obsidian4">
 </head>
 <body>
@@ -564,6 +564,22 @@
           </div>
         </div>
         <div class="preview-container" id="preview-output">
+          <!-- Zen Mode Floating Button (زر عائم لنمط القراءة بملء الشاشة والتركيز الخالص) -->
+          <button type="button" class="zen-mode-floating-btn" id="btn-toggle-zen-reading" onclick="toggleZenReadingMode()" title="نمط القراءة بملء الشاشة والتركيز (Zen Mode)" aria-label="تبديل وضع التركيز والقراءة الكاملة">
+            <svg class="zen-icon-enter" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 3h6v6"></path>
+              <path d="M9 21H3v-6"></path>
+              <path d="M21 3l-7 7"></path>
+              <path d="M3 21l7-7"></path>
+            </svg>
+            <svg class="zen-icon-exit" style="display:none;" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 14h6v6"></path>
+              <path d="M20 10h-6V4"></path>
+              <path d="M14 10l7-7"></path>
+              <path d="M10 14L3 21"></path>
+            </svg>
+            <span class="zen-btn-text">وضع التركيز</span>
+          </button>
           <!-- AI Context Button (اسأل AI عن هذا الملف) - داخل منطقة المعاينة فوق المحتوى -->
           <button type="button" class="ai-context-pill-btn" id="btn-ai-context" onclick="openAiChatWithContext()" title="اسأل الـ AI عن شيء بهذا الملف — يقرأ المحتوى وينفذ أوامرك" style="display: none;">
             <svg class="ai-sparkle-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1790,6 +1806,28 @@
           <div class="settings-panel active" id="settings-panel-appearance">
             <h3 class="settings-section-title"><svg class="ui-icon" viewBox="0 0 24 24" width="16" height="16"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.563C22 6.5 17.5 2 12 2Z"></path></svg><span>المظهر والعرض</span></h3>
 
+            <!-- خيار وضع القراءة المريح فائق الأناقة (Ergonomic Reading Mode) -->
+            <div class="settings-group settings-comfort-mode-card">
+              <div class="settings-toggle-row">
+                <div class="settings-toggle-info">
+                  <span class="settings-label" style="margin: 0; display: flex; align-items: center; gap: 6px;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-color);">
+                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                    </svg>
+                    وضع القراءة المريح (Ergonomic Reading Mode)
+                  </span>
+                  <span class="settings-toggle-desc">
+                    تجربة قراءة فائقة الانسيابية وراحة العين (مستوحاة من Manus AI): خط عربي عصري، ارتفاع أسطر متوازن، خلفية هادئة مريحة للشبكية، وروابط ناعمة غير مشتتة.
+                  </span>
+                </div>
+                <label class="settings-toggle" style="flex-shrink: 0;">
+                  <input type="checkbox" id="s-comfort-reading-mode" checked onchange="applySetting('comfortReadingMode', this.checked)">
+                  <span class="settings-toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
             <div class="settings-group">
               <label class="settings-label">وضع المظهر</label>
               <div class="settings-radio-group">
@@ -2364,7 +2402,7 @@
   <script src="app/js/vienix-idb.js?v=1.3"></script>
 
   <!-- Application Main Script -->
-  <script src="app/js/rtlmd.js?v=obsidian62"></script>
+  <script src="app/js/rtlmd.js?v=obsidian63"></script>
 
   <!-- Storage Health Monitor & Full Workspace Backup Module (Phase 0) -->
   <script src="app/js/storage-backup.js?v=1.3"></script>
