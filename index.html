@@ -3134,23 +3134,6 @@
         setAiLoading(false);
         renderAiChat();
 
-        // أضف أزرار إدراج / استبدال / نسخ في آخر فقاعة
-        var bubbles = document.querySelectorAll('.ai-bubble-bot');
-        var lastBubble = bubbles[bubbles.length - 1];
-        if (lastBubble) {
-          var existingActions = lastBubble.querySelector('.ai-bubble-actions');
-          if (existingActions) {
-            // زر استبدال (يضيف السطر بعد الجملة في المحرر)
-            var replaceBtn = document.createElement('button');
-            replaceBtn.className = 'ai-insert-btn';
-            replaceBtn.title = 'إدراج الرد تحت العبارة في المحرر';
-            replaceBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg> إدراج في المحرر';
-            var lastIdx = _aiMessages.length - 1;
-            replaceBtn.onclick = function() { insertAiResponseToEditor(lastIdx); };
-            existingActions.insertBefore(replaceBtn, existingActions.firstChild);
-          }
-        }
-
         setTimeout(function() {
           var b = document.querySelectorAll('.ai-bubble-bot');
           if (b.length) b[b.length - 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
