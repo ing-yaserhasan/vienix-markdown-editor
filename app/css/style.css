@@ -7566,6 +7566,307 @@ body.is-resizing-workspace .workspace-resizer {
   word-break: break-word;
 }
 
+/* =========================================================
+   حاوية الأيقونتين الجانبيتين (نسخ + اسأل AI) بجانب كارت الترجمة
+   ========================================================= */
+
+/* الغلاف الخارجي الذي يحتوي الكارت والأيقونات معاً */
+.itb-outer-wrapper {
+  display: flex;
+  flex-direction: row;
+  direction: ltr; /* يضمن وضع الكارت على اليسار والأيقونات على اليمين محاذية لحد الترجمة الأخضر كما في صورة المرجع */
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  clear: both;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  transition: margin 0.28s ease, gap 0.28s ease;
+}
+
+/* عندما يكون الكارت مفتوحاً */
+.itb-outer-wrapper.is-card-open {
+  gap: 10px;
+  margin: 8px 0 14px 0;
+  overflow: visible;
+}
+
+/* الكارت يأخذ كامل المساحة المتبقية داخل الغلاف */
+.itb-outer-wrapper .inline-translation-box {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+/* لوحة الأيقونتين الجانبية (تظهر على يمين الكارت محاذية للحافة الخضراء) */
+.itb-side-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  pointer-events: none;
+  opacity: 0;
+  max-width: 0;
+  max-height: 0;
+  overflow: hidden;
+  transform: scale(0.85);
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              max-width 0.22s ease,
+              max-height 0.22s ease;
+}
+
+/* تظهر الأيقونات بسلاسة عند فتح الكارت */
+.itb-outer-wrapper.is-card-open .itb-side-actions {
+  pointer-events: auto;
+  opacity: 1;
+  max-width: 44px;
+  max-height: 100px;
+  overflow: visible;
+  transform: scale(1);
+}
+
+/* الزر الأساسي المشترك للأيقونتين - بدون إطار ثقيل، أيقونة عائمة نظيفة مطابقة للصورة المرفقة */
+.itb-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: none;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.itb-action-btn:hover {
+  transform: scale(1.15);
+  background: rgba(99, 102, 241, 0.09);
+}
+
+.itb-action-btn:active {
+  transform: scale(0.92);
+}
+
+.itb-action-btn:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 2px;
+}
+
+/* === أيقونة النسخ (أزرق نيلي نقي) === */
+.itb-copy-action-btn svg {
+  color: #6366f1;
+  stroke: #6366f1;
+  transition: all 0.18s ease;
+}
+
+.itb-copy-action-btn:hover svg {
+  color: #4f46e5;
+  stroke: #4f46e5;
+}
+
+.itb-copy-action-btn.copied {
+  background: #f0fdf4;
+}
+
+.itb-copy-action-btn.copied svg {
+  color: #10b981;
+  stroke: #10b981;
+}
+
+/* === أيقونة Ask AI (سماوي / نيلي) === */
+.itb-ask-ai-btn:hover {
+  background: rgba(56, 189, 248, 0.09);
+}
+
+.itb-ask-ai-btn svg {
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+  transition: transform 0.2s ease;
+}
+
+.itb-ask-ai-btn:hover svg {
+  transform: rotate(-5deg) scale(1.08);
+}
+
+/* Dark mode */
+[data-theme="dark"] .itb-action-btn {
+  background: transparent;
+  border-color: transparent;
+}
+
+[data-theme="dark"] .itb-action-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .itb-copy-action-btn svg {
+  color: #a5b4fc;
+  stroke: #a5b4fc;
+}
+
+[data-theme="dark"] .itb-ask-ai-btn:hover {
+  background: rgba(56, 189, 248, 0.14);
+}
+
+/* === توستر صغير لتأكيد النسخ فوق الأيقونة === */
+.itb-copy-toast {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: #1e293b;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Tajawal', sans-serif;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 9999;
+}
+
+.itb-copy-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+[data-theme="dark"] .itb-copy-toast {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+/* === نافذة "يجب تفعيل AI" === */
+.itb-ai-disabled-tip {
+  position: fixed;
+  z-index: 10500;
+  background: #fff;
+  border: 1.5px solid #E3E7EE;
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: 0 8px 32px rgba(118,82,200,0.14), 0 2px 8px rgba(0,0,0,0.06);
+  max-width: 260px;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: auto;
+  animation: itbTipFadeIn 0.22s cubic-bezier(0.16,1,0.3,1);
+}
+
+@keyframes itbTipFadeIn {
+  from { opacity: 0; transform: scale(0.92) translateY(6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.itb-ai-disabled-tip-icon {
+  font-size: 28px;
+  text-align: center;
+  line-height: 1;
+}
+
+.itb-ai-disabled-tip-msg {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  text-align: center;
+  line-height: 1.5;
+  direction: rtl;
+  font-family: 'Tajawal', sans-serif;
+}
+
+.itb-ai-disabled-tip-sub {
+  font-size: 11.5px;
+  color: #64748b;
+  text-align: center;
+  line-height: 1.5;
+  direction: rtl;
+  font-family: 'Tajawal', sans-serif;
+}
+
+.itb-ai-disabled-tip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 14px;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'Tajawal', sans-serif;
+  background: linear-gradient(135deg, #B99AEF 0%, #7652C8 45%, #55C7D2 100%);
+  color: #fff;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  width: 100%;
+  direction: rtl;
+}
+
+.itb-ai-disabled-tip-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.itb-ai-disabled-tip-close {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #94a3b8;
+  line-height: 1;
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.itb-ai-disabled-tip-close:hover { color: #475569; }
+
+[data-theme="dark"] .itb-ai-disabled-tip {
+  background: #1e293b;
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+}
+
+[data-theme="dark"] .itb-ai-disabled-tip-msg { color: #f1f5f9; }
+[data-theme="dark"] .itb-ai-disabled-tip-sub  { color: #94a3b8; }
+
+/* في الشاشات الصغيرة جداً، اخفِ الأيقونتين وادمجهما داخل الكارت */
+@media (max-width: 400px) {
+  .itb-side-actions {
+    position: static;
+    flex-direction: row;
+    justify-content: flex-end;
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+    margin-top: 6px;
+    display: none; /* تُخفى وتظهر بداخل الكارت بدلاً */
+  }
+  .itb-outer-wrapper.is-card-open .itb-side-actions {
+    display: flex;
+  }
+}
 
 /* =========================================================
    ØªØ±Ù‚ÙŠØ§Øª Ø­Ø§ÙˆÙŠØ© Ø§Ù„ØªØ­Ø¬ÙŠÙ… Ù„Ù„Ø¥ÙŠÙ…ÙˆØ¬ÙŠ ÙˆØ§Ù„ØµÙˆØ±: ØªØ­Ø±ÙŠÙƒ Ø­Ø±ØŒ ØªØ¯ÙˆÙŠØ±ØŒ ÙˆÙ…Ù†Ø¹ Ø§Ù‚ØªØ·Ø§Ø¹ Ø§Ù„ÙÙ‚Ø§Ø¹Ø©

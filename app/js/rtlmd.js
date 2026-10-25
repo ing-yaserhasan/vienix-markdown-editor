@@ -13085,11 +13085,14 @@ function exportDocument(format) {
     if (!boxEl) return;
 
     const isOpen = boxEl.classList.contains('is-open');
+    // الغلاف الخارجي الذي يتحكم في ظهور الأيقونتين
+    const outerWrapper = boxEl._outerWrapper || null;
 
     if (isOpen) {
       // إغلاق الكارت وسحب النص لأعلى
       boxEl.classList.remove('is-open');
       if (btn) btn.classList.remove('is-active');
+      if (outerWrapper) outerWrapper.classList.remove('is-card-open');
       return;
     }
 
@@ -13099,6 +13102,7 @@ function exportDocument(format) {
         if (b !== boxEl) {
           b.classList.remove('is-open');
           if (b._associatedBtn) b._associatedBtn.classList.remove('is-active');
+          if (b._outerWrapper) b._outerWrapper.classList.remove('is-card-open');
         }
       });
     }
@@ -13106,6 +13110,7 @@ function exportDocument(format) {
     // فتح الكارت ودفع النص لأسفل
     boxEl.classList.add('is-open');
     if (btn) btn.classList.add('is-active');
+    if (outerWrapper) outerWrapper.classList.add('is-card-open');
 
     const textEl = boxEl.querySelector('.itb-text');
     const loadEl = boxEl.querySelector('.itb-loading');
@@ -13167,6 +13172,7 @@ function exportDocument(format) {
       } else if (!active && isOpen) {
         box.classList.remove('is-open');
         if (associatedBtn) associatedBtn.classList.remove('is-active');
+        if (box._outerWrapper) box._outerWrapper.classList.remove('is-card-open');
       }
     });
 
@@ -13189,10 +13195,13 @@ function exportDocument(format) {
       // إذا كان النقر داخل الكارت أو على زر الترجمة الفردي التابع له، نتجاهل
       if (box.contains(e.target)) return;
       if (box._associatedBtn && box._associatedBtn.contains(e.target)) return;
+      // تجاهل النقر على لوحة الأيقونات الجانبية (نسخ / اسأل AI)
+      if (box._outerWrapper && box._outerWrapper.contains(e.target)) return;
 
       // إغلاق الكارت وسحب النص لأعلى
       box.classList.remove('is-open');
       if (box._associatedBtn) box._associatedBtn.classList.remove('is-active');
+      if (box._outerWrapper) box._outerWrapper.classList.remove('is-card-open');
     });
   });
 
@@ -13400,7 +13409,107 @@ function exportDocument(format) {
             phraseWrapper.appendChild(transBtn);
           }
 
-          phraseWrapper.appendChild(transBox);
+          // ── الغلاف الخارجي يحتوي على الكارت + لوحة الأيقونات الجانبية ──
+          const outerWrapper = document.createElement('div');
+          outerWrapper.className = 'itb-outer-wrapper';
+          transBox._outerWrapper = outerWrapper;
+
+          // ── لوحة الأيقونتين الجانبية (تظهر فقط عند فتح الكارت على يمين الكارت) ──
+          const sideActions = document.createElement('div');
+          sideActions.className = 'itb-side-actions';
+
+          // ── زر النسخ (أعلى) ──
+          const copyBtn = document.createElement('button');
+          copyBtn.type = 'button';
+          copyBtn.className = 'itb-action-btn itb-copy-action-btn';
+          copyBtn.title = 'نسخ الترجمة';
+          copyBtn.setAttribute('aria-label', 'نسخ الترجمة');
+          copyBtn.innerHTML = `<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#6366f1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="8" y="8" width="13" height="13" rx="3"></rect>
+            <path d="M4 16c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2h9c1.1 0 2 .9 2 2"></path>
+          </svg>
+          <span class="itb-copy-toast">تم النسخ ✓</span>`;
+
+          copyBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+            // نسخ نص الترجمة إن كان جاهزاً، وإلا نسخ العبارة الأصلية
+            const transEl = transBox.querySelector('.itb-text');
+            const transText = (transEl && transEl.innerText) ? transEl.innerText.trim() : '';
+            const textToCopy = transText || part.content;
+
+            navigator.clipboard.writeText(textToCopy).then(() => {
+              copyBtn.classList.add('copied');
+              const toast = copyBtn.querySelector('.itb-copy-toast');
+              if (toast) toast.classList.add('show');
+              if (typeof showToast === 'function') {
+                showToast('تم نسخ الترجمة بنجاح ✓', 'success', 1600);
+              }
+              setTimeout(() => {
+                copyBtn.classList.remove('copied');
+                if (toast) toast.classList.remove('show');
+              }, 1800);
+            }).catch(() => {
+              try {
+                const ta = document.createElement('textarea');
+                ta.value = textToCopy;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                copyBtn.classList.add('copied');
+                const toast = copyBtn.querySelector('.itb-copy-toast');
+                if (toast) toast.classList.add('show');
+                if (typeof showToast === 'function') {
+                  showToast('تم نسخ الترجمة بنجاح ✓', 'success', 1600);
+                }
+                setTimeout(() => {
+                  copyBtn.classList.remove('copied');
+                  if (toast) toast.classList.remove('show');
+                }, 1800);
+              } catch (_) {}
+            });
+          });
+
+          // ── زر اسأل AI (أسفل) ──
+          const askAiBtn = document.createElement('button');
+          askAiBtn.type = 'button';
+          askAiBtn.className = 'itb-action-btn itb-ask-ai-btn';
+          askAiBtn.title = 'اسأل AI عن هذا النص';
+          askAiBtn.setAttribute('aria-label', 'اسأل AI عن هذا النص');
+          // أيقونة فقاعة محادثة وبداخلها نجمة لمعة أنيقة متناسقة مع صورة المرجع
+          askAiBtn.innerHTML = `<svg viewBox="0 0 24 24" width="21" height="21" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="itbAiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#818cf8"/>
+                <stop offset="100%" stop-color="#38bdf8"/>
+              </linearGradient>
+            </defs>
+            <!-- فقاعة المحادثة -->
+            <path d="M21 11.5C21 16.19 16.97 20 12 20C10.53 20 9.14 19.67 7.9 19.08L3.5 20.5L4.95 16.32C3.73 14.97 3 13.31 3 11.5C3 6.81 7.03 3 12 3C16.97 3 21 6.81 21 11.5Z" 
+                  stroke="url(#itbAiGrad)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- نجمة لمعة متمركزة بالوسط -->
+            <path d="M12 7.5 Q12 11.5 15.5 11.5 Q12 11.5 12 15.5 Q12 11.5 8.5 11.5 Q12 11.5 12 7.5 Z" 
+                  fill="url(#itbAiGrad)"/>
+          </svg>`;
+
+          askAiBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+            // استدعاء وظيفة فتح AI مع نص العبارة
+            if (typeof window.openAiChatWithPhrase === 'function') {
+              window.openAiChatWithPhrase(part.content, this);
+            }
+          });
+
+          sideActions.appendChild(copyBtn);
+          sideActions.appendChild(askAiBtn);
+
+          outerWrapper.appendChild(transBox);
+          outerWrapper.appendChild(sideActions);
+          phraseWrapper.appendChild(outerWrapper);
 
           fragment.appendChild(phraseWrapper);
         }

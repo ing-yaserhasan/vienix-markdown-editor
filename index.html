@@ -2986,6 +2986,175 @@
     };
     // Re-run to apply
     updateAiButtonVisibility();
+
+    // ───── Layer 8: Ask AI About Phrase (من لوحة كارت الترجمة) ─────
+    var _itbAiDisabledTip = null;
+
+    function _closeItbAiDisabledTip() {
+      if (_itbAiDisabledTip) {
+        _itbAiDisabledTip.style.opacity = '0';
+        _itbAiDisabledTip.style.transform = 'scale(0.92) translateY(6px)';
+        setTimeout(function() {
+          if (_itbAiDisabledTip && _itbAiDisabledTip.parentNode) {
+            _itbAiDisabledTip.parentNode.removeChild(_itbAiDisabledTip);
+          }
+          _itbAiDisabledTip = null;
+        }, 200);
+      }
+    }
+
+    window.openAiChatWithPhrase = function(phraseText, triggerBtn) {
+      // ── حالة 1: الذكاء الاصطناعي غير مفعّل ──
+      if (!isAiEnabled()) {
+        // أغلق أي تلميح مفتوح مسبقاً
+        _closeItbAiDisabledTip();
+
+        // أنشئ التلميح
+        var tip = document.createElement('div');
+        tip.className = 'itb-ai-disabled-tip';
+        tip.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+
+        tip.innerHTML =
+          '<button class="itb-ai-disabled-tip-close" title="إغلاق" onclick="(function(el){el.style.opacity=\'0\';el.style.transform=\'scale(0.92) translateY(6px)\';setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},200);})(this.closest(\'.itb-ai-disabled-tip\'))">✕</button>' +
+          '<div class="itb-ai-disabled-tip-icon">✨</div>' +
+          '<div class="itb-ai-disabled-tip-msg">ميزة «اسأل AI» غير مفعلة</div>' +
+          '<div class="itb-ai-disabled-tip-sub">عمل هذه الميزة مرتبط بتفعيل ميزة الذكاء الاصطناعي من قسم الإعدادات.</div>' +
+          '<button class="itb-ai-disabled-tip-btn" onclick="openSettingsModal();if(typeof switchSettingsTab===\'function\'){switchSettingsTab(\'ai\');}(function(el){el.style.opacity=\'0\';setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},200);})(this.closest(\'.itb-ai-disabled-tip\'))">' +
+          '⚙️ تفعيل الذكاء الاصطناعي' +
+          '</button>';
+
+        document.body.appendChild(tip);
+        _itbAiDisabledTip = tip;
+
+        // تحديد موضع التلميح بجانب الزر (باستخدام إحداثيات viewport لأن العنصر position: fixed)
+        if (triggerBtn) {
+          var rect = triggerBtn.getBoundingClientRect();
+          var tipW = 270;
+          var leftPos = rect.left - tipW - 10;
+          if (leftPos < 12) leftPos = rect.right + 10;
+          if (leftPos + tipW > window.innerWidth - 12) {
+            leftPos = Math.max(12, window.innerWidth - tipW - 12);
+          }
+          var topPos = rect.top - 20;
+          var maxTop = window.innerHeight - 200;
+          if (topPos > maxTop) topPos = maxTop;
+          if (topPos < 12) topPos = 12;
+          tip.style.left = leftPos + 'px';
+          tip.style.top = topPos + 'px';
+        } else {
+          tip.style.left = '50%';
+          tip.style.top = '50%';
+          tip.style.transform = 'translate(-50%, -50%)';
+        }
+
+        // إغلاق تلقائي بعد 5 ثوانٍ
+        setTimeout(_closeItbAiDisabledTip, 5000);
+
+        // إغلاق عند النقر خارجه
+        setTimeout(function() {
+          function onOutsideClick(ev) {
+            if (_itbAiDisabledTip && !_itbAiDisabledTip.contains(ev.target)) {
+              _closeItbAiDisabledTip();
+              document.removeEventListener('click', onOutsideClick, true);
+            }
+          }
+          document.addEventListener('click', onOutsideClick, true);
+        }, 100);
+
+        return;
+      }
+
+      // ── حالة 2: AI مفعّل — افتح المحادثة مع نص العبارة مُحمَّل مسبقاً ──
+      var overlay = document.getElementById('ai-chat-overlay');
+      if (!overlay) return;
+
+      // أعد تعيين المحادثة
+      _aiMessages = [];
+      saveAiChatHistory([]);
+
+      // أدرج العبارة كرسالة أولى من المستخدم
+      var initMsg = {
+        role: 'user',
+        content: 'اسألك عن العبارة التالية:\n«' + phraseText + '»\n\nأخبرني بمعناها، سياق استخدامها، ونطقها.',
+        time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
+      };
+      _aiMessages.push(initMsg);
+      saveAiChatHistory(_aiMessages);
+
+      // افتح المودال وحدّث التسمية
+      overlay.style.display = 'flex';
+      setTimeout(function() { overlay.classList.add('ai-chat-visible'); }, 10);
+      var modelLabel = document.getElementById('ai-chat-model-label');
+      if (modelLabel) {
+        var m = loadAiModel();
+        var names = {
+          'gemini-2.0-flash-lite':'Gemini 2.0 Flash Lite',
+          'gemini-3.8-flash':'Gemini 3.8 Flash',
+          'gemini-3.5-flash-lite':'Gemini 3.5 Flash Lite',
+          'gemini-2.5-flash-lite':'Gemini 2.5 Flash Lite',
+          'gemini-1.5-flash':'Gemini 1.5 Flash'
+        };
+        modelLabel.textContent = names[m] || m;
+      }
+
+      // اعرض رسالة المستخدم فوراً واطلب الرد
+      renderAiChat();
+      setAiLoading(true);
+
+      // أضف سياق النظام
+      var phrasePrompt = AI_SYSTEM_PROMPT +
+        '\n\nالمستخدم يسأل عن عبارة أجنبية من نص يقرأه. أجب بإيجاز ووضوح وباللغة العربية:\n' +
+        '- المعنى الدقيق للعبارة\n' +
+        '- سياق استخدامها الطبيعي (جملة مثال إن أمكن)\n' +
+        '- ملاحظة لغوية مفيدة إن وجدت (اشتقاق، مرادف، حالة خاصة)\n\n' +
+        '--- سجل المحادثة ---\nالمستخدم: اسألك عن العبارة التالية:\n«' + phraseText + '»\n\nأخبرني بمعناها، سياق استخدامها، ونطقها.\nAI:';
+
+      _aiAbortCtrl = new AbortController();
+      callGeminiAPI(phrasePrompt, { signal: _aiAbortCtrl.signal }).then(function(reply) {
+        var aiMsg = {
+          role: 'model',
+          content: reply,
+          time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
+        };
+        _aiMessages.push(aiMsg);
+        saveAiChatHistory(_aiMessages);
+        setAiLoading(false);
+        renderAiChat();
+
+        // أضف أزرار إدراج / استبدال / نسخ في آخر فقاعة
+        var bubbles = document.querySelectorAll('.ai-bubble-bot');
+        var lastBubble = bubbles[bubbles.length - 1];
+        if (lastBubble) {
+          var existingActions = lastBubble.querySelector('.ai-bubble-actions');
+          if (existingActions) {
+            // زر استبدال (يضيف السطر بعد الجملة في المحرر)
+            var replaceBtn = document.createElement('button');
+            replaceBtn.className = 'ai-insert-btn';
+            replaceBtn.title = 'إدراج الرد تحت العبارة في المحرر';
+            replaceBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg> إدراج في المحرر';
+            var lastIdx = _aiMessages.length - 1;
+            replaceBtn.onclick = function() { insertAiResponseToEditor(lastIdx); };
+            existingActions.insertBefore(replaceBtn, existingActions.firstChild);
+          }
+        }
+
+        setTimeout(function() {
+          var b = document.querySelectorAll('.ai-bubble-bot');
+          if (b.length) b[b.length - 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 120);
+      }).catch(function(err) {
+        var errMsg = {
+          role: 'model',
+          content: '⚠️ ' + err.message,
+          time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}),
+          isError: true
+        };
+        _aiMessages.push(errMsg);
+        setAiLoading(false);
+        renderAiChat();
+      });
+    };
+
   })();
   </script>
 
