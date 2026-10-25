@@ -15,10 +15,10 @@
   <!-- Typography & Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700&family=Cairo:wght@400;600;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/earlyaccess/droidarabicnaskh.css">
   <link rel="stylesheet" href="assets/fonts/tajawal.css">
-  <link rel="stylesheet" href="app/css/style.css?v=obsidian59">
+  <link rel="stylesheet" href="app/css/style.css?v=obsidian61">
   <link rel="stylesheet" href="app/css/classic.css?v=obsidian4">
 </head>
 <body>
@@ -1818,7 +1818,7 @@
                     وضع القراءة المريح (Ergonomic Reading Mode)
                   </span>
                   <span class="settings-toggle-desc">
-                    تجربة قراءة فائقة الانسيابية وراحة العين (مستوحاة من Manus AI): خط عربي عصري، ارتفاع أسطر متوازن، خلفية هادئة مريحة للشبكية، وروابط ناعمة غير مشتتة.
+                    تجربة قراءة فائقة الانسيابية وراحة العين: ارتفاع أسطر متوازن، خلفية هادئة مريحة للشبكية، وروابط ناعمة غير مشتتة.
                   </span>
                 </div>
                 <label class="settings-toggle" style="flex-shrink: 0;">
@@ -1843,6 +1843,18 @@
                 <input type="range" class="settings-slider" id="s-preview-font-size" min="12" max="24" value="16" step="1" oninput="applySetting('previewFontSize', this.value)">
                 <span class="settings-slider-value" id="s-preview-font-size-val">16px</span>
               </div>
+            </div>
+
+            <div class="settings-group">
+              <label class="settings-label">خط المعاينة</label>
+              <select class="settings-select" id="s-preview-font" onchange="applySetting('previewFont', this.value)">
+                <option value="system" selected>خط النظام الافتراضي (System)</option>
+                <option value="'IBM Plex Sans Arabic', sans-serif">IBM Plex Sans Arabic</option>
+                <option value="'Noto Sans Arabic', sans-serif">Noto Sans Arabic</option>
+                <option value="'Tajawal', sans-serif">Tajawal</option>
+                <option value="'Cairo', sans-serif">Cairo</option>
+                <option value="'Almarai', sans-serif">Almarai</option>
+              </select>
             </div>
 
             <div class="settings-group">

@@ -39,6 +39,7 @@
     // Appearance
     theme: 'dark',
     comfortReadingMode: true, // وضع القراءة المريح فائق الأناقة (مفعّل افتراضياً)
+    previewFont: 'system',
     previewFontSize: '16',
     editorFontSize: '15',
     accentColor: '#6366f1',
@@ -164,6 +165,10 @@
         applyComfortReadingMode(!!value);
         break;
 
+      case 'previewFont':
+        applyPreviewFont(value);
+        break;
+
       case 'pronunciationEnabled':
       case 'targetLanguage':
       case 'dottedUnderline':
@@ -210,15 +215,33 @@
     }
   });
 
+  window.applyPreviewFont = function (fontKey) {
+    let fontVal = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+    if (fontKey && fontKey !== 'system') {
+      fontVal = fontKey;
+    }
+    document.documentElement.style.setProperty('--preview-body-font', fontVal);
+    const prevContent = document.getElementById('preview-content');
+    if (prevContent) {
+      prevContent.style.setProperty('--preview-body-font', fontVal);
+    }
+  };
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       if (typeof window.applyComfortReadingMode === 'function') {
         window.applyComfortReadingMode(vienixSettings.comfortReadingMode !== false);
       }
+      if (typeof window.applyPreviewFont === 'function') {
+        window.applyPreviewFont(vienixSettings.previewFont || 'system');
+      }
     });
   } else {
     if (typeof window.applyComfortReadingMode === 'function') {
       window.applyComfortReadingMode(vienixSettings.comfortReadingMode !== false);
+    }
+    if (typeof window.applyPreviewFont === 'function') {
+      window.applyPreviewFont(vienixSettings.previewFont || 'system');
     }
   }
 
@@ -243,6 +266,9 @@
     }
     if (typeof applyComfortReadingMode === 'function') {
       applyComfortReadingMode(vienixSettings.comfortReadingMode !== false);
+    }
+    if (typeof applyPreviewFont === 'function') {
+      applyPreviewFont(vienixSettings.previewFont || 'system');
     }
     if (typeof updateGlobalBilingualBtnVisibility === 'function') {
       updateGlobalBilingualBtnVisibility();
@@ -11956,11 +11982,14 @@ function exportDocument(format) {
     const themeRadio = document.querySelector(`input[name="s-theme"][value="${s.theme}"]`);
     if (themeRadio) themeRadio.checked = true;
 
-    // Font sizes
+    // Font sizes and font selector
     const previewFontSlider = document.getElementById('s-preview-font-size');
     if (previewFontSlider) previewFontSlider.value = s.previewFontSize || '16';
     const previewFontVal = document.getElementById('s-preview-font-size-val');
     if (previewFontVal) previewFontVal.textContent = (s.previewFontSize || '16') + 'px';
+
+    const previewFontSelect = document.getElementById('s-preview-font');
+    if (previewFontSelect) previewFontSelect.value = s.previewFont || 'system';
 
     const editorFontSlider = document.getElementById('s-editor-font-size');
     if (editorFontSlider) editorFontSlider.value = s.editorFontSize || '15';

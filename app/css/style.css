@@ -10074,8 +10074,41 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* =========================================================================
-   وضع القراءة المريح فائق الأناقة (Comfort / Ergonomic Reading Mode)
-   مستوحى من دراسات راحة العين وهندسة واجهات الذكاء الاصطناعي الحديثة (Manus AI)
+   خط نصوص المعاينة المباشرة فقط دون التأثير على الواجهة أو المخططات أو الأكواد
+   ========================================================================= */
+:root {
+  --preview-body-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+#preview-output .markdown-body,
+#preview-output .markdown-body p,
+#preview-output .markdown-body h1,
+#preview-output .markdown-body h2,
+#preview-output .markdown-body h3,
+#preview-output .markdown-body h4,
+#preview-output .markdown-body h5,
+#preview-output .markdown-body h6,
+#preview-output .markdown-body li,
+#preview-output .markdown-body a,
+#preview-output .markdown-body blockquote,
+#preview-output .markdown-body td,
+#preview-output .markdown-body th {
+  font-family: var(--preview-body-font) !important;
+}
+
+/* استثناء صريح وحماية تامة لمخططات Mermaid والأكواد البرمجية من أي تغيير للخط */
+#preview-output .markdown-body .mermaid,
+#preview-output .markdown-body .mermaid *,
+#preview-output .markdown-body svg,
+#preview-output .markdown-body svg text,
+#preview-output .markdown-body pre,
+#preview-output .markdown-body code,
+#preview-output .markdown-body kbd {
+  font-family: var(--font-mono) !important;
+}
+
+/* =========================================================================
+   وضع القراءة المريح (Comfort / Ergonomic Reading Mode)
    ========================================================================= */
 
 /* كارت إعدادات وضع القراءة */
@@ -10238,8 +10271,10 @@ body.zen-reading-mode .zen-mode-floating-btn:hover {
   color: #e2e8f0 !important;
 }
 
-.comfort-reading-mode .markdown-body {
-  font-family: 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+.comfort-reading-mode .markdown-body,
+.comfort-reading-mode .markdown-body p,
+.comfort-reading-mode .markdown-body li {
+  font-family: var(--preview-body-font) !important;
   font-size: 1.07rem !important;
   line-height: 1.85 !important;
   color: #27272a !important;
@@ -10297,7 +10332,7 @@ body.zen-reading-mode .zen-mode-floating-btn:hover {
 .comfort-reading-mode .markdown-body h2,
 .comfort-reading-mode .markdown-body h3,
 .comfort-reading-mode .markdown-body h4 {
-  font-family: 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-family: var(--preview-body-font) !important;
   font-weight: 600 !important;
   letter-spacing: -0.015em;
   color: #0f172a !important;
