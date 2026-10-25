@@ -10096,15 +10096,28 @@ body.is-resizing-workspace .workspace-resizer {
   font-family: var(--preview-body-font) !important;
 }
 
-/* استثناء صريح وحماية تامة لمخططات Mermaid والأكواد البرمجية من أي تغيير للخط */
-#preview-output .markdown-body .mermaid,
-#preview-output .markdown-body .mermaid *,
-#preview-output .markdown-body svg,
-#preview-output .markdown-body svg text,
+/* حماية الأكواد البرمجية بالخط الأحادي المسافة */
 #preview-output .markdown-body pre,
 #preview-output .markdown-body code,
 #preview-output .markdown-body kbd {
   font-family: var(--font-mono) !important;
+}
+
+/* ========================================================================
+   حماية مخططات Mermaid: تثبيت خط تجوال حصريًا بغض النظر عن اختيار المستخدم
+   ======================================================================== */
+#preview-output .markdown-body .mermaid,
+#preview-output .markdown-body .mermaid *,
+#preview-output .markdown-body .mermaid svg,
+#preview-output .markdown-body .mermaid svg text,
+#preview-output .markdown-body .mermaid foreignObject,
+#preview-output .markdown-body .mermaid foreignObject div,
+#preview-output .markdown-body .mermaid foreignObject span,
+#preview-output .markdown-body .mermaid .nodeLabel,
+#preview-output .markdown-body .mermaid .edgeLabel,
+#preview-output .markdown-body .mermaid .label {
+  font-family: 'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  letter-spacing: normal !important;
 }
 
 /* =========================================================================
