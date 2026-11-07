@@ -2950,6 +2950,9 @@ body.is-resizing-workspace .workspace-resizer {
   transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: inherit;
   outline: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* 1. Ø§Ù„Ø­Ø¬Ø±Ø© Ø§Ù„ÙØ§Ø±ØºØ© (Empty Slot) */
@@ -3144,7 +3147,12 @@ body.is-resizing-workspace .workspace-resizer {
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
   padding: 4px;
   min-width: 175px;
+  max-height: 90vh;
+  overflow-y: auto;
   animation: contextFadeIn 0.12s ease-out;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 [data-theme="dark"] .chamber-context-menu {
@@ -3436,6 +3444,8 @@ body.is-resizing-workspace .workspace-resizer {
   border-radius: 5px;
   cursor: pointer;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   transition: background 0.12s;
   color: var(--text-primary, #334155);
 }
@@ -3544,6 +3554,9 @@ body.is-resizing-workspace .workspace-resizer {
   padding: 4px 8px;
   border-radius: 5px;
   cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   transition: background 0.12s, color 0.12s;
   position: relative;
   min-height: 30px;

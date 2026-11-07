@@ -3251,6 +3251,7 @@ function exportDocument(format) {
     if (wrapper && !wrapper.dataset.listenerAttached) {
       wrapper.dataset.listenerAttached = 'true';
       wrapper.addEventListener('click', (e) => {
+        if (Date.now() - lastLongPressTriggerTime < 500) return;
         const btn = e.target.closest('.chamber-btn');
         if (!btn) return;
         if (btn.id === 'chamber-dashed-slot') {
@@ -3437,16 +3438,21 @@ function exportDocument(format) {
   };
 
   // ==========================================
-  // CHAMBERS CONTEXT MENU (القائمة السياقية)
+  // CHAMBERS CONTEXT MENU (القائمة السياقية ودعم اللمس المطول)
   // ==========================================
   let contextTargetChamber = null;
-
   let contextTargetFolderKey = null;
+  let contextTargetFolderFile = null;
+  let lastContextMenuOpenTime = 0;
+  let lastLongPressTriggerTime = 0;
 
   function setupChamberContextMenu() {
     const cMenu = document.getElementById('chamber-context-menu');
     const fMenu = document.getElementById('folder-context-menu');
     document.addEventListener('click', (e) => {
+      // منع إغلاق القائمة فوراً عند رفع الإصبع على الموبايل
+      if (Date.now() - lastContextMenuOpenTime < 450) return;
+      if (Date.now() - lastLongPressTriggerTime < 500) return;
       if (cMenu && !e.target.closest('#chamber-context-menu')) {
         cMenu.style.display = 'none';
       }
@@ -3454,21 +3460,221 @@ function exportDocument(format) {
         fMenu.style.display = 'none';
       }
     });
+
+    setupTouchLongPress();
   }
 
-  function openChamberContextMenu(e, chNum) {
+  // دعم النقر المطول على شاشات اللمس (Mobile/Tablet Long-Press System)
+  function setupTouchLongPress() {
+    let touchLongPressTimer = null;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchTargetInfo = null;
+
+    document.addEventListener('touchstart', (e) => {
+      if (!e.touches || e.touches.length !== 1) {
+        if (touchLongPressTimer) {
+          clearTimeout(touchLongPressTimer);
+          touchLongPressTimer = null;
+        }
+        touchTargetInfo = null;
+        return;
+      }
+
+      const target = e.target;
+      if (!target || !target.closest) return;
+
+      // تجاهل النقر إذا كان على أزرار فرعية، حقول إدخال، أو داخل القوائم
+      if (target.closest('button, input, textarea, select, .obsidian-item-actions, .obsidian-inline-edit-box, .obsidian-action-btn, #chamber-context-menu, #folder-context-menu')) {
+        return;
+      }
+
+      // 1. فحص رأس المجلد في الشجرة
+      const folderHeader = target.closest('.obsidian-folder-header');
+      if (folderHeader) {
+        const folderKey = folderHeader.getAttribute('data-folder-key') ||
+                          folderHeader.closest('.obsidian-folder')?.getAttribute('data-folder-key');
+        if (folderKey) {
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+          touchTargetInfo = { type: 'folder', folderKey };
+          startTimer();
+          return;
+        }
+      }
+
+      // 2. فحص ملف داخل مجلد
+      const folderFileItem = target.closest('.obsidian-tree-item.is-folder-file');
+      if (folderFileItem) {
+        const fileId = folderFileItem.getAttribute('data-file-id') ||
+                       (folderFileItem.id ? folderFileItem.id.replace('tree-file-', '') : null);
+        const folderKey = folderFileItem.getAttribute('data-folder-key') ||
+                          folderFileItem.closest('.obsidian-folder')?.getAttribute('data-folder-key');
+        if (fileId && folderKey) {
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+          touchTargetInfo = { type: 'folder-file', fileId, folderKey };
+          startTimer();
+          return;
+        }
+      }
+
+      // 3. فحص ملف حجرة (1-7) في الشجرة
+      const treeItem = target.closest('.obsidian-tree-item');
+      if (treeItem && !treeItem.classList.contains('is-folder-file')) {
+        const chNum = parseInt(treeItem.getAttribute('data-chamber-num') ||
+                               (treeItem.id ? treeItem.id.replace('tree-item-', '') : ''), 10);
+        if (!isNaN(chNum) && chNum >= 1) {
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+          touchTargetInfo = { type: 'chamber-tree', chNum };
+          startTimer();
+          return;
+        }
+      }
+
+      // 4. فحص زر حجرة في شريط الحجرات العلوي
+      const chamberBtn = target.closest('.chamber-btn');
+      if (chamberBtn && chamberBtn.id !== 'chamber-dashed-slot') {
+        const ch = parseInt(chamberBtn.getAttribute('data-chamber'), 10);
+        if (!isNaN(ch) && ch >= 1) {
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+          touchTargetInfo = { type: 'chamber-bar', chNum: ch };
+          startTimer();
+          return;
+        }
+      }
+    }, { passive: true });
+
+    function startTimer() {
+      if (touchLongPressTimer) clearTimeout(touchLongPressTimer);
+      touchLongPressTimer = setTimeout(() => {
+        if (!touchTargetInfo) return;
+        lastLongPressTriggerTime = Date.now();
+        lastContextMenuOpenTime = Date.now();
+
+        // اهتزاز لمسي هادئ (Haptic feedback)
+        if (navigator.vibrate) {
+          try { navigator.vibrate(45); } catch (_) {}
+        }
+
+        const simulatedEvent = {
+          clientX: touchStartX,
+          clientY: touchStartY,
+          preventDefault: () => {},
+          stopPropagation: () => {}
+        };
+
+        if (touchTargetInfo.type === 'folder') {
+          window.handleFolderContextMenu(simulatedEvent, touchTargetInfo.folderKey);
+        } else if (touchTargetInfo.type === 'folder-file') {
+          window.handleFolderFileContextMenu(simulatedEvent, touchTargetInfo.folderKey, touchTargetInfo.fileId);
+        } else if (touchTargetInfo.type === 'chamber-tree') {
+          window.handleTreeItemContextMenu(simulatedEvent, touchTargetInfo.chNum);
+        } else if (touchTargetInfo.type === 'chamber-bar') {
+          openChamberContextMenu(simulatedEvent, touchTargetInfo.chNum);
+        }
+
+        touchTargetInfo = null;
+        touchLongPressTimer = null;
+      }, 450);
+    }
+
+    document.addEventListener('touchmove', (e) => {
+      if (touchLongPressTimer && e.touches && e.touches.length === 1) {
+        const dx = Math.abs(e.touches[0].clientX - touchStartX);
+        const dy = Math.abs(e.touches[0].clientY - touchStartY);
+        if (dx > 10 || dy > 10) {
+          clearTimeout(touchLongPressTimer);
+          touchLongPressTimer = null;
+          touchTargetInfo = null;
+        }
+      }
+    }, { passive: true });
+
+    document.addEventListener('touchend', () => {
+      if (touchLongPressTimer) {
+        clearTimeout(touchLongPressTimer);
+        touchLongPressTimer = null;
+      }
+      touchTargetInfo = null;
+    }, { passive: true });
+
+    document.addEventListener('touchcancel', () => {
+      if (touchLongPressTimer) {
+        clearTimeout(touchLongPressTimer);
+        touchLongPressTimer = null;
+      }
+      touchTargetInfo = null;
+    }, { passive: true });
+
+    // منع النقرة الوهمية (Synthetic click) الناتجة عن رفع الإصبع بعد النقر المطول
+    document.addEventListener('click', (e) => {
+      if (Date.now() - lastLongPressTriggerTime < 500) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        return false;
+      }
+    }, true);
+
+    // منع بدء السحب العرضي في أندرويد أثناء النقر المطول
+    document.addEventListener('dragstart', (e) => {
+      if (touchLongPressTimer || (Date.now() - lastLongPressTriggerTime < 800)) {
+        e.preventDefault();
+      }
+    }, true);
+  }
+
+  function openChamberContextMenu(e, chNum, folderFile) {
     if (e && e.preventDefault) e.preventDefault();
-    contextTargetChamber = chNum;
+    contextTargetChamber = chNum || null;
+    contextTargetFolderFile = folderFile || null;
+
     const menu = document.getElementById('chamber-context-menu');
     const fMenu = document.getElementById('folder-context-menu');
     if (fMenu) fMenu.style.display = 'none';
     if (!menu) return;
+
+    lastContextMenuOpenTime = Date.now();
+
+    const switchLabel = document.getElementById('chamber-context-switch-label');
+    const renameLabel = document.getElementById('chamber-context-rename-label');
+    const clearLabel = document.getElementById('chamber-context-clear-label');
+    const copyLabel = document.getElementById('chamber-context-copy-label');
+    const compareBtn = document.getElementById('chamber-context-compare-btn');
+
+    if (contextTargetFolderFile) {
+      if (switchLabel) switchLabel.textContent = 'فتح وعرض الملف';
+      if (renameLabel) renameLabel.textContent = 'إعادة تسمية الملف';
+      if (copyLabel) copyLabel.textContent = 'نسخ محتوى الملف';
+      if (clearLabel) clearLabel.textContent = 'حذف هذا الملف';
+      if (compareBtn) compareBtn.style.display = 'none';
+    } else {
+      if (switchLabel) switchLabel.textContent = 'فتح / تفعيل الحجرة';
+      if (renameLabel) renameLabel.textContent = 'إعادة تسمية مخصصة';
+      if (copyLabel) copyLabel.textContent = 'نسخ محتوى الحجرة';
+      if (clearLabel) clearLabel.textContent = 'تفريغ هذه الحجرة';
+      if (compareBtn) compareBtn.style.display = 'flex';
+    }
+
     menu.style.display = 'block';
 
     const menuW = 200;
     const menuH = 260;
-    let x = e ? e.clientX : window.innerWidth / 2;
-    let y = e ? e.clientY : window.innerHeight / 2;
+    let x = window.innerWidth / 2;
+    let y = window.innerHeight / 2;
+
+    if (e) {
+      if (typeof e.clientX === 'number') {
+        x = e.clientX;
+        y = e.clientY;
+      } else if (e.touches && e.touches[0]) {
+        x = e.touches[0].clientX;
+        y = e.touches[0].clientY;
+      }
+    }
 
     if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 10;
     if (y + menuH > window.innerHeight) y = window.innerHeight - menuH - 10;
@@ -3487,6 +3693,8 @@ function exportDocument(format) {
     if (cMenu) cMenu.style.display = 'none';
     const menu = document.getElementById('folder-context-menu');
     if (!menu) return;
+
+    lastContextMenuOpenTime = Date.now();
 
     let isCustom = false;
     let hasParent = false;
@@ -3521,8 +3729,19 @@ function exportDocument(format) {
     menu.style.display = 'block';
     const menuW = 205;
     const menuH = 340;
-    let x = e ? e.clientX : window.innerWidth / 2;
-    let y = e ? e.clientY : window.innerHeight / 2;
+    let x = window.innerWidth / 2;
+    let y = window.innerHeight / 2;
+
+    if (e) {
+      if (typeof e.clientX === 'number') {
+        x = e.clientX;
+        y = e.clientY;
+      } else if (e.touches && e.touches[0]) {
+        x = e.touches[0].clientX;
+        y = e.touches[0].clientY;
+      }
+    }
+
     if (x + menuW > window.innerWidth) x = window.innerWidth - menuW - 10;
     if (y + menuH > window.innerHeight) y = window.innerHeight - menuH - 10;
     if (x < 10) x = 10;
@@ -4060,9 +4279,19 @@ function exportDocument(format) {
     openChamberContextMenu(e, chNum);
   };
 
+  window.handleFolderFileContextMenu = function (e, folderKey, fileId) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+    openChamberContextMenu(e, null, { folderKey, fileId });
+  };
+
   window.contextSwitchChamber = function () {
     const menu = document.getElementById('chamber-context-menu');
     if (menu) menu.style.display = 'none';
+    if (contextTargetFolderFile) {
+      window.handleFolderFileClick(contextTargetFolderFile.folderKey, contextTargetFolderFile.fileId);
+      return;
+    }
     if (!contextTargetChamber) return;
     window.switchChamber(contextTargetChamber);
     renderChambersExplorerTree();
@@ -4071,6 +4300,10 @@ function exportDocument(format) {
   window.contextRenameChamber = function () {
     const menu = document.getElementById('chamber-context-menu');
     if (menu) menu.style.display = 'none';
+    if (contextTargetFolderFile) {
+      window.startFolderFileRename(null, contextTargetFolderFile.folderKey, contextTargetFolderFile.fileId);
+      return;
+    }
     if (!contextTargetChamber) return;
     window.startTreeInlineRename(null, contextTargetChamber);
   };
@@ -4078,6 +4311,10 @@ function exportDocument(format) {
   window.contextPasteChamber = function () {
     const menu = document.getElementById('chamber-context-menu');
     if (menu) menu.style.display = 'none';
+    if (contextTargetFolderFile) {
+      window.pasteToFolderFile(null, contextTargetFolderFile.folderKey, contextTargetFolderFile.fileId);
+      return;
+    }
     if (!contextTargetChamber) return;
     window.pasteToChamberFromTree(null, contextTargetChamber);
   };
@@ -4085,6 +4322,10 @@ function exportDocument(format) {
   window.contextMoveFolderChamber = function () {
     const menu = document.getElementById('chamber-context-menu');
     if (menu) menu.style.display = 'none';
+    if (contextTargetFolderFile) {
+      window.openMoveFolderFileModal(contextTargetFolderFile.folderKey, contextTargetFolderFile.fileId);
+      return;
+    }
     if (!contextTargetChamber) return;
     window.openMoveFolderModal(contextTargetChamber);
   };
@@ -4098,6 +4339,10 @@ function exportDocument(format) {
   window.contextClearChamber = function () {
     const menu = document.getElementById('chamber-context-menu');
     if (menu) menu.style.display = 'none';
+    if (contextTargetFolderFile) {
+      window.deleteFolderFile(null, contextTargetFolderFile.folderKey, contextTargetFolderFile.fileId);
+      return;
+    }
     if (!contextTargetChamber) return;
     window.clearChamberFromTree(null, contextTargetChamber);
   };
@@ -4105,6 +4350,10 @@ function exportDocument(format) {
   window.contextCopyChamber = function () {
     const menu = document.getElementById('chamber-context-menu');
     if (menu) menu.style.display = 'none';
+    if (contextTargetFolderFile) {
+      window.copyFolderFileContent(null, contextTargetFolderFile.folderKey, contextTargetFolderFile.fileId);
+      return;
+    }
     if (!contextTargetChamber) return;
     const val = getChamberContent(contextTargetChamber);
     if (!val || val.trim() === '') {
@@ -4216,6 +4465,7 @@ function exportDocument(format) {
   };
 
   window.toggleTreeFolder = function (folderKey) {
+    if (Date.now() - lastLongPressTriggerTime < 500) return;
     const isCurrentlyCollapsed = collapsedFolders[folderKey] !== false;
     collapsedFolders[folderKey] = !isCurrentlyCollapsed;
     renderChambersExplorerTree();
@@ -4764,6 +5014,7 @@ function exportDocument(format) {
 
   // تفاعل النقر على ملف داخل مجلد: عرضه في الحجرة رقم 8 المخصصة لعرض ملفات المستكشف
   window.handleFolderFileClick = function (folderKey, fileId) {
+    if (Date.now() - lastLongPressTriggerTime < 500) return;
     const files = getFolderFiles(folderKey);
     const file = files.find(f => f.id === fileId);
     if (!file) return;
@@ -5342,6 +5593,10 @@ function exportDocument(format) {
   }
 
   window.handleFolderDragStart = function (e, folderKey) {
+    if (!e || !e.dataTransfer || Date.now() - lastLongPressTriggerTime < 800) {
+      if (e && e.preventDefault) e.preventDefault();
+      return;
+    }
     draggedFolderKey = folderKey;
     draggedChamberNum = null;
     e.dataTransfer.effectAllowed = 'move';
@@ -5360,6 +5615,10 @@ function exportDocument(format) {
   };
 
   window.handleItemDragStart = function (e, chNum) {
+    if (!e || !e.dataTransfer || Date.now() - lastLongPressTriggerTime < 800) {
+      if (e && e.preventDefault) e.preventDefault();
+      return;
+    }
     draggedChamberNum = chNum;
     draggedFolderKey = null;
     draggedFile = null;
@@ -5456,6 +5715,10 @@ function exportDocument(format) {
   // سحب وإفلات ملفات المجلدات (Folder Files Drag & Drop)
   // ==========================================
   window.handleFileDragStart = function (e, folderKey, fileId) {
+    if (!e || !e.dataTransfer || Date.now() - lastLongPressTriggerTime < 800) {
+      if (e && e.preventDefault) e.preventDefault();
+      return;
+    }
     draggedFile = { folderKey, fileId };
     draggedChamberNum = null;
     draggedFolderKey = null;
@@ -6003,6 +6266,7 @@ function exportDocument(format) {
       return `
         <div class="obsidian-tree-item ${item.isActive ? 'active' : ''}"
              id="tree-item-${item.num}"
+             data-chamber-num="${item.num}"
              draggable="true"
              ondragstart="handleItemDragStart(event, ${item.num})"
              ondragover="handleItemDragOver(event, ${item.num})"
@@ -6054,13 +6318,16 @@ function exportDocument(format) {
       return `
         <div class="obsidian-tree-item is-folder-file ${isViewingInChamber ? 'active' : ''}"
              id="tree-file-${file.id}"
+             data-folder-key="${parentFolderKey}"
+             data-file-id="${file.id}"
              draggable="true"
              ondragstart="handleFileDragStart(event, '${parentFolderKey}', '${file.id}')"
              ondragover="handleFileDragOver(event, '${parentFolderKey}', '${file.id}')"
              ondragleave="handleFileDragLeave(event)"
              ondrop="handleFileDrop(event, '${file.id}', '${parentFolderKey}')"
              ondragend="handleFileDragEnd(event)"
-             onclick="handleFolderFileClick('${parentFolderKey}', '${file.id}')">
+             onclick="handleFolderFileClick('${parentFolderKey}', '${file.id}')"
+             oncontextmenu="handleFolderFileContextMenu(event, '${parentFolderKey}', '${file.id}')">
           <span class="obsidian-item-num" title="ملف رقم ${file.num}">${formattedNum}</span>
           <span class="obsidian-dot ${isFilled ? 'filled' : 'empty'}" title="${isFilled ? 'محتوى مكتوب' : 'فارغ'}"></span>
           <div class="obsidian-item-title-row" id="tree-title-row-file-${file.id}">
@@ -6121,6 +6388,7 @@ function exportDocument(format) {
       let nodeHTML = `
         <div class="obsidian-folder ${isSub ? 'sub-folder' : ''} ${isCollapsed ? 'collapsed' : ''}" id="obsidian-folder-${f.key}" data-folder-key="${f.key}">
           <div class="obsidian-folder-header"
+               data-folder-key="${f.key}"
                draggable="true"
                ondragstart="handleFolderDragStart(event, '${f.key}')"
                ondragend="handleFolderDragEnd(event)"
@@ -6191,6 +6459,7 @@ function exportDocument(format) {
   window.renderChambersExplorerTree = renderChambersExplorerTree;
 
   window.handleTreeItemClick = function (e, chNum) {
+    if (Date.now() - lastLongPressTriggerTime < 500) return;
     if (e.target.closest('.obsidian-item-actions') || e.target.closest('.obsidian-inline-edit-box') || e.target.closest('.tree-action-btn')) {
       return;
     }
