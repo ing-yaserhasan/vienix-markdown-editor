@@ -48,7 +48,7 @@
     preserveBlankLines: true,
     autoBrackets: true,
     editorFont: "'Fira Code', monospace",
-    textDirection: 'rtl',
+    textDirection: 'auto',
     autoSaveInterval: '5000',
     // Pronunciation Assistant (★ مساعد التدرب على نطق اللغات - معطل افتراضياً للزائر لأول مرة)
     pronunciationEnabled: false,
@@ -87,6 +87,10 @@
         if (existingTheme) {
           vienixSettings.theme = existingTheme;
         }
+      }
+      // إذا لم يكن المستخدم قد خصص اتجاه الكتابة صراحة، نفعّل 'auto' الافتراضي الذكي
+      if (!localStorage.getItem('vienix_text_dir_customized')) {
+        vienixSettings.textDirection = 'auto';
       }
     } catch (e) {
       vienixSettings = Object.assign({}, SETTINGS_DEFAULTS);
@@ -158,7 +162,15 @@
         break;
 
       case 'textDirection':
-        if (editor) editor.dir = value === 'auto' ? 'auto' : value;
+        try { localStorage.setItem('vienix_text_dir_customized', 'true'); } catch (e) {}
+        const dirVal = value === 'auto' ? 'auto' : value;
+        if (editor) editor.dir = dirVal;
+        if (typeof classicEditor !== 'undefined' && classicEditor) classicEditor.dir = dirVal;
+        if (typeof previewContent !== 'undefined' && previewContent) previewContent.dir = dirVal;
+        if (typeof classicOutput !== 'undefined' && classicOutput) classicOutput.dir = dirVal;
+        renderMarkdown();
+        if (typeof renderClassicMarkdown === 'function') renderClassicMarkdown();
+        updateDirectionToolbarUI();
         break;
 
       case 'comfortReadingMode':
@@ -258,8 +270,15 @@
     if (vienixSettings.wordWrap !== undefined && editor) {
       editor.style.whiteSpace = vienixSettings.wordWrap ? 'pre-wrap' : 'pre';
     }
-    if (vienixSettings.textDirection && editor) {
-      editor.dir = vienixSettings.textDirection === 'auto' ? 'auto' : vienixSettings.textDirection;
+    if (vienixSettings.textDirection) {
+      const dirVal = vienixSettings.textDirection === 'auto' ? 'auto' : vienixSettings.textDirection;
+      if (editor) editor.dir = dirVal;
+      if (typeof classicEditor !== 'undefined' && classicEditor) classicEditor.dir = dirVal;
+      if (typeof previewContent !== 'undefined' && previewContent) previewContent.dir = dirVal;
+      if (typeof classicOutput !== 'undefined' && classicOutput) classicOutput.dir = dirVal;
+    }
+    if (typeof updateDirectionToolbarUI === 'function') {
+      updateDirectionToolbarUI();
     }
     if (vienixSettings.accentColor) {
       document.documentElement.style.setProperty('--accent-color', vienixSettings.accentColor);
@@ -784,6 +803,85 @@
       tbl.classList.add('tbl-border-' + borderVal);
       if (roundedVal) tbl.classList.add('tbl-rounded');
     });
+  }
+
+  // ============================================================
+  // محرك فحص الاتجاه الذكي وحماية التوافق اللغوي (Bidi Engine)
+  // ============================================================
+  function detectDocumentDirection(text) {
+    if (!text || typeof text !== 'string') return 'rtl';
+    const match = text.match(/[\p{Script=Arabic}\p{Script=Hebrew}\p{Script=Syriac}\p{Script=Thaana}]|[\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}]/u);
+    if (!match) return 'rtl';
+    return /[\p{Script=Arabic}\p{Script=Hebrew}\p{Script=Syriac}\p{Script=Thaana}]/u.test(match[0]) ? 'rtl' : 'ltr';
+  }
+
+  function applyDirectionToContainer(container) {
+    if (!container) return;
+    const dirSetting = (typeof vienixSettings !== 'undefined' && vienixSettings.textDirection) || 'auto';
+
+    if (dirSetting === 'rtl') {
+      container.dir = 'rtl';
+      container.querySelectorAll('p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, table').forEach(el => {
+        if (!el.closest('pre, code, .mermaid, .mermaid-wrapper')) {
+          el.removeAttribute('dir');
+        }
+      });
+      return;
+    }
+
+    if (dirSetting === 'ltr') {
+      container.dir = 'ltr';
+      container.querySelectorAll('p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, table').forEach(el => {
+        if (!el.closest('pre, code, .mermaid, .mermaid-wrapper')) {
+          el.removeAttribute('dir');
+        }
+      });
+      return;
+    }
+
+    // النمط الافتراضي الذكي (Auto):
+    container.dir = 'auto';
+
+    const blocks = container.querySelectorAll('p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, table');
+    blocks.forEach(el => {
+      if (el.classList.contains('md-blank-line')) return;
+      if (el.closest('pre, code, .mermaid, .mermaid-wrapper')) return;
+      el.setAttribute('dir', 'auto');
+    });
+  }
+
+  window.cycleTextDirection = function () {
+    const current = (typeof vienixSettings !== 'undefined' && vienixSettings.textDirection) || 'auto';
+    let next = 'auto';
+    if (current === 'auto') next = 'rtl';
+    else if (current === 'rtl') next = 'ltr';
+    else if (current === 'ltr') next = 'auto';
+
+    vienixSettings.textDirection = next;
+    saveSettings();
+    applySetting('textDirection', next);
+    const label = next === 'auto' ? 'تلقائي (ذكي)' : (next === 'rtl' ? 'عربي (RTL)' : 'أجنبي (LTR)');
+    showToast(`تم ضبط اتجاه الكتابة: ${label}`, 'info', 1500);
+  };
+
+  function updateDirectionToolbarUI() {
+    const dir = (typeof vienixSettings !== 'undefined' && vienixSettings.textDirection) || 'auto';
+    const btnText = document.getElementById('dir-btn-text');
+    const btnIcon = document.getElementById('dir-btn-icon');
+    if (btnText && btnIcon) {
+      if (dir === 'auto') {
+        btnText.textContent = 'تلقائي';
+        btnIcon.textContent = '🌐';
+      } else if (dir === 'rtl') {
+        btnText.textContent = 'RTL عربي';
+        btnIcon.textContent = '→';
+      } else {
+        btnText.textContent = 'LTR لاتيني';
+        btnIcon.textContent = '←';
+      }
+    }
+    const radio = document.querySelector(`input[name="s-text-dir"][value="${dir}"]`);
+    if (radio) radio.checked = true;
   }
 
   // ============================================================
@@ -1612,6 +1710,9 @@ function exportDocument(format) {
     );
 
     previewContent.innerHTML = html;
+
+    // تطبيق الاتجاه الذكي على المعاينة (Smart Bidirectional)
+    applyDirectionToContainer(previewContent);
 
     // تطبيق CSS classes بعد الرندر على الجداول التي تملك data-border
     applyTableStyles(previewContent);
@@ -2700,9 +2801,13 @@ function exportDocument(format) {
 
       const cleanBody = getCleanExportHTML(contentClone);
 
+      const docDir = (vienixSettings.textDirection && vienixSettings.textDirection !== 'auto') 
+        ? vienixSettings.textDirection 
+        : (detectDocumentDirection(contentClone.innerText || contentClone.textContent) || 'rtl');
+
       const htmlString = `
         <!DOCTYPE html>
-        <html dir="rtl" lang="ar" xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <html dir="${docDir}" lang="${docDir === 'rtl' ? 'ar' : 'en'}" xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
         <head>
           <meta charset="utf-8">
           <title>مستند Vienix Markdown Editor</title>
@@ -2710,19 +2815,21 @@ function exportDocument(format) {
             @page { size: A4 portrait; margin: 2cm; }
             body {
               font-family: 'Tajawal', 'Arial', sans-serif;
-              direction: rtl;
-              text-align: right;
+              direction: ${docDir};
+              text-align: ${docDir === 'rtl' ? 'right' : 'left'};
               line-height: 1.8;
               color: #111;
             }
             h1 { font-size: 22pt; color: #1e3a8a; border-bottom: 2px solid #3b82f6; padding-bottom: 5px; }
             h2 { font-size: 18pt; color: #1e40af; border-bottom: 1px solid #cbd5e1; }
             h3 { font-size: 14pt; color: #2563eb; }
-            table { border-collapse: collapse; width: 100%; margin: 15px 0; direction: rtl; }
-            th, td { border: 1px solid #94a3b8; padding: 8px 12px; text-align: right; }
+            table { border-collapse: collapse; width: 100%; margin: 15px 0; direction: ${docDir}; }
+            th, td { border: 1px solid #94a3b8; padding: 8px 12px; text-align: start; }
             th { background-color: #f1f5f9; font-weight: bold; }
             blockquote {
-              border-right: 4px solid #3b82f6;
+              border-inline-start: 4px solid #3b82f6;
+              border-right: ${docDir === 'rtl' ? '4px solid #3b82f6' : 'none'};
+              border-left: ${docDir === 'ltr' ? '4px solid #3b82f6' : 'none'};
               padding: 8px 15px;
               margin: 15px 0;
               background-color: #f8fafc;
@@ -2739,7 +2846,7 @@ function exportDocument(format) {
             img { max-width: 100%; height: auto; border-radius: 6px; }
           </style>
         </head>
-        <body dir="rtl">
+        <body dir="${docDir}">
           ${cleanBody}
         </body>
         </html>
@@ -2770,8 +2877,12 @@ function exportDocument(format) {
 
     const cleanBody = getCleanExportHTML(previewContent);
 
+    const docDir = (vienixSettings.textDirection && vienixSettings.textDirection !== 'auto') 
+      ? vienixSettings.textDirection 
+      : (detectDocumentDirection(previewContent.innerText || previewContent.textContent) || 'rtl');
+
     const fullHTML = `<!DOCTYPE html>
-<html dir="rtl" lang="ar">
+<html dir="${docDir}" lang="${docDir === 'rtl' ? 'ar' : 'en'}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -2780,8 +2891,8 @@ function exportDocument(format) {
   <style>
     body {
       font-family: 'Tajawal', sans-serif;
-      direction: rtl;
-      text-align: right;
+      direction: ${docDir};
+      text-align: ${docDir === 'rtl' ? 'right' : 'left'};
       line-height: 1.8;
       max-width: 850px;
       margin: 40px auto;
@@ -8130,6 +8241,7 @@ function exportDocument(format) {
         }
       );
       classicOutput.innerHTML = cHtml;
+      applyDirectionToContainer(classicOutput);
       applyTableStyles(classicOutput);
     } else {
       classicOutput.textContent = rawText;
@@ -12280,8 +12392,9 @@ function exportDocument(format) {
     if (autoBrackets) autoBrackets.checked = s.autoBrackets !== false;
     const editorFont = document.getElementById('s-editor-font');
     if (editorFont) editorFont.value = s.editorFont || "'Fira Code', monospace";
-    const textDirRadio = document.querySelector(`input[name="s-text-dir"][value="${s.textDirection || 'rtl'}"]`);
+    const textDirRadio = document.querySelector(`input[name="s-text-dir"][value="${s.textDirection || 'auto'}"]`);
     if (textDirRadio) textDirRadio.checked = true;
+    updateDirectionToolbarUI();
     const autoSave = document.getElementById('s-auto-save-interval');
     if (autoSave) autoSave.value = s.autoSaveInterval || '5000';
 

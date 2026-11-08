@@ -707,6 +707,30 @@ body.is-resizing-workspace .workspace-resizer {
   color: var(--text-secondary);
 }
 
+.panel-dir-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.panel-dir-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--accent-color);
+}
+.panel-dir-btn:active {
+  transform: scale(0.97);
+}
+
 /* ØªØ±ÙˆÙŠØ³Ø© Ù†Ø§ÙØ°Ø© Ø§Ù„Ù…Ø¹Ø§ÙŠÙ†Ø© Ù…Ø¹ Ø£Ø²Ø±Ø§Ø± Ø§Ù„ØªØ­ÙƒÙ… Ù„Ù„Ù…ÙˆØ¨Ø§ÙŠÙ„ */
 .preview-header-actions {
   display: flex;
@@ -1106,8 +1130,24 @@ body.is-resizing-workspace .workspace-resizer {
 .markdown-body ul,
 .markdown-body ol {
   margin-bottom: 1.2em;
+  padding-inline-start: 1.8em;
+  padding-inline-end: 0;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+:root[dir="rtl"] .markdown-body:not([dir="ltr"]) ul:not([dir="ltr"]),
+:root[dir="rtl"] .markdown-body:not([dir="ltr"]) ol:not([dir="ltr"]) {
   padding-right: 1.8em;
   padding-left: 0;
+}
+
+.markdown-body[dir="ltr"] ul,
+.markdown-body[dir="ltr"] ol,
+.markdown-body ul[dir="ltr"],
+.markdown-body ol[dir="ltr"] {
+  padding-left: 1.8em;
+  padding-right: 0;
 }
 
 .markdown-body li {
@@ -1124,9 +1164,23 @@ body.is-resizing-workspace .workspace-resizer {
   margin: 1.4em 0;
   padding: 12px 18px;
   background: var(--bg-hover);
-  border-right: 4px solid var(--accent-color);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  border-inline-start: 4px solid var(--accent-color);
+  border-inline-end: none;
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
+}
+
+:root[dir="rtl"] .markdown-body:not([dir="ltr"]) blockquote:not([dir="ltr"]) {
+  border-right: 4px solid var(--accent-color);
+  border-left: none;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.markdown-body[dir="ltr"] blockquote,
+.markdown-body blockquote[dir="ltr"] {
+  border-left: 4px solid var(--accent-color);
+  border-right: none;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
 }
 
 .markdown-body blockquote p:last-child {
@@ -1171,7 +1225,7 @@ body.is-resizing-workspace .workspace-resizer {
   padding: 10px 14px;
   border-bottom: 1px solid var(--border-color);
   border-inline-end: 1px solid var(--border-color);
-  text-align: right;
+  text-align: start;
   transition: background 0.15s ease;
 }
 
@@ -10677,8 +10731,8 @@ body.zen-reading-mode .zen-mode-floating-btn:hover {
 }
 
 .comfort-reading-mode .markdown-body blockquote {
-  border-right: 3.5px solid #cbd5e1 !important;
-  border-left: none !important;
+  border-inline-start: 3.5px solid #cbd5e1 !important;
+  border-inline-end: none !important;
   padding: 0.6em 1.2em !important;
   margin: 1.3em 0 !important;
   color: #475569 !important;
@@ -10686,16 +10740,62 @@ body.zen-reading-mode .zen-mode-floating-btn:hover {
   border-radius: 6px;
 }
 
+.comfort-reading-mode .markdown-body[dir="ltr"] blockquote,
+.comfort-reading-mode .markdown-body blockquote[dir="ltr"] {
+  border-left: 3.5px solid #cbd5e1 !important;
+  border-right: none !important;
+}
+
 [data-theme="dark"].comfort-reading-mode .markdown-body blockquote {
-  border-right-color: #334155 !important;
+  border-inline-start-color: #334155 !important;
   color: #94a3b8 !important;
   background: rgba(255, 255, 255, 0.03) !important;
 }
 
+[data-theme="dark"].comfort-reading-mode .markdown-body[dir="ltr"] blockquote,
+[data-theme="dark"].comfort-reading-mode .markdown-body blockquote[dir="ltr"] {
+  border-left-color: #334155 !important;
+  border-right: none !important;
+}
+
 .comfort-reading-mode .markdown-body ul,
 .comfort-reading-mode .markdown-body ol {
-  padding-right: 1.7em !important;
+  padding-inline-start: 1.7em !important;
+  padding-inline-end: 0 !important;
   margin-bottom: 1.3em !important;
+}
+
+.comfort-reading-mode .markdown-body[dir="ltr"] ul,
+.comfort-reading-mode .markdown-body[dir="ltr"] ol,
+.comfort-reading-mode .markdown-body ul[dir="ltr"],
+.comfort-reading-mode .markdown-body ol[dir="ltr"] {
+  padding-left: 1.7em !important;
+  padding-right: 0 !important;
+}
+
+/* دعم المحاذاة التلقائية الذكية للفقرات الأجنبية والعربية */
+.markdown-body [dir="ltr"],
+.markdown-body[dir="ltr"] p,
+.markdown-body[dir="ltr"] h1,
+.markdown-body[dir="ltr"] h2,
+.markdown-body[dir="ltr"] h3,
+.markdown-body[dir="ltr"] h4,
+.markdown-body[dir="ltr"] h5,
+.markdown-body[dir="ltr"] h6 {
+  text-align: left;
+  direction: ltr;
+}
+
+.markdown-body [dir="rtl"],
+.markdown-body[dir="rtl"] p,
+.markdown-body[dir="rtl"] h1,
+.markdown-body[dir="rtl"] h2,
+.markdown-body[dir="rtl"] h3,
+.markdown-body[dir="rtl"] h4,
+.markdown-body[dir="rtl"] h5,
+.markdown-body[dir="rtl"] h6 {
+  text-align: right;
+  direction: rtl;
 }
 
 .comfort-reading-mode .markdown-body li {

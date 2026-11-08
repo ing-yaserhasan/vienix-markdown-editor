@@ -474,7 +474,13 @@
       <!-- Editor Panel -->
       <section class="panel panel-editor" id="panel-editor">
         <div class="panel-header">
-          <span>محرر الماركداون (Markdown RTL)</span>
+          <div class="panel-header-title-group" style="display:inline-flex; align-items:center; gap:8px;">
+            <span>محرر الماركداون</span>
+            <button type="button" class="panel-dir-btn" id="btn-toggle-direction" onclick="cycleTextDirection()" title="تبديل اتجاه الكتابة: تلقائي ذكي ⇄ عربي (RTL) ⇄ أجنبي (LTR)">
+              <span id="dir-btn-icon">🌐</span>
+              <span id="dir-btn-text">تلقائي</span>
+            </button>
+          </div>
           <span class="badge" id="save-status">تم الحفظ تلقائياً ✓</span>
         </div>
         <div class="editor-wrapper">
@@ -1926,9 +1932,9 @@
             <div class="settings-group">
               <label class="settings-label">اتجاه الكتابة الافتراضي</label>
               <div class="settings-radio-group">
-                <label class="settings-radio-pill"><input type="radio" name="s-text-dir" value="rtl" checked onchange="applySetting('textDirection', 'rtl')"><span>→ RTL (عربي)</span></label>
+                <label class="settings-radio-pill"><input type="radio" name="s-text-dir" value="auto" checked onchange="applySetting('textDirection', 'auto')"><span><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>تلقائي (ذكي)</span></label>
+                <label class="settings-radio-pill"><input type="radio" name="s-text-dir" value="rtl" onchange="applySetting('textDirection', 'rtl')"><span>→ RTL (عربي)</span></label>
                 <label class="settings-radio-pill"><input type="radio" name="s-text-dir" value="ltr" onchange="applySetting('textDirection', 'ltr')"><span>← LTR (لاتيني)</span></label>
-                <label class="settings-radio-pill"><input type="radio" name="s-text-dir" value="auto" onchange="applySetting('textDirection', 'auto')"><span><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>تلقائي</span></label>
               </div>
             </div>
 
