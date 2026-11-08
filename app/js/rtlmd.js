@@ -12554,6 +12554,17 @@ function exportDocument(format) {
   }
   window.showSpeechWarningToast = showSpeechWarningToast;
 
+  // تنظيف النص قبل إرساله لمحرك الصوت (حذف علامات الماركداون والترقيم مثل ؟:-., لضمان عدم لفظ أسمائها)
+  function cleanTextForSpeech(text) {
+    if (!text) return '';
+    return text
+      .replace(/[*_#`~[\]()]/g, ' ')
+      .replace(/[?؟:;!.,\-—–…/\\^|<>{}"'«»“”„]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+  window.cleanTextForSpeech = cleanTextForSpeech;
+
   function speakText(text, explicitLang, callbacks = {}) {
     if (!text || typeof speechSynthesis === 'undefined' || !window.speechSynthesis) {
       showSpeechWarningToast('متصفحك الحالي يقيّد النطق الصوتي، يُرجى استخدام Chrome أو تفعيل حزمة الصوت من إعدادات الهاتف ⚠️');
@@ -12570,7 +12581,7 @@ function exportDocument(format) {
       }
     }
 
-    const cleanSpeech = text.replace(/[*_#`~[\]()]/g, ' ').replace(/\s+/g, ' ').trim();
+    const cleanSpeech = cleanTextForSpeech(text);
     if (!cleanSpeech) return null;
 
     window._isPronunciationSpeaking = true;
@@ -12680,15 +12691,16 @@ function exportDocument(format) {
     const wordSpans = phraseWrapper ? Array.from(phraseWrapper.querySelectorAll('.pronunciation-word')) : [];
 
     let wordOffsets = [];
-    const cleanSpeech = text.replace(/[*_#`~[\]()]/g, ' ').replace(/\s+/g, ' ').trim();
+    const cleanSpeech = cleanTextForSpeech(text);
     if (vienixSettings.syncWordHighlight && wordSpans.length > 0) {
       let searchPos = 0;
       wordOffsets = wordSpans.map(span => {
         const w = (span.getAttribute('data-word') || span.textContent).trim();
-        const idx = cleanSpeech.toLowerCase().indexOf(w.toLowerCase(), searchPos);
+        const cleanW = cleanTextForSpeech(w) || w;
+        const idx = cleanSpeech.toLowerCase().indexOf(cleanW.toLowerCase(), searchPos);
         if (idx !== -1) {
-          searchPos = idx + w.length;
-          return { span, start: idx, end: idx + w.length };
+          searchPos = idx + cleanW.length;
+          return { span, start: idx, end: idx + cleanW.length };
         }
         return { span, start: -1, end: -1 };
       });
@@ -13635,8 +13647,14 @@ function exportDocument(format) {
           parts.push({ type: 'text', content: text.substring(lastIndex, match.index) });
         }
 
-        parts.push({ type: 'phrase', content: phrase });
-        lastIndex = match.index + match[0].length;
+        // دمج علامات الترقيم والإشارات التابعة لنهاية العبارة مباشرة (مثل ؟:-.,! وغيرها)
+        const afterMatchIndex = match.index + match[0].length;
+        const trailingMatch = text.slice(afterMatchIndex).match(/^([^\S\r\n]*[.?!\:;،؟…\-—–,]+(?:[^\S\r\n]+[.?!\:;،؟…\-—–,]+)*)/);
+        const trailingPunct = trailingMatch ? trailingMatch[1] : '';
+
+        parts.push({ type: 'phrase', content: phrase, trailingPunct: trailingPunct });
+        lastIndex = afterMatchIndex + trailingPunct.length;
+        PHRASE_REGEX.lastIndex = lastIndex;
       }
 
       if (parts.length === 0) return;
@@ -13654,12 +13672,13 @@ function exportDocument(format) {
         } else {
           hasPronounceable = true;
           const detectedLang = vienixSettings.targetLanguage !== 'auto' ? vienixSettings.targetLanguage : (detectLanguage(part.content) || 'de-AT');
+          const fullPhraseText = part.content + (part.trailingPunct ? part.trailingPunct.trim() : '');
 
           // Phrase wrapper for bidirectional LTR isolation
           const phraseWrapper = document.createElement('span');
           phraseWrapper.className = 'pronunciation-phrase';
           phraseWrapper.setAttribute('dir', 'ltr');
-          phraseWrapper.setAttribute('data-phrase', part.content);
+          phraseWrapper.setAttribute('data-phrase', fullPhraseText);
           phraseWrapper.setAttribute('data-lang', detectedLang);
 
           // Split phrase into word tokens and separators
@@ -13674,7 +13693,7 @@ function exportDocument(format) {
               wordSpan.setAttribute('data-lang', detectedLang);
               wordSpan.title = `انقر لنطق: ${tok}`;
 
-                            if (mode === 'click' || mode === 'mixed') {
+              if (mode === 'click' || mode === 'mixed') {
                 wordSpan.addEventListener('click', function (e) {
                   e.stopPropagation();
                   e.preventDefault();
@@ -13690,13 +13709,18 @@ function exportDocument(format) {
             }
           });
 
+          // دمج علامات الترقيم التابعة للجملة في نهايتها مباشرة داخل الغلاف وقبل أزرار النطق والترجمة
+          if (part.trailingPunct) {
+            phraseWrapper.appendChild(document.createTextNode(part.trailingPunct));
+          }
+
           // Speaker icon button for phrase pronunciation (20px round, sleek indigo)
           if (mode === 'icon' || mode === 'mixed') {
             const speakerBtn = document.createElement('button');
             speakerBtn.type = 'button';
             speakerBtn.className = 'pronunciation-speaker-btn';
-            speakerBtn.title = `🔊 استمع للعبارة: ${part.content} (نقر مطول أو زر يمين للخيارات)`;
-            speakerBtn.setAttribute('aria-label', `Listen to ${part.content}`);
+            speakerBtn.title = `🔊 استمع للعبارة: ${fullPhraseText} (نقر مطول أو زر يمين للخيارات)`;
+            speakerBtn.setAttribute('aria-label', `Listen to ${fullPhraseText}`);
             speakerBtn.innerHTML = speakerSvg;
 
             // Long-press detection on touch screens (Mobile/Tablet)
@@ -13715,7 +13739,7 @@ function exportDocument(format) {
                   if (navigator.vibrate) try { navigator.vibrate(40); } catch (_) {}
                   openPronunciationContextMenu(
                     { clientX: touchStartX, clientY: touchStartY },
-                    part.content,
+                    fullPhraseText,
                     detectedLang,
                     speakerBtn
                   );
@@ -13744,14 +13768,14 @@ function exportDocument(format) {
               e.preventDefault();
               if (hasTriggeredLongPress) { hasTriggeredLongPress = false; return; }
               const effectiveLang = phraseWrapper.getAttribute('data-override-lang') || phraseWrapper.getAttribute('data-lang') || detectedLang;
-              speakPronunciation(part.content, this, effectiveLang);
+              speakPronunciation(fullPhraseText, this, effectiveLang);
             });
 
             speakerBtn.addEventListener('contextmenu', function (e) {
               e.stopPropagation();
               e.preventDefault();
               const effectiveLang = phraseWrapper.getAttribute('data-override-lang') || phraseWrapper.getAttribute('data-lang') || detectedLang;
-              openPronunciationContextMenu(e, part.content, effectiveLang, this);
+              openPronunciationContextMenu(e, fullPhraseText, effectiveLang, this);
             });
 
             phraseWrapper.appendChild(speakerBtn);
@@ -13762,7 +13786,7 @@ function exportDocument(format) {
           transBox.className = 'inline-translation-box';
           transBox.setAttribute('dir', 'rtl');
           transBox.innerHTML = '<div class="itb-loading"><span class="wtb-spinner"></span><span>جارٍ استحضار ترجمة العبارة...</span></div><p class="itb-text" style="display:none;"></p>';
-          transBox._phrase = part.content;
+          transBox._phrase = fullPhraseText;
           transBox._lang = detectedLang;
           transBox._wrapper = phraseWrapper;
           transBox._associatedBtn = null;
@@ -13777,7 +13801,7 @@ function exportDocument(format) {
             transBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>';
 
             transBtn._associatedBox = transBox;
-            transBtn._associatedPhrase = part.content;
+            transBtn._associatedPhrase = fullPhraseText;
             transBtn._associatedLang = detectedLang;
             transBox._associatedBtn = transBtn;
 
@@ -13785,7 +13809,7 @@ function exportDocument(format) {
               e.stopPropagation();
               e.preventDefault();
               const effectiveLang = phraseWrapper.getAttribute('data-override-lang') || detectedLang;
-              toggleInlinePhraseTranslation(transBtn, transBox, part.content, effectiveLang, false);
+              toggleInlinePhraseTranslation(transBtn, transBox, fullPhraseText, effectiveLang, false);
             });
 
             phraseWrapper.appendChild(transBtn);
@@ -13818,7 +13842,7 @@ function exportDocument(format) {
             // نسخ نص الترجمة إن كان جاهزاً، وإلا نسخ العبارة الأصلية
             const transEl = transBox.querySelector('.itb-text');
             const transText = (transEl && transEl.innerText) ? transEl.innerText.trim() : '';
-            const textToCopy = transText || part.content;
+            const textToCopy = transText || fullPhraseText;
 
             navigator.clipboard.writeText(textToCopy).then(() => {
               copyBtn.classList.add('copied');
@@ -13876,7 +13900,7 @@ function exportDocument(format) {
             e.preventDefault();
             // استدعاء وظيفة فتح AI مع نص العبارة
             if (typeof window.openAiChatWithPhrase === 'function') {
-              window.openAiChatWithPhrase(part.content, this);
+              window.openAiChatWithPhrase(fullPhraseText, this);
             }
           });
 
