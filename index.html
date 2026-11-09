@@ -2266,8 +2266,8 @@
             <p class="settings-section-desc">هذه المفاتيح اختيارية. المحرر يعمل بالكامل بدونها. تُحفظ محلياً فقط ولا تُرسل لأي خادم.</p>
 
             <div class="settings-group">
-              <label class="settings-label">مفتاح Google Cloud TTS</label>
-              <p class="settings-hint">للحصول على جودة نطق عالية (WaveNet). <a href="https://cloud.google.com/text-to-speech/docs/quickstart-client-libraries" target="_blank" rel="noopener">كيف تحصل على المفتاح؟</a></p>
+              <label class="settings-label">مفتاح Google Cloud TTS <span style="font-size:11px; font-weight:normal; color:var(--text-tertiary,#94a3b8);">(خاص بالنطق الصوتي فقط — وليس مساعد Gemini)</span></label>
+              <p class="settings-hint">للحصول على جودة نطق صوتي عالية (WaveNet). <a href="https://cloud.google.com/text-to-speech/docs/quickstart-client-libraries" target="_blank" rel="noopener">كيف تحصل على المفتاح؟</a> <span style="color:var(--accent-color,#6366f1); cursor:pointer; text-decoration:underline;" onclick="switchSettingsTab('ai')">» لإعداد مفتاح الذكاء الاصطناعي اضغط هنا (قسم AI)</span></p>
               <div class="settings-api-row">
                 <input type="password" class="settings-input" id="s-google-tts-key" placeholder="AIza..." oninput="applySetting('googleTtsKey', this.value)">
                 <button class="settings-mini-btn" onclick="toggleApiKeyVisibility('s-google-tts-key')" title="إظهار/إخفاء"><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
@@ -2307,13 +2307,15 @@
             <div class="settings-group">
               <label class="settings-label">نموذج الذكاء الاصطناعي</label>
               <select class="settings-input" id="s-ai-model" onchange="saveAiModel(this.value)" style="cursor:pointer;">
-                <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (الموصى به — أسرع)</option>
+                <option value="gemini-2.5-flash">Gemini 2.5 Flash (الافتراضي — الأحدث والأقوى)</option>
+                <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (الأسرع)</option>
+                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
                 <option value="gemini-3.8-flash">Gemini 3.8 Flash</option>
                 <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash Lite</option>
                 <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
-                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
               </select>
-              <p class="settings-hint">النموذج الافتراضي يوفر استجابة شبه لحظية (~500ms) وحصص مجانية كبيرة. إذا لم يتوفر النموذج المختار سيتم الانتقال للبديل تلقائياً.</p>
+              <p class="settings-hint">النموذج الافتراضي Gemini 2.5 Flash يجمع بين الدقة والسرعة وحصص مجانية كبيرة. إذا تعذر الاتصال بنموذج يتم الانتقال للبديل تلقائياً.</p>
             </div>
 
             <!-- API Keys -->
@@ -2321,9 +2323,10 @@
               <label class="settings-label">مفاتيح Gemini API</label>
               <p class="settings-hint">أضف مفتاحاً أو أكثر. عند استنفاد حصة مفتاح يتم التدوير للمفتاح التالي تلقائياً. <a href="https://aistudio.google.com/" target="_blank" rel="noopener">احصل على مفتاح مجاني</a></p>
               <div class="settings-api-row" style="margin-bottom:8px;">
-                <input type="password" class="settings-input" id="s-ai-new-key" placeholder="AIza... (الصق مفتاح Gemini API هنا)" onkeydown="if(event.key==='Enter') addAiKey()">
-                <button class="settings-mini-btn" onclick="toggleApiKeyVisibility('s-ai-new-key')" title="إظهار/إخفاء"><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
-                <button class="settings-mini-btn" onclick="addAiKey()" title="إضافة المفتاح" style="color:#10b981; font-weight:700;"><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg><span>إضافة</span></button>
+                <input type="password" class="settings-input" id="s-ai-new-key" placeholder="AIza... (الصق مفتاح Gemini API هنا)" onkeydown="if(event.key==='Enter') addAiKey()" onblur="if(typeof savePendingAiKey==='function') savePendingAiKey()" onpaste="setTimeout(function(){ if(typeof savePendingAiKey==='function') savePendingAiKey(); }, 80)">
+                <button type="button" class="settings-mini-btn" onclick="toggleApiKeyVisibility('s-ai-new-key')" title="إظهار/إخفاء"><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                <button type="button" class="settings-mini-btn" onclick="addAiKey()" title="إضافة وحفظ المفتاح" style="color:#10b981; font-weight:700;"><svg class="ui-icon" viewBox="0 0 24 24" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg><span>إضافة</span></button>
+                <button type="button" class="settings-mini-btn" onclick="testGeminiKey()" title="اختبار الاتصال بالمفتاح" style="color:#0284c7; font-weight:600;"><svg class="ui-icon" viewBox="0 0 24 24" width="13" height="13"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg><span>اختبار</span></button>
               </div>
               <div id="ai-keys-list"></div>
             </div>
@@ -2439,9 +2442,9 @@
     var AI_ENABLED_STORAGE = 'vienix_ai_enabled';
     var AI_KEY_INDEX_STORAGE = 'vienix_ai_key_idx';
     var AI_CHAT_STORAGE = 'vienix_ai_chat_history';
-    var DEFAULT_AI_MODEL = 'gemini-2.0-flash-lite';
+    var DEFAULT_AI_MODEL = 'gemini-2.5-flash';
     var GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
-    var CANDIDATE_MODELS = ['gemini-2.0-flash-lite','gemini-3.8-flash','gemini-3.5-flash-lite','gemini-2.5-flash-lite','gemini-1.5-flash'];
+    var CANDIDATE_MODELS = ['gemini-2.5-flash','gemini-2.0-flash-lite','gemini-2.0-flash','gemini-1.5-flash','gemini-3.8-flash','gemini-3.5-flash-lite','gemini-2.5-flash-lite'];
 
     function _b64e(s) { try { return btoa(unescape(encodeURIComponent(s))); } catch(e) { return ''; } }
     function _b64d(s) { try { return decodeURIComponent(escape(atob(s))); } catch(e) { return ''; } }
@@ -2765,6 +2768,58 @@
       saveAiKeys(keys);
       inp.value = '';
       inp.type = 'password';
+    };
+
+    // حفظ المفتاح إن كان مكتوباً في الحقل دون الضغط على "إضافة"
+    window.savePendingAiKey = function() {
+      var inp = document.getElementById('s-ai-new-key');
+      if (!inp) return;
+      var val = inp.value.trim();
+      if (!val) return;
+      var keys = loadAiKeys();
+      // تجنب التكرار
+      if (keys.indexOf(val) === -1) {
+        keys.push(val);
+        saveAiKeys(keys);
+      }
+      inp.value = '';
+      inp.type = 'password';
+    };
+
+    // اختبار مفتاح Gemini API
+    window.testGeminiKey = function() {
+      var inp = document.getElementById('s-ai-new-key');
+      var keyToTest = (inp && inp.value.trim()) || '';
+      if (!keyToTest) {
+        var keys = loadAiKeys();
+        keyToTest = keys.length ? keys[0] : '';
+      }
+      if (!keyToTest) {
+        if (typeof showToast === 'function') showToast('لم يتم إدخال أي مفتاح للاختبار', 'error');
+        return;
+      }
+      var model = loadAiModel() || DEFAULT_AI_MODEL;
+      var url = GEMINI_API_BASE + '/models/' + model + ':generateContent?key=' + keyToTest.trim();
+      if (typeof showToast === 'function') showToast('جاري اختبار المفتاح...', 'info', 2000);
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: 'مرحبا' }] }], generationConfig: { maxOutputTokens: 10 } })
+      }).then(function(res) {
+        if (res.ok || res.status === 200) {
+          if (typeof showToast === 'function') showToast('✅ المفتاح صحيح وشغال!', 'success', 3000);
+        } else if (res.status === 400) {
+          if (typeof showToast === 'function') showToast('✅ المفتاح صحيح (استجابة 400 متوقعة)', 'success', 3000);
+        } else if (res.status === 403 || res.status === 401) {
+          if (typeof showToast === 'function') showToast('❌ المفتاح غير صالح أو منتهي الصلاحية (403)', 'error', 4000);
+        } else if (res.status === 429) {
+          if (typeof showToast === 'function') showToast('⚠️ المفتاح صحيح لكن استنفد الحصة (429)', 'info', 4000);
+        } else {
+          if (typeof showToast === 'function') showToast('خطأ ' + res.status + ' — تحقق من المفتاح', 'error', 4000);
+        }
+      }).catch(function(err) {
+        if (typeof showToast === 'function') showToast('تعذر الاتصال: ' + err.message, 'error', 4000);
+      });
     };
 
     window.removeAiKey = function(idx) {

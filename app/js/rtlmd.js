@@ -12202,12 +12202,18 @@ function exportDocument(format) {
 
   window.closeSettingsModal = function (event) {
     if (event && event.target !== event.currentTarget) return;
+    if (typeof window.savePendingAiKey === 'function') {
+      try { window.savePendingAiKey(); } catch (_) {}
+    }
     const overlay = document.getElementById('settings-modal-overlay');
     if (overlay) overlay.classList.remove('active');
     document.body.style.overflow = '';
   };
 
   window.switchSettingsTab = function (tabId) {
+    if (typeof window.savePendingAiKey === 'function') {
+      try { window.savePendingAiKey(); } catch (_) {}
+    }
     document.querySelectorAll('.settings-tab-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.tab === tabId);
     });
