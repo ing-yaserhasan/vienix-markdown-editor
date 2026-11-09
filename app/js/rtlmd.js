@@ -13619,10 +13619,16 @@ function exportDocument(format) {
         const parent = node.parentElement;
         if (!parent) return NodeFilter.FILTER_REJECT;
         const tag = parent.tagName;
+        // تجاهل العناصر التقنية والكود والأزرار
         if (['CODE', 'PRE', 'SCRIPT', 'STYLE', 'SVG', 'BUTTON'].includes(tag)) return NodeFilter.FILTER_REJECT;
-        if (parent.closest('pre, code, .mermaid, .mermaid-wrapper, script, style, .diagram-zoom-controls, .preview-tools, .image-resizer-wrapper, .pronunciation-phrase, .pronunciation-word, .pronunciation-speaker-btn')) {
+        // تجاهل الروابط <a> بالكامل — لا نطق على URLs
+        if (tag === 'A') return NodeFilter.FILTER_REJECT;
+        if (parent.closest('pre, code, a, .mermaid, .mermaid-wrapper, script, style, .diagram-zoom-controls, .preview-tools, .image-resizer-wrapper, .pronunciation-phrase, .pronunciation-word, .pronunciation-speaker-btn')) {
           return NodeFilter.FILTER_REJECT;
         }
+        // تجاهل أي نص يحتوي على URL أو بروتوكول شبكي
+        const txt = node.textContent || '';
+        if (/https?:\/\/|ftp:\/\/|www\./i.test(txt)) return NodeFilter.FILTER_REJECT;
         return NodeFilter.FILTER_ACCEPT;
       }
     });
@@ -13639,6 +13645,9 @@ function exportDocument(format) {
       const text = textNode.textContent;
       if (!text || text.trim().length === 0) return;
 
+      // ── تجاهل النصوص التي تحتوي على روابط أو بروتوكولات شبكية بالكامل ──
+      if (/https?:\/\/|ftp:\/\/|www\./i.test(text)) return;
+
       PHRASE_REGEX.lastIndex = 0;
       let match;
       const parts = [];
@@ -13648,6 +13657,26 @@ function exportDocument(format) {
         const phrase = match[1].trim();
         // Ignore single non-word characters
         if (phrase.length < 1) continue;
+
+        // ── تجاهل العبارات التي تبدو أجزاء من URL أو مسارات ──
+        // يتحقق من الحرف السابق واللاحق للعبارة في النص الأصلي
+        const charBefore = match.index > 0 ? text[match.index - 1] : '';
+        const charAfter = text[match.index + match[0].length] || '';
+        const isUrlFragment =
+          /[\/\\.@#?=&%_~]/.test(charBefore) ||   // يسبقها رمز URL
+          /[\/\\.@#?=&%_~:]/.test(charAfter) ||   // يليها رمز URL
+          /^(https?|ftp|www|mailto|tel|file)$/i.test(phrase); // كلمات بروتوكول
+        if (isUrlFragment) {
+          // أضفها كنص عادي وانتقل للتالية
+          if (match.index > lastIndex) {
+            parts.push({ type: 'text', content: text.substring(lastIndex, match.index + match[0].length) });
+          } else {
+            parts.push({ type: 'text', content: match[0] });
+          }
+          lastIndex = match.index + match[0].length;
+          PHRASE_REGEX.lastIndex = lastIndex;
+          continue;
+        }
 
         if (match.index > lastIndex) {
           parts.push({ type: 'text', content: text.substring(lastIndex, match.index) });
