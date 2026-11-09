@@ -12491,7 +12491,12 @@ function exportDocument(format) {
   function detectLanguage(text) {
     if (!text || text.trim().length === 0) return null;
     const cleaned = text.replace(/[\d\s\p{P}\p{S}]/gu, '');
-    if (cleaned.length === 0) return null;
+    if (cleaned.length === 0) {
+      // إذا كان النص أرقاماً فقط (مثل 33 أو 956)، نعتمد لغة التعلم المختارة أو الافتراضية لنطق الأرقام بها
+      return (typeof vienixSettings !== 'undefined' && vienixSettings.targetLanguage && vienixSettings.targetLanguage !== 'auto')
+        ? vienixSettings.targetLanguage
+        : 'de-AT';
+    }
 
     // Arabic check
     const arabicChars = (cleaned.match(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g) || []).length;
@@ -13639,8 +13644,8 @@ function exportDocument(format) {
     // تعبير منتظم شامل لاستكشاف الروابط والرموز التقنية والمطابقات التي يجب استثناؤها تماماً من النطق
     const SKIP_TECH_REGEX = /(?:https?:\/\/|ftp:\/\/|www\.)[^\s<]+|(?:[a-zA-Z0-9-]+\.)+(?:com|org|net|edu|gov|io|ai|de|at|ch|uk|fr|co|app|dev|me|info|tv|xyz|site|online)(?:\/[^\s<]*)?|\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b|\b[a-zA-Z0-9_\-]+\.(?:html?|css|js|jsx|ts|tsx|json|png|jpe?g|gif|svg|webp|ico|pdf|docx?|xlsx?|zip|tar|gz|mp3|mp4|wav)\b|(?:\/)?@[a-zA-Z0-9._\-]+|#[a-zA-Z0-9_\-]+|\b\w*_\w+\b/gi;
 
-    // تعبير مطابقة العبارات الطبيعية اللاتينية/الأجنبية (على مستوى نفس السطر فقط دون ابتلاع الفواصل السطرية)
-    const PHRASE_REGEX = /([\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}\p{Script=Hangul}]+(?:[^\S\r\n',’\-]+[\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}\p{Script=Hangul}]+)*)/gu;
+    // تعبير مطابقة العبارات الطبيعية اللاتينية/الأجنبية والأرقام (على مستوى نفس السطر فقط دون ابتلاع الفواصل السطرية)
+    const PHRASE_REGEX = /([\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}\p{Script=Hangul}\p{N}]+(?:[^\S\r\n',’\-]+[\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}\p{Script=Hangul}\p{N}]+)*)/gu;
     // التحقق من احتواء الكلمة على حرف صوتي (Vowel) لضمان أنها كلمة لغوية حقيقية وليست شفرة تقنية (مثل ZS أو Db أو v2)
     const VOWEL_CHECK = /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}\p{Script=Hangul}]|[aeiouyäöüßéèêëàâùûîïôœæáíóúñ]/i;
 
@@ -13670,7 +13675,7 @@ function exportDocument(format) {
         tokens.push({ isSkip: false, content: text.substring(lastScanIdx) });
       }
 
-      // 2. معالجة المقاطع واستخراج العبارات اللغوية الصالحة للنطق فقط
+      // 2. معالجة المقاطع واستخراج العبارات اللغوية الصالحة للنطق فقط (مع معاملة الأرقام مثل النصوص)
       const parts = [];
       tokens.forEach(tok => {
         if (tok.isSkip) {
@@ -13689,11 +13694,15 @@ function exportDocument(format) {
           const beforeChar = pStart > 0 ? tok.content[pStart - 1] : '';
           const afterChar = pEnd < tok.content.length ? tok.content[pEnd] : '';
 
+          // معاملة الأرقام معاملة النصوص: هل العبارة عبارة عن رقم خالص أو تحتوي أرقاماً؟
+          const isPureOrMixedNumber = /^[\p{N}\s.,\-+]+$/u.test(phrase) || /\p{N}/u.test(phrase);
+          const hasVowels = VOWEL_CHECK.test(phrase);
+
           // تجاهل الكلمات المجاورة لرموز تقنية أو رموز URL أو الكلمات البرمجية المجردة
           if (/[\/\\@#$%=&_~^|<>]/.test(beforeChar) || /[\/\\@#$%=&_~^|<>]/.test(afterChar) ||
               /^(https?|ftp|www|com|org|net|html|css|js|php|api|key)$/i.test(phrase) ||
-              !VOWEL_CHECK.test(phrase) ||
-              (phrase.length < 2 && !/^[aAiIoOuU]$/.test(phrase))) {
+              (!isPureOrMixedNumber && !hasVowels) ||
+              (!isPureOrMixedNumber && phrase.length < 2 && !/^[aAiIoOuU]$/.test(phrase))) {
             if (pStart > subLast) parts.push({ type: 'text', content: tok.content.substring(subLast, pEnd) });
             else parts.push({ type: 'text', content: pm[0] });
             subLast = pEnd;
