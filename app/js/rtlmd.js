@@ -13619,16 +13619,14 @@ function exportDocument(format) {
         const parent = node.parentElement;
         if (!parent) return NodeFilter.FILTER_REJECT;
         const tag = parent.tagName;
-        // تجاهل العناصر التقنية والكود والأزرار
-        if (['CODE', 'PRE', 'SCRIPT', 'STYLE', 'SVG', 'BUTTON'].includes(tag)) return NodeFilter.FILTER_REJECT;
-        // تجاهل الروابط <a> بالكامل — لا نطق على URLs
-        if (tag === 'A') return NodeFilter.FILTER_REJECT;
-        if (parent.closest('pre, code, a, .mermaid, .mermaid-wrapper, script, style, .diagram-zoom-controls, .preview-tools, .image-resizer-wrapper, .pronunciation-phrase, .pronunciation-word, .pronunciation-speaker-btn')) {
+        // تجاهل العناصر التقنية والكود والأزرار والحقول
+        if (['CODE', 'PRE', 'SCRIPT', 'STYLE', 'SVG', 'BUTTON', 'INPUT', 'TEXTAREA'].includes(tag)) return NodeFilter.FILTER_REJECT;
+        // تجاهل الروابط <a> بالكامل — لا نطق إطلاقاً على أي رابط
+        if (tag === 'A' || parent.closest('a')) return NodeFilter.FILTER_REJECT;
+        // تجاهل أي نص يقع داخل كتل الأكواد أو المخططات أو عناصر النطق الموجودة مسبقاً
+        if (parent.closest('pre, code, a, .mermaid, .mermaid-wrapper, script, style, .diagram-zoom-controls, .preview-tools, .image-resizer-wrapper, .pronunciation-phrase, .pronunciation-word, .pronunciation-speaker-btn, .inline-translation-box')) {
           return NodeFilter.FILTER_REJECT;
         }
-        // تجاهل أي نص يحتوي على URL أو بروتوكول شبكي
-        const txt = node.textContent || '';
-        if (/https?:\/\/|ftp:\/\/|www\./i.test(txt)) return NodeFilter.FILTER_REJECT;
         return NodeFilter.FILTER_ACCEPT;
       }
     });
@@ -13638,65 +13636,90 @@ function exportDocument(format) {
       textNodes.push(walker.currentNode);
     }
 
-    // Regex for foreign word sequences (Latin, Cyrillic, Greek, CJK, etc.)
-    const PHRASE_REGEX = /([\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}\p{Script=Hangul}]+(?:[\s',’\-]+[\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}\p{Script=Hangul}]+)*)/gu;
+    // تعبير منتظم شامل لاستكشاف الروابط والرموز التقنية والمطابقات التي يجب استثناؤها تماماً من النطق
+    const SKIP_TECH_REGEX = /(?:https?:\/\/|ftp:\/\/|www\.)[^\s<]+|(?:[a-zA-Z0-9-]+\.)+(?:com|org|net|edu|gov|io|ai|de|at|ch|uk|fr|co|app|dev|me|info|tv|xyz|site|online)(?:\/[^\s<]*)?|\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b|\b[a-zA-Z0-9_\-]+\.(?:html?|css|js|jsx|ts|tsx|json|png|jpe?g|gif|svg|webp|ico|pdf|docx?|xlsx?|zip|tar|gz|mp3|mp4|wav)\b|(?:\/)?@[a-zA-Z0-9._\-]+|#[a-zA-Z0-9_\-]+|\b\w*_\w+\b/gi;
+
+    // تعبير مطابقة العبارات الطبيعية اللاتينية/الأجنبية (على مستوى نفس السطر فقط دون ابتلاع الفواصل السطرية)
+    const PHRASE_REGEX = /([\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}\p{Script=Hangul}]+(?:[^\S\r\n',’\-]+[\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}\p{Script=Hangul}]+)*)/gu;
+    // التحقق من احتواء الكلمة على حرف صوتي (Vowel) لضمان أنها كلمة لغوية حقيقية وليست شفرة تقنية (مثل ZS أو Db أو v2)
+    const VOWEL_CHECK = /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}\p{Script=Hangul}]|[aeiouyäöüßéèêëàâùûîïôœæáíóúñ]/i;
 
     textNodes.forEach(textNode => {
       const text = textNode.textContent;
       if (!text || text.trim().length === 0) return;
 
-      // ── تجاهل النصوص التي تحتوي على روابط أو بروتوكولات شبكية بالكامل ──
-      if (/https?:\/\/|ftp:\/\/|www\./i.test(text)) return;
+      // إذا كان كامل النص عبارة عن رابط صريح فقط، لا تقترب منه واتركه كما هو
+      if (/^(?:https?:\/\/|ftp:\/\/|www\.)\S+$/i.test(text.trim()) ||
+          /^(?:[a-zA-Z0-9-]+\.)+(?:com|org|net|edu|gov|io|ai|de|at|ch|uk|fr|co|app|dev|me|info|tv)\S*$/i.test(text.trim())) {
+        return;
+      }
 
-      PHRASE_REGEX.lastIndex = 0;
-      let match;
+      // 1. تقسيم النص إلى مقاطع: مقاطع تقنية (روابط/شفرات) ومقاطع نص طبيعي
+      const tokens = [];
+      let lastScanIdx = 0;
+      let sm;
+      SKIP_TECH_REGEX.lastIndex = 0;
+      while ((sm = SKIP_TECH_REGEX.exec(text)) !== null) {
+        if (sm.index > lastScanIdx) {
+          tokens.push({ isSkip: false, content: text.substring(lastScanIdx, sm.index) });
+        }
+        tokens.push({ isSkip: true, content: sm[0] });
+        lastScanIdx = sm.index + sm[0].length;
+      }
+      if (lastScanIdx < text.length) {
+        tokens.push({ isSkip: false, content: text.substring(lastScanIdx) });
+      }
+
+      // 2. معالجة المقاطع واستخراج العبارات اللغوية الصالحة للنطق فقط
       const parts = [];
-      let lastIndex = 0;
+      tokens.forEach(tok => {
+        if (tok.isSkip) {
+          parts.push({ type: 'text', content: tok.content });
+          return;
+        }
 
-      while ((match = PHRASE_REGEX.exec(text)) !== null) {
-        const phrase = match[1].trim();
-        // Ignore single non-word characters
-        if (phrase.length < 1) continue;
+        let subLast = 0;
+        let pm;
+        PHRASE_REGEX.lastIndex = 0;
+        while ((pm = PHRASE_REGEX.exec(tok.content)) !== null) {
+          const phrase = pm[1].trim();
+          const pStart = pm.index;
+          const pEnd = pm.index + pm[0].length;
 
-        // ── تجاهل العبارات التي تبدو أجزاء من URL أو مسارات ──
-        // يتحقق من الحرف السابق واللاحق للعبارة في النص الأصلي
-        const charBefore = match.index > 0 ? text[match.index - 1] : '';
-        const charAfter = text[match.index + match[0].length] || '';
-        const isUrlFragment =
-          /[\/\\.@#?=&%_~]/.test(charBefore) ||   // يسبقها رمز URL
-          /[\/\\.@#?=&%_~:]/.test(charAfter) ||   // يليها رمز URL
-          /^(https?|ftp|www|mailto|tel|file)$/i.test(phrase); // كلمات بروتوكول
-        if (isUrlFragment) {
-          // أضفها كنص عادي وانتقل للتالية
-          if (match.index > lastIndex) {
-            parts.push({ type: 'text', content: text.substring(lastIndex, match.index + match[0].length) });
-          } else {
-            parts.push({ type: 'text', content: match[0] });
+          const beforeChar = pStart > 0 ? tok.content[pStart - 1] : '';
+          const afterChar = pEnd < tok.content.length ? tok.content[pEnd] : '';
+
+          // تجاهل الكلمات المجاورة لرموز تقنية أو رموز URL أو الكلمات البرمجية المجردة
+          if (/[\/\\@#$%=&_~^|<>]/.test(beforeChar) || /[\/\\@#$%=&_~^|<>]/.test(afterChar) ||
+              /^(https?|ftp|www|com|org|net|html|css|js|php|api|key)$/i.test(phrase) ||
+              !VOWEL_CHECK.test(phrase) ||
+              (phrase.length < 2 && !/^[aAiIoOuU]$/.test(phrase))) {
+            if (pStart > subLast) parts.push({ type: 'text', content: tok.content.substring(subLast, pEnd) });
+            else parts.push({ type: 'text', content: pm[0] });
+            subLast = pEnd;
+            continue;
           }
-          lastIndex = match.index + match[0].length;
-          PHRASE_REGEX.lastIndex = lastIndex;
-          continue;
+
+          if (pStart > subLast) {
+            parts.push({ type: 'text', content: tok.content.substring(subLast, pStart) });
+          }
+
+          // دمج علامات الترقيم التابعة لنهاية العبارة مباشرة (مثل ؟:-.,! وغيرها)
+          const afterMatch = tok.content.slice(pEnd).match(/^([^\S\r\n]*[.?!\:;،؟…\-—–,]+(?:[^\S\r\n]+[.?!\:;،؟…\-—–,]+)*)/);
+          const trailingPunct = afterMatch ? afterMatch[1] : '';
+
+          parts.push({ type: 'phrase', content: phrase, trailingPunct: trailingPunct });
+          subLast = pEnd + trailingPunct.length;
+          PHRASE_REGEX.lastIndex = subLast;
         }
-
-        if (match.index > lastIndex) {
-          parts.push({ type: 'text', content: text.substring(lastIndex, match.index) });
+        if (subLast < tok.content.length) {
+          parts.push({ type: 'text', content: tok.content.substring(subLast) });
         }
+      });
 
-        // دمج علامات الترقيم والإشارات التابعة لنهاية العبارة مباشرة (مثل ؟:-.,! وغيرها)
-        const afterMatchIndex = match.index + match[0].length;
-        const trailingMatch = text.slice(afterMatchIndex).match(/^([^\S\r\n]*[.?!\:;،؟…\-—–,]+(?:[^\S\r\n]+[.?!\:;،؟…\-—–,]+)*)/);
-        const trailingPunct = trailingMatch ? trailingMatch[1] : '';
-
-        parts.push({ type: 'phrase', content: phrase, trailingPunct: trailingPunct });
-        lastIndex = afterMatchIndex + trailingPunct.length;
-        PHRASE_REGEX.lastIndex = lastIndex;
-      }
-
-      if (parts.length === 0) return;
-
-      if (lastIndex < text.length) {
-        parts.push({ type: 'text', content: text.substring(lastIndex) });
-      }
+      // إذا لم توجد أي عبارة حقيقية صالحة للنطق، لا نعدل على العقدة أبداً
+      const hasAnyPhrase = parts.some(p => p.type === 'phrase');
+      if (!hasAnyPhrase) return;
 
       const fragment = document.createDocumentFragment();
       let hasPronounceable = false;
