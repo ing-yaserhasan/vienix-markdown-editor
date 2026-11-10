@@ -19,6 +19,9 @@
   const statReadingTime = document.getElementById('stat-reading-time');
   const saveStatus = document.getElementById('save-status');
 
+  // WYSIWYG / Live Edit Mode State (افتراضياً وضع القراءة والعرض فقط: معطل)
+  let isWysiwygActive = false;
+
   // Storage key helper with fallback for seamless compatibility (IndexedDB + LocalStorage)
   function getStored(key, legacyKey) {
     if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
@@ -1187,7 +1190,13 @@
     // ربط الحدث مع لوحتَي المعاينة
     function attachTableClick(container) {
       if (!container) return;
+      window.removeTableToolbar = removeToolbar;
       container.addEventListener('click', function (e) {
+        // حظر كامل لظهور أدوات الجدول في وضع القراءة/العرض إذا لم يكن زر Edit مفعلاً
+        if (!isWysiwygActive) {
+          removeToolbar();
+          return;
+        }
         const tbl = e.target.closest('table');
         if (!tbl) { removeToolbar(); return; }
         if (e.target.closest('[data-vienix-table-toolbar]')) return;
@@ -1738,11 +1747,16 @@ function exportDocument(format) {
     // تفعيل الأسهم الموجهة التفاعلية مع شريط الأدوات والمقابض
     setupArrowResizers(previewContent);
 
-    // إذا كان وضع التحرير المباشر مفعلاً، نحافظ على خصائص التحرير وحماية العناصر
+    // إذا كان وضع التحرير المباشر مفعلاً، نحافظ على خصائص التحرير وحماية العناصر، وإلا نضمن وضع القراءة المحمي بالكامل
     if (typeof isWysiwygActive !== 'undefined' && isWysiwygActive) {
       previewContent.setAttribute('contenteditable', 'true');
       previewContent.classList.add('preview-editable');
+      document.body.classList.add('wysiwyg-active');
       protectNonEditableElements();
+    } else {
+      previewContent.removeAttribute('contenteditable');
+      previewContent.classList.remove('preview-editable');
+      document.body.classList.remove('wysiwyg-active');
     }
 
     // مساعد التدرب على النطق — معالجة النصوص الأجنبية بعد الرندر إذا كان مفعلاً
@@ -9199,6 +9213,7 @@ function exportDocument(format) {
       // Presets
       toolbar.querySelectorAll('[data-preset]').forEach((btn) => {
         btn.addEventListener('click', (e) => {
+          if (!isWysiwygActive) return;
           e.stopPropagation();
           const preset = btn.getAttribute('data-preset');
           wrapper.style.width = preset;
@@ -9222,6 +9237,7 @@ function exportDocument(format) {
       // Alignment
       toolbar.querySelectorAll('[data-align]').forEach((btn) => {
         btn.addEventListener('click', (e) => {
+          if (!isWysiwygActive) return;
           e.stopPropagation();
           toolbar.querySelectorAll('[data-align]').forEach((b) => b.classList.remove('active'));
           btn.classList.add('active');
@@ -9233,8 +9249,9 @@ function exportDocument(format) {
         });
       });
 
-      // Select / Activate
+      // Select / Activate — حصرياً عند تفعيل وضع التحرير Edit Mode
       wrapper.addEventListener('click', (e) => {
+        if (!isWysiwygActive) return;
         e.stopPropagation();
         document.querySelectorAll('.image-resizer-wrapper.active').forEach((w) => {
           if (w !== wrapper) w.classList.remove('active');
@@ -9251,6 +9268,7 @@ function exportDocument(format) {
       const floatBtn = toolbar.querySelector('.btn-float-toggle');
       if (floatBtn) {
         floatBtn.addEventListener('click', (e) => {
+          if (!isWysiwygActive) return;
           e.stopPropagation();
           isFloatingMode = !isFloatingMode;
           wrapper.classList.toggle('is-floating', isFloatingMode);
@@ -9271,7 +9289,7 @@ function exportDocument(format) {
 
       // سحب الصورة أو الإيموجي بالماوس واللمس عندما يكون التحريك الحر مفعلاً
       const startFloatDrag = (e) => {
-        if (!isFloatingMode) return;
+        if (!isWysiwygActive || !isFloatingMode) return;
         if (e.target.closest('.image-resizer-toolbar, .resizer-handle, .resizer-rotate-handle, .resizer-corner-rotate-handle')) return;
         e.preventDefault();
         e.stopPropagation();
@@ -9320,6 +9338,7 @@ function exportDocument(format) {
       const btnCcw = toolbar.querySelector('.btn-rotate-ccw');
       if (btnCcw) {
         btnCcw.addEventListener('click', (e) => {
+          if (!isWysiwygActive) return;
           e.stopPropagation();
           applyRotation(currentRotation - 90);
         });
@@ -9328,6 +9347,7 @@ function exportDocument(format) {
       const btnCw = toolbar.querySelector('.btn-rotate-cw');
       if (btnCw) {
         btnCw.addEventListener('click', (e) => {
+          if (!isWysiwygActive) return;
           e.stopPropagation();
           applyRotation(currentRotation + 90);
         });
@@ -9337,6 +9357,7 @@ function exportDocument(format) {
       const cornerRotateHandle = wrapper.querySelector('.resizer-corner-rotate-handle');
       if (cornerRotateHandle) {
         const startRotateDrag = (startX, startY) => {
+          if (!isWysiwygActive) return;
           const rect = wrapper.getBoundingClientRect();
           const centerX = rect.left + rect.width / 2;
           const centerY = rect.top + rect.height / 2;
@@ -9368,12 +9389,14 @@ function exportDocument(format) {
         };
 
         cornerRotateHandle.addEventListener('mousedown', (e) => {
+          if (!isWysiwygActive) return;
           e.preventDefault();
           e.stopPropagation();
           startRotateDrag(e.clientX, e.clientY);
         });
 
         cornerRotateHandle.addEventListener('touchstart', (e) => {
+          if (!isWysiwygActive) return;
           if (e.touches && e.touches.length === 1) {
             e.preventDefault();
             e.stopPropagation();
@@ -9388,6 +9411,7 @@ function exportDocument(format) {
         const dir = handle.getAttribute('data-dir');
 
         const onPointerDown = (e) => {
+          if (!isWysiwygActive) return;
           e.preventDefault();
           e.stopPropagation();
 
@@ -9444,15 +9468,19 @@ function exportDocument(format) {
     });
   }
 
-  // Deactivate resizers when clicking outside
+  // Deactivate resizers when clicking outside or when WYSIWYG is disabled
   document.addEventListener('click', (e) => {
-    if (!e.target.closest('.image-resizer-wrapper, .arrow-resizer-wrapper')) {
-      document.querySelectorAll('.image-resizer-wrapper.active, .arrow-resizer-wrapper.active').forEach((w) => w.classList.remove('active'));
+    if (!isWysiwygActive || !e.target.closest('.image-resizer-wrapper, .arrow-resizer-wrapper')) {
+      document.querySelectorAll('.image-resizer-wrapper.active, .arrow-resizer-wrapper.active').forEach((w) => {
+        w.classList.remove('active');
+        w.classList.remove('is-floating');
+      });
     }
   });
 
   // تحديث حجم الصورة داخل نص الماركداون بالمحرر
   function updateImageWidthInMarkdown(imgSrc, newWidthVal) {
+    if (typeof isWysiwygActive !== 'undefined' && !isWysiwygActive) return;
     if (!imgSrc) return;
     const activeEditor = isClassicMode ? (classicEditor || editor) : editor;
     if (!activeEditor) return;
@@ -9962,7 +9990,7 @@ function exportDocument(format) {
   // نظام التحرير المباشر في مساحة العرض (WYSIWYG Live Preview System)
   // يشمل: تحويل المعاينة إلى محرر، مكتبة Turndown، شريط التنسيق العائم، وحماية المخططات
   // =========================================================================
-  let isWysiwygActive = false;
+  // isWysiwygActive معرّف في قمة النطاق
   let turndownService = null;
   let wysiwygDebounceTimer = null;
   let isWysiwygSyncing = false;
@@ -10514,6 +10542,7 @@ function exportDocument(format) {
     const panelEditor = document.getElementById('panel-editor');
 
     if (isWysiwygActive) {
+      document.body.classList.add('wysiwyg-active');
       // تفعيل وضع التحرير المباشر
       if (btn) {
         btn.classList.add('active');
@@ -10544,6 +10573,7 @@ function exportDocument(format) {
         saveStatus.className = 'save-badge';
       }
     } else {
+      document.body.classList.remove('wysiwyg-active');
       // إيقاف وضع التحرير المباشر
       if (btn) {
         btn.classList.remove('active');
@@ -10565,6 +10595,17 @@ function exportDocument(format) {
 
       hideFloatingFormatToolbar();
       updatePreviewHeaderIndicator(false);
+
+      // إلغاء تفعيل وتنظيف جميع العناصر النشطة وأشرطة الأدوات فوراً
+      document.querySelectorAll('.image-resizer-wrapper.active, .arrow-resizer-wrapper.active').forEach((w) => {
+        w.classList.remove('active');
+        w.classList.remove('is-floating');
+      });
+      if (typeof window.removeTableToolbar === 'function') {
+        window.removeTableToolbar();
+      } else {
+        document.querySelectorAll('.table-resizer-toolbar, [data-vienix-table-toolbar]').forEach(el => el.remove());
+      }
 
       // مزامنة أخيرة للمحتوى المعدل
       syncPreviewToMarkdown(true);
@@ -11766,8 +11807,9 @@ function exportDocument(format) {
         setTimeout(clampToolbar, 10);
       };
 
-      // تفعيل السهم عند النقر عليه
+      // تفعيل السهم عند النقر عليه — حصرياً عند تفعيل وضع التحرير Edit Mode
       wrapper.addEventListener('click', (e) => {
+        if (!isWysiwygActive) return;
         e.stopPropagation();
         document.querySelectorAll('.arrow-resizer-wrapper.active, .image-resizer-wrapper.active').forEach((w) => {
           if (w !== wrapper) w.classList.remove('active');
@@ -11779,6 +11821,7 @@ function exportDocument(format) {
       // 1. تغيير الاتجاه (Direction Buttons)
       toolbar.querySelectorAll('[data-dir]').forEach((btn) => {
         btn.addEventListener('click', (e) => {
+          if (!isWysiwygActive) return;
           e.stopPropagation();
           toolbar.querySelectorAll('[data-dir]').forEach((b) => b.classList.remove('active'));
           btn.classList.add('active');
@@ -11792,6 +11835,7 @@ function exportDocument(format) {
       const btnPrev = toolbar.querySelector('.btn-prev-model');
       if (btnPrev) {
         btnPrev.addEventListener('click', (e) => {
+          if (!isWysiwygActive) return;
           e.stopPropagation();
           currentModelId = currentModelId > 1 ? currentModelId - 1 : ARROW_MODELS.length;
           syncChangesToMarkdown();
@@ -11801,6 +11845,7 @@ function exportDocument(format) {
       const btnNext = toolbar.querySelector('.btn-next-model');
       if (btnNext) {
         btnNext.addEventListener('click', (e) => {
+          if (!isWysiwygActive) return;
           e.stopPropagation();
           currentModelId = currentModelId < ARROW_MODELS.length ? currentModelId + 1 : 1;
           syncChangesToMarkdown();
@@ -11810,6 +11855,7 @@ function exportDocument(format) {
       // 3. تغيير اللون (Color Selector)
       toolbar.querySelectorAll('.arrow-tb-color-dot').forEach((dot) => {
         dot.addEventListener('click', (e) => {
+          if (!isWysiwygActive) return;
           e.stopPropagation();
           toolbar.querySelectorAll('.arrow-tb-color-dot').forEach((d) => d.classList.remove('active'));
           dot.classList.add('active');
@@ -11821,6 +11867,7 @@ function exportDocument(format) {
       const customColorPicker = toolbar.querySelector('.arrow-tb-color-picker-input');
       if (customColorPicker) {
         customColorPicker.addEventListener('input', (e) => {
+          if (!isWysiwygActive) return;
           currentColor = e.target.value;
           toolbar.querySelectorAll('.arrow-tb-color-dot').forEach((d) => d.classList.remove('active'));
           syncChangesToMarkdown();
@@ -11830,6 +11877,7 @@ function exportDocument(format) {
       // 4. تغيير الحجم بالقيم المسبقة (Size Presets)
       toolbar.querySelectorAll('.btn-size-preset').forEach((btn) => {
         btn.addEventListener('click', (e) => {
+          if (!isWysiwygActive) return;
           e.stopPropagation();
           toolbar.querySelectorAll('.btn-size-preset').forEach((b) => b.classList.remove('active'));
           btn.classList.add('active');
@@ -11842,6 +11890,7 @@ function exportDocument(format) {
       const btnCcw = toolbar.querySelector('.btn-rotate-ccw');
       if (btnCcw) {
         btnCcw.addEventListener('click', (e) => {
+          if (!isWysiwygActive) return;
           e.stopPropagation();
           currentRotation = ((currentRotation - 90) % 360 + 360) % 360;
           syncChangesToMarkdown();
@@ -11851,6 +11900,7 @@ function exportDocument(format) {
       const btnCw = toolbar.querySelector('.btn-rotate-cw');
       if (btnCw) {
         btnCw.addEventListener('click', (e) => {
+          if (!isWysiwygActive) return;
           e.stopPropagation();
           currentRotation = ((currentRotation + 90) % 360 + 360) % 360;
           syncChangesToMarkdown();
@@ -11861,6 +11911,7 @@ function exportDocument(format) {
       const cornerRotateHandle = wrapper.querySelector('.resizer-corner-rotate-handle');
       if (cornerRotateHandle) {
         const startRotateDrag = (startX, startY) => {
+          if (!isWysiwygActive) return;
           const rect = wrapper.getBoundingClientRect();
           const centerX = rect.left + rect.width / 2;
           const centerY = rect.top + rect.height / 2;
@@ -11892,12 +11943,14 @@ function exportDocument(format) {
         };
 
         cornerRotateHandle.addEventListener('mousedown', (e) => {
+          if (!isWysiwygActive) return;
           e.preventDefault();
           e.stopPropagation();
           startRotateDrag(e.clientX, e.clientY);
         });
 
         cornerRotateHandle.addEventListener('touchstart', (e) => {
+          if (!isWysiwygActive) return;
           if (e.touches && e.touches.length === 1) {
             e.preventDefault();
             e.stopPropagation();
@@ -11915,6 +11968,7 @@ function exportDocument(format) {
       if (floatBtn) {
         floatBtn.classList.toggle('active', isFloatingMode);
         floatBtn.addEventListener('click', (e) => {
+          if (!isWysiwygActive) return;
           e.stopPropagation();
           isFloatingMode = !isFloatingMode;
           wrapper.classList.toggle('is-floating', isFloatingMode);
@@ -11938,7 +11992,7 @@ function exportDocument(format) {
       }
 
       const startFloatDrag = (e) => {
-        if (!wrapper.classList.contains('is-floating')) return;
+        if (!isWysiwygActive || !wrapper.classList.contains('is-floating')) return;
         if (e.target.closest('.arrow-resizer-toolbar, .resizer-handle, .resizer-corner-rotate-handle')) return;
         e.preventDefault();
         e.stopPropagation();
@@ -11980,6 +12034,7 @@ function exportDocument(format) {
       // 8. المحاذاة (Alignment)
       toolbar.querySelectorAll('[data-align]').forEach((btn) => {
         btn.addEventListener('click', (e) => {
+          if (!isWysiwygActive) return;
           e.stopPropagation();
           toolbar.querySelectorAll('[data-align]').forEach((b) => b.classList.remove('active'));
           btn.classList.add('active');
@@ -11994,6 +12049,7 @@ function exportDocument(format) {
       handles.forEach((handle) => {
         const dir = handle.getAttribute('data-dir');
         const onPointerDown = (e) => {
+          if (!isWysiwygActive) return;
           e.preventDefault();
           e.stopPropagation();
           wrapper.classList.add('active');
@@ -12038,6 +12094,7 @@ function exportDocument(format) {
       const btnConvertToText = toolbar.querySelector('.btn-convert-to-text');
       if (btnConvertToText) {
         btnConvertToText.addEventListener('click', (e) => {
+          if (!isWysiwygActive) return;
           e.stopPropagation();
           const char = arrowEl.textContent || '→';
           replaceArrowWithPlainText(arrowId, char, currentModelId);
@@ -12055,6 +12112,7 @@ function exportDocument(format) {
       const btnDelete = toolbar.querySelector('.btn-arrow-delete');
       if (btnDelete) {
         btnDelete.addEventListener('click', (e) => {
+          if (!isWysiwygActive) return;
           e.stopPropagation();
           deleteArrowInMarkdown(arrowId, originalRawChar, currentModelId);
           if (anchor) anchor.remove();
@@ -12067,6 +12125,7 @@ function exportDocument(format) {
 
   // تحديث كود السهم داخل نص الماركداون بالمحرر بصيغة مختصرة تشبه الصور
   function updateArrowInMarkdown(arrowId, attrs) {
+    if (typeof isWysiwygActive !== 'undefined' && !isWysiwygActive) return;
     if (!arrowId) return;
     const activeEditor = isClassicMode ? (classicEditor || editor) : editor;
     if (!activeEditor) return;
@@ -12105,6 +12164,7 @@ function exportDocument(format) {
 
   // تحويل السهم التفاعلي في المحرر إلى رمز نصي عادي مجرد
   function replaceArrowWithPlainText(arrowId, char, modelId) {
+    if (typeof isWysiwygActive !== 'undefined' && !isWysiwygActive) return;
     const activeEditor = isClassicMode ? (classicEditor || editor) : editor;
     if (!activeEditor) return;
 
@@ -12140,6 +12200,7 @@ function exportDocument(format) {
 
   // حذف السهم من نص الماركداون بالمحرر
   function deleteArrowInMarkdown(arrowId, originalChar, modelId) {
+    if (typeof isWysiwygActive !== 'undefined' && !isWysiwygActive) return;
     const activeEditor = isClassicMode ? (classicEditor || editor) : editor;
     if (!activeEditor) return;
 

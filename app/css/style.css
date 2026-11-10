@@ -1653,8 +1653,8 @@ body.is-resizing-workspace .workspace-resizer {
 }
 
 /* Ø­Ø§Ù„Ø© Ø§Ù„ØªØ±ÙƒÙŠØ² ÙˆØ§Ø®ØªÙŠØ§Ø± Ø§Ù„ØµÙˆØ±Ø© Ø§Ù„Ø¹Ø§Ø¯ÙŠØ© */
-.image-resizer-wrapper:hover,
-.image-resizer-wrapper.active {
+.preview-editable .image-resizer-wrapper.active,
+body.wysiwyg-active .image-resizer-wrapper.active {
   outline: 2px solid var(--accent-color, #2563eb);
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18);
   border-radius: 8px;
@@ -1726,8 +1726,8 @@ body.is-resizing-workspace .workspace-resizer {
   white-space: nowrap;
 }
 
-.image-resizer-wrapper:hover .image-resizer-toolbar,
-.image-resizer-wrapper.active .image-resizer-toolbar {
+.preview-editable .image-resizer-wrapper.active .image-resizer-toolbar,
+body.wysiwyg-active .image-resizer-wrapper.active .image-resizer-toolbar {
   display: flex;
 }
 
@@ -1786,8 +1786,8 @@ body.is-resizing-workspace .workspace-resizer {
   touch-action: none;
 }
 
-.image-resizer-wrapper:hover .resizer-handle,
-.image-resizer-wrapper.active .resizer-handle {
+.preview-editable .image-resizer-wrapper.active .resizer-handle,
+body.wysiwyg-active .image-resizer-wrapper.active .resizer-handle {
   display: block;
 }
 
@@ -7948,8 +7948,8 @@ body.is-resizing-workspace .workspace-resizer {
   max-width: 95vw;
 }
 
-.image-resizer-wrapper:hover .image-resizer-toolbar,
-.image-resizer-wrapper.active .image-resizer-toolbar {
+.preview-editable .image-resizer-wrapper.active .image-resizer-toolbar,
+body.wysiwyg-active .image-resizer-wrapper.active .image-resizer-toolbar {
   display: flex !important;
 }
 
@@ -8005,7 +8005,8 @@ body.is-resizing-workspace .workspace-resizer {
   cursor: grabbing;
 }
 
-.image-resizer-wrapper.active .resizer-corner-rotate-handle {
+.preview-editable .image-resizer-wrapper.active .resizer-corner-rotate-handle,
+body.wysiwyg-active .image-resizer-wrapper.active .resizer-corner-rotate-handle {
   display: flex !important;
 }
 
@@ -8806,11 +8807,8 @@ body.is-resizing-workspace .workspace-resizer {
   box-sizing: border-box;
 }
 
-.arrow-resizer-wrapper:hover {
-  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.5));
-}
-
-.arrow-resizer-wrapper.active {
+.preview-editable .arrow-resizer-wrapper.active,
+body.wysiwyg-active .arrow-resizer-wrapper.active {
   outline: 2px dashed rgba(59, 130, 246, 0.8) !important;
   outline-offset: 3px;
   filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.7));
@@ -8917,8 +8915,8 @@ body.is-resizing-workspace .workspace-resizer {
   direction: rtl;
 }
 
-.arrow-resizer-wrapper:hover .arrow-resizer-toolbar,
-.arrow-resizer-wrapper.active .arrow-resizer-toolbar {
+.preview-editable .arrow-resizer-wrapper.active .arrow-resizer-toolbar,
+body.wysiwyg-active .arrow-resizer-wrapper.active .arrow-resizer-toolbar {
   display: flex;
 }
 
@@ -8971,9 +8969,10 @@ body.is-resizing-workspace .workspace-resizer {
   display: none;
 }
 
-.arrow-resizer-wrapper:hover .resizer-handle,
-.arrow-resizer-wrapper.active .resizer-handle,
-.arrow-resizer-wrapper.active .resizer-corner-rotate-handle {
+.preview-editable .arrow-resizer-wrapper.active .resizer-handle,
+.preview-editable .arrow-resizer-wrapper.active .resizer-corner-rotate-handle,
+body.wysiwyg-active .arrow-resizer-wrapper.active .resizer-handle,
+body.wysiwyg-active .arrow-resizer-wrapper.active .resizer-corner-rotate-handle {
   display: block;
 }
 
@@ -10819,4 +10818,69 @@ body.zen-reading-mode .zen-mode-floating-btn:hover {
   .comfort-reading-mode .preview-container {
     padding: 20px 18px 75px 18px !important;
   }
-}
+}
+
+/* ==========================================================================
+   حماية تامة ونهائية لشاشة العرض والمعاينة عند تعطيل زر Edit:
+   منع أي عبث أو ظهور أشرطة أدوات أو مقابض أو إطارات على الصور أو الإيموجي أو الأسهم أو الجداول
+   ========================================================================== */
+body:not(.wysiwyg-active) .image-resizer-toolbar,
+body:not(.wysiwyg-active) .arrow-resizer-toolbar,
+body:not(.wysiwyg-active) .table-resizer-toolbar,
+body:not(.wysiwyg-active) [data-vienix-table-toolbar],
+body:not(.wysiwyg-active) .resizer-handle,
+body:not(.wysiwyg-active) .resizer-corner-rotate-handle,
+body:not(.wysiwyg-active) .wysiwyg-floating-toolbar,
+#preview-content:not(.preview-editable) .image-resizer-toolbar,
+#preview-content:not(.preview-editable) .arrow-resizer-toolbar,
+#preview-content:not(.preview-editable) .table-resizer-toolbar,
+#preview-content:not(.preview-editable) [data-vienix-table-toolbar],
+#preview-content:not(.preview-editable) .resizer-handle,
+#preview-content:not(.preview-editable) .resizer-corner-rotate-handle,
+#preview-content:not(.preview-editable) .wysiwyg-floating-toolbar,
+#classic-output .image-resizer-toolbar,
+#classic-output .arrow-resizer-toolbar,
+#classic-output .table-resizer-toolbar,
+#classic-output [data-vienix-table-toolbar],
+#classic-output .resizer-handle,
+#classic-output .resizer-corner-rotate-handle,
+#classic-output .wysiwyg-floating-toolbar {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+body:not(.wysiwyg-active) .image-resizer-wrapper,
+body:not(.wysiwyg-active) .image-resizer-wrapper:hover,
+body:not(.wysiwyg-active) .image-resizer-wrapper.active,
+body:not(.wysiwyg-active) .arrow-resizer-wrapper,
+body:not(.wysiwyg-active) .arrow-resizer-wrapper:hover,
+body:not(.wysiwyg-active) .arrow-resizer-wrapper.active,
+#preview-content:not(.preview-editable) .image-resizer-wrapper,
+#preview-content:not(.preview-editable) .image-resizer-wrapper:hover,
+#preview-content:not(.preview-editable) .image-resizer-wrapper.active,
+#preview-content:not(.preview-editable) .arrow-resizer-wrapper,
+#preview-content:not(.preview-editable) .arrow-resizer-wrapper:hover,
+#preview-content:not(.preview-editable) .arrow-resizer-wrapper.active,
+#classic-output .image-resizer-wrapper,
+#classic-output .image-resizer-wrapper:hover,
+#classic-output .image-resizer-wrapper.active,
+#classic-output .arrow-resizer-wrapper,
+#classic-output .arrow-resizer-wrapper:hover,
+#classic-output .arrow-resizer-wrapper.active {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  cursor: default !important;
+  filter: none !important;
+}
+
+body:not(.wysiwyg-active) .image-resizer-wrapper img,
+body:not(.wysiwyg-active) .image-resizer-wrapper.is-emoji-wrapper img,
+#preview-content:not(.preview-editable) .image-resizer-wrapper img,
+#preview-content:not(.preview-editable) .image-resizer-wrapper.is-emoji-wrapper img {
+  cursor: default !important;
+  pointer-events: auto;
+}
+
