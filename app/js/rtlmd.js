@@ -13058,6 +13058,94 @@ function exportDocument(format) {
   }
   window.closeWordTranslationBubble = closeWordTranslationBubble;
 
+  // قاموس الكلمات الوظيفية والأدوات والأفعال الشائعة لتفادي أخطاء الترجمة الحرفية المعزولة
+  const VIENIX_FUNCTIONAL_DICT = {
+    de: {
+      'dem': 'أداة تعريف (Dativ للمذكر/المحايد)',
+      'der': 'أداة تعريف (Nominativ مذكر / Dativ وGenitiv مؤنث)',
+      'die': 'أداة تعريف (مؤنث / جمع)',
+      'das': 'أداة تعريف (محايد)',
+      'den': 'أداة تعريف (Akkusativ مذكر / Dativ جمع)',
+      'des': 'أداة تعريف (Genitiv مذكر ومحايد)',
+      'ein': 'أداة تنكير (مذكر / محايد)',
+      'eine': 'أداة تنكير (مؤنث)',
+      'einen': 'أداة تنكير (Akkusativ مذكر)',
+      'einem': 'أداة تنكير (Dativ مذكر / محايد)',
+      'einer': 'أداة تنكير (Dativ / Genitiv مؤنث)',
+      'eines': 'أداة تنكير (Genitiv مذكر / محايد)',
+      'kein': 'أداة نفي اسمية (لا / ليس)',
+      'keine': 'أداة نفي اسمية (لا / ليس - مؤنث أو جمع)',
+      'keinen': 'أداة نفي اسمية (Akkusativ مذكر)',
+      'keinem': 'أداة نفي اسمية (Dativ مذكر / محايد)',
+      'ich': 'أنا (ضمير متكلم)',
+      'du': 'أنتَ / أنتِ (مخاطب مفرد)',
+      'er': 'هو (غائب مذكر)',
+      'sie': 'هي / هم / هُنَّ / حضرتكم',
+      'es': 'هو / هي (للمحايد)',
+      'wir': 'نحن (متكلم جمع)',
+      'ihr': 'أنتم (مخاطب جمع)',
+      'mich': 'إياي / ـني (Akkusativ)',
+      'mir': 'لي / إليَّ (Dativ)',
+      'dich': 'إياك / ـكَ (Akkusativ)',
+      'dir': 'لك / إليك (Dativ)',
+      'ihn': 'إياه / ـه (Akkusativ)',
+      'ihm': 'له / إليه (Dativ)',
+      'uns': 'لنا / إيانا',
+      'euch': 'لكم / إياكم',
+      'ihnen': 'لهم / إليهم',
+      'und': 'وَ (حرف عطف)',
+      'oder': 'أو (تخيير)',
+      'aber': 'لكن / ولكن',
+      'denn': 'لأنّ / إذ أن',
+      'weil': 'لأنّ (سببية تدفع الفعل لآخر الجملة)',
+      'dass': 'أنّ / بأنّ',
+      'wenn': 'إذا / لو / عندما',
+      'als': 'عندما (لحدث ماضٍ) / كـَ / مقارنة بـ',
+      'mit': 'مع / بواسطة (Dativ)',
+      'von': 'من / عن (Dativ)',
+      'zu': 'إلى / نحو (Dativ)',
+      'in': 'في / إلى (Wechselpräposition)',
+      'im': 'في الـ (in + dem)',
+      'ins': 'إلى الـ (in + das)',
+      'am': 'في / عند الـ (an + dem)',
+      'ans': 'إلى الـ (an + das)',
+      'beim': 'عند الـ (bei + dem)',
+      'zum': 'إلى الـ (zu + dem)',
+      'zur': 'إلى الـ (zu + der)',
+      'vom': 'من الـ (von + dem)',
+      'auf': 'على / فوق',
+      'für': 'لـِ / لأجل (Akkusativ)',
+      'an': 'على / عند / بجانب',
+      'über': 'فوق / عن / عبر',
+      'unter': 'تحت / بين',
+      'vor': 'قبل / أمام',
+      'nach': 'بعد / إلى (Dativ)',
+      'bei': 'عند / لدى (Dativ)',
+      'aus': 'من (خارج من - Dativ)',
+      'ab': 'بدءاً من / (بادئة فعل منفصل)',
+      'durch': 'من خلال / عبر (Akkusativ)',
+      'ohne': 'بدون / بلا (Akkusativ)',
+      'um': 'حول / في تمام (Akkusativ)',
+      'gegen': 'ضد / قرابة (Akkusativ)',
+      'bis': 'حتى / إلى غاية',
+      'seit': 'منذ (Dativ)',
+      'nicht': 'أداة نفي (لا / ليس)',
+      'sehr': 'جداً / كثيراً',
+      'auch': 'أيضاً / كذلك',
+      'nur': 'فقط / فحسب',
+      'schon': 'بالفعل / مسبقاً',
+      'noch': 'لا يزال / بعد',
+      'immer': 'دائماً / باستمرار',
+      'oft': 'غالباً / كثيراً ما',
+      'manchmal': 'أحياناً',
+      'nie': 'أبداً / قط',
+      'jetzt': 'الآن / في هذا الوقت',
+      'hier': 'هنا',
+      'da': 'هناك / حيث أنّ',
+      'dort': 'هناك'
+    }
+  };
+
   // 1. Chrome On-Device AI Translation (3)
   async function translateOnDevice(word, sourceLang) {
     try {
@@ -13161,7 +13249,14 @@ function exportDocument(format) {
     const cleanWord = (word || '').trim();
     if (!cleanWord) return null;
     const src = sourceLang ? sourceLang.split('-')[0].toLowerCase() : 'auto';
-    const cacheKey = `vienix_trans_${src}_${cleanWord.toLowerCase().slice(0, 100)}`;
+    const lower = cleanWord.toLowerCase();
+
+    // Step 0: Check Functional & Grammar Dictionary (للكلمات الوظيفية كـ dem, der, im لتفادي أخطاء مثل ماركا ألمانيا)
+    if (VIENIX_FUNCTIONAL_DICT[src] && VIENIX_FUNCTIONAL_DICT[src][lower]) {
+      return { text: VIENIX_FUNCTIONAL_DICT[src][lower], source: 'dict' };
+    }
+
+    const cacheKey = `vienix_trans_${src}_${lower.slice(0, 100)}`;
 
     // Step 1: Check localStorage Cache (0ms, 100% offline)
     try {
@@ -13229,6 +13324,13 @@ function exportDocument(format) {
         </div>
         <div class="wtb-content" id="wtb-content" style="display:none;">
           <div class="wtb-arabic" id="wtb-arabic-text"></div>
+          <div class="wtb-context-box" id="wtb-context-box" style="display:none;">
+            <div class="wtb-context-label">
+              <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              <span>سياق الجملة:</span>
+            </div>
+            <div class="wtb-context-arabic" id="wtb-context-arabic"></div>
+          </div>
         </div>
       </div>
     `;
@@ -13283,9 +13385,12 @@ function exportDocument(format) {
       arrow.style.left = `${Math.max(14, Math.min(bubbleRect.width - 14, arrowLeft))}px`;
     }
 
-    // Fetch Translation
+    // Fetch Translation (Word + Contextual Phrase)
     const abortController = new AbortController();
     activeTransAbortController = abortController;
+
+    const phraseWrapper = wordElement ? wordElement.closest('.pronunciation-phrase') : null;
+    const parentPhrase = phraseWrapper ? (phraseWrapper.getAttribute('data-phrase') || phraseWrapper.textContent || '').trim() : '';
 
     fetchWordTranslation(word, langCode, abortController.signal).then(res => {
       if (!activeTransBubble || activeTransBubble !== bubble) return;
@@ -13303,6 +13408,21 @@ function exportDocument(format) {
         if (arabicEl) {
           arabicEl.innerHTML = '<span style="color:var(--text-muted); font-size:0.85rem;">تعذر جلب الترجمة الفورية حالياً.</span>';
         }
+      }
+
+      // جلب ترجمة الجملة الكاملة في الخلفية لعرض السياق الصحيح
+      if (parentPhrase && parentPhrase.length > word.length + 3) {
+        fetchWordTranslation(parentPhrase, langCode, abortController.signal).then(phraseRes => {
+          if (!activeTransBubble || activeTransBubble !== bubble) return;
+          if (phraseRes && phraseRes.text && phraseRes.text.trim()) {
+            const contextBox = bubble.querySelector('#wtb-context-box');
+            const contextArabic = bubble.querySelector('#wtb-context-arabic');
+            if (contextBox && contextArabic) {
+              contextArabic.textContent = phraseRes.text;
+              contextBox.style.display = 'flex';
+            }
+          }
+        }).catch(() => {});
       }
     }).catch(err => {
       if (err && err.name === 'AbortError') return;
