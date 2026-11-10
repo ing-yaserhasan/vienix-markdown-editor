@@ -212,10 +212,22 @@
   };
 
   // ── Ghost Icons Mode: أيقونات النطق شفافة 25% وتظهر 100% عند النقر/الحوم ──
+  // عند التفعيل: يُزال dir="ltr" من أغلفة الجمل حتى لا يتأثر الاتجاه التلقائي (dir=auto)
+  // بدونه: خوارزمية dir=auto تتجاهل النص اللاتيني داخل العنصر المعزول فتجعل الفقرة RTL بالخطأ
   window.applyGhostIconsMode = function (enabled) {
     document.body.classList.toggle('ghost-pron-icons', !!enabled);
     const checkbox = document.getElementById('s-ghost-icons');
     if (checkbox) checkbox.checked = !!enabled;
+
+    // تبديل dir attribute على أغلفة الجمل الأجنبية
+    var phrases = document.querySelectorAll('.pronunciation-phrase');
+    for (var i = 0; i < phrases.length; i++) {
+      if (enabled) {
+        phrases[i].removeAttribute('dir');
+      } else {
+        phrases[i].setAttribute('dir', 'ltr');
+      }
+    }
   };
 
   window.toggleZenReadingMode = function () {
@@ -1786,6 +1798,10 @@ function exportDocument(format) {
     // مساعد التدرب على النطق — معالجة النصوص الأجنبية بعد الرندر إذا كان مفعلاً
     if (typeof vienixSettings !== 'undefined' && vienixSettings.pronunciationEnabled === true) {
       processPronunciationInPreview();
+      // إعادة تطبيق وضع Ghost Icons على الأغلفة الجديدة (إزالة dir="ltr" إذا كان مفعلاً)
+      if (vienixSettings.ghostIcons !== false && typeof applyGhostIconsMode === 'function') {
+        applyGhostIconsMode(true);
+      }
     }
   }
 
