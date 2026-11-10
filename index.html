@@ -1851,6 +1851,33 @@
                   <span class="settings-toggle-slider"></span>
                 </label>
               </div>
+
+              <!-- أزرار اختيار لون وضع القراءة المريح (4 خيارات مريحة للعين) -->
+              <div class="comfort-colors-container" id="comfort-colors-container">
+                <span class="comfort-colors-label">لون خلفية مساحة العمل (المحرر والعرض):</span>
+                <div class="comfort-colors-palette" role="radiogroup" aria-label="ألوان خلفية وضع القراءة المريح">
+                  <button type="button" class="comfort-color-btn" data-color="#F8F8F7" onclick="setComfortReadingColor('#F8F8F7')" title="رمادي حجري دافئ (#F8F8F7)">
+                    <span class="comfort-color-swatch" style="background-color: #F8F8F7;"></span>
+                    <span class="comfort-color-name">#F8F8F7</span>
+                    <span class="comfort-color-check">✓</span>
+                  </button>
+                  <button type="button" class="comfort-color-btn" data-color="#FCFCFC" onclick="setComfortReadingColor('#FCFCFC')" title="أبيض ناعم مطفي (#FCFCFC)">
+                    <span class="comfort-color-swatch" style="background-color: #FCFCFC;"></span>
+                    <span class="comfort-color-name">#FCFCFC</span>
+                    <span class="comfort-color-check">✓</span>
+                  </button>
+                  <button type="button" class="comfort-color-btn active" data-color="#F8F9FA" onclick="setComfortReadingColor('#F8F9FA')" title="اللون الحالي الافتراضي (#F8F9FA)">
+                    <span class="comfort-color-swatch" style="background-color: #F8F9FA;"></span>
+                    <span class="comfort-color-name">اللون الحالي</span>
+                    <span class="comfort-color-check">✓</span>
+                  </button>
+                  <button type="button" class="comfort-color-btn" data-color="#FAF6EE" onclick="setComfortReadingColor('#FAF6EE')" title="سمني فاتح مريح للعين (#FAF6EE)">
+                    <span class="comfort-color-swatch" style="background-color: #FAF6EE;"></span>
+                    <span class="comfort-color-name">سمني فاتح</span>
+                    <span class="comfort-color-check">✓</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div class="settings-group">

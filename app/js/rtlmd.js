@@ -42,6 +42,7 @@
     // Appearance
     theme: 'dark',
     comfortReadingMode: true, // وضع القراءة المريح فائق الأناقة (مفعّل افتراضياً)
+    comfortReadingColor: '#F8F9FA', // لون خلفية وضع القراءة المريح الافتراضي (#F8F8F7 / #FCFCFC / #F8F9FA / #FAF6EE)
     previewFont: 'system',
     previewFontSize: '16',
     editorFontSize: '15',
@@ -178,7 +179,11 @@
         break;
 
       case 'comfortReadingMode':
-        applyComfortReadingMode(!!value);
+        applyComfortReadingMode(!!value, vienixSettings.comfortReadingColor);
+        break;
+
+      case 'comfortReadingColor':
+        setComfortReadingColor(value);
         break;
 
       case 'previewFont':
@@ -205,13 +210,50 @@
     }
   }
 
-  window.applyComfortReadingMode = function (enabled) {
+  window.applyComfortReadingMode = function (enabled, color) {
     const isComfort = enabled !== false;
     document.body.classList.toggle('comfort-reading-mode', isComfort);
     const wrapper = document.getElementById('modern-app-wrapper');
     if (wrapper) wrapper.classList.toggle('comfort-reading-mode', isComfort);
     const prev = document.getElementById('preview-output');
     if (prev) prev.classList.toggle('comfort-reading-mode', isComfort);
+
+    const colorsContainer = document.getElementById('comfort-colors-container');
+    if (colorsContainer) {
+      colorsContainer.classList.toggle('disabled', !isComfort);
+    }
+
+    const selectedColor = color || vienixSettings.comfortReadingColor || '#F8F9FA';
+    applyComfortReadingColor(selectedColor);
+    updateComfortColorButtonsUI(selectedColor);
+  };
+
+  window.applyComfortReadingColor = function (color) {
+    const c = color || vienixSettings.comfortReadingColor || '#F8F9FA';
+    document.documentElement.style.setProperty('--comfort-reading-bg', c);
+    document.body.style.setProperty('--comfort-reading-bg', c);
+  };
+
+  window.setComfortReadingColor = function (color) {
+    if (!color) return;
+    vienixSettings.comfortReadingColor = color;
+    // إذا كان وضع القراءة معطلاً وقام المستخدم باختيار لون، يُعاد تفعيله تلقائياً
+    if (vienixSettings.comfortReadingMode === false) {
+      vienixSettings.comfortReadingMode = true;
+      const comfortChk = document.getElementById('s-comfort-reading-mode');
+      if (comfortChk) comfortChk.checked = true;
+    }
+    saveSettings();
+    applyComfortReadingMode(true, color);
+  };
+
+  window.updateComfortColorButtonsUI = function (selectedColor) {
+    const target = (selectedColor || vienixSettings.comfortReadingColor || '#F8F9FA').toUpperCase();
+    const btns = document.querySelectorAll('.comfort-color-btn');
+    btns.forEach(function (btn) {
+      const btnColor = (btn.getAttribute('data-color') || '').toUpperCase();
+      btn.classList.toggle('active', btnColor === target);
+    });
   };
 
   // ── Ghost Icons Mode: أيقونات النطق شفافة 25% وتظهر 100% عند النقر/الحوم ──
@@ -272,7 +314,7 @@
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       if (typeof window.applyComfortReadingMode === 'function') {
-        window.applyComfortReadingMode(vienixSettings.comfortReadingMode !== false);
+        window.applyComfortReadingMode(vienixSettings.comfortReadingMode !== false, vienixSettings.comfortReadingColor);
       }
       if (typeof window.applyPreviewFont === 'function') {
         window.applyPreviewFont(vienixSettings.previewFont || 'system');
@@ -280,7 +322,7 @@
     });
   } else {
     if (typeof window.applyComfortReadingMode === 'function') {
-      window.applyComfortReadingMode(vienixSettings.comfortReadingMode !== false);
+      window.applyComfortReadingMode(vienixSettings.comfortReadingMode !== false, vienixSettings.comfortReadingColor);
     }
     if (typeof window.applyPreviewFont === 'function') {
       window.applyPreviewFont(vienixSettings.previewFont || 'system');
@@ -314,7 +356,7 @@
       document.documentElement.style.setProperty('--accent-color', vienixSettings.accentColor);
     }
     if (typeof applyComfortReadingMode === 'function') {
-      applyComfortReadingMode(vienixSettings.comfortReadingMode !== false);
+      applyComfortReadingMode(vienixSettings.comfortReadingMode !== false, vienixSettings.comfortReadingColor);
     }
     if (typeof applyPreviewFont === 'function') {
       applyPreviewFont(vienixSettings.previewFont || 'system');
@@ -12708,6 +12750,13 @@ function exportDocument(format) {
     // Comfort reading mode
     const comfortChk = document.getElementById('s-comfort-reading-mode');
     if (comfortChk) comfortChk.checked = s.comfortReadingMode !== false;
+    const colorsContainer = document.getElementById('comfort-colors-container');
+    if (colorsContainer) {
+      colorsContainer.classList.toggle('disabled', s.comfortReadingMode === false);
+    }
+    if (typeof updateComfortColorButtonsUI === 'function') {
+      updateComfortColorButtonsUI(s.comfortReadingColor || '#F8F9FA');
+    }
 
     // Theme
     const themeRadio = document.querySelector(`input[name="s-theme"][value="${s.theme}"]`);

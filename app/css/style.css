@@ -10684,6 +10684,106 @@ body.wysiwyg-active .arrow-resizer-wrapper.active .resizer-corner-rotate-handle 
   margin-top: 4px;
 }
 
+/* حاوية أزرار ألوان وضع القراءة المريح الأربعة */
+.comfort-colors-container {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(99, 102, 241, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: opacity 0.22s ease, filter 0.22s ease;
+}
+
+.comfort-colors-container.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  filter: grayscale(0.5);
+}
+
+.comfort-colors-label {
+  font-size: 0.79rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.comfort-colors-palette {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+@media (max-width: 600px) {
+  .comfort-colors-palette {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.comfort-color-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.77rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  transition: all 0.18s ease;
+  user-select: none;
+  text-align: right;
+  direction: rtl;
+  position: relative;
+}
+
+.comfort-color-btn:hover {
+  border-color: var(--accent-color);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.comfort-color-btn.active {
+  border-color: var(--accent-color);
+  background: var(--accent-light, rgba(99, 102, 241, 0.08));
+  font-weight: 700;
+  box-shadow: 0 0 0 2px var(--accent-color);
+}
+
+.comfort-color-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .comfort-color-swatch {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.comfort-color-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.76rem;
+}
+
+.comfort-color-check {
+  display: none;
+  color: var(--accent-color);
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.comfort-color-btn.active .comfort-color-check {
+  display: inline-flex;
+}
+
 /* زر نمط القراءة بملء الشاشة العائم (Zen Mode Floating Button) */
 .zen-mode-floating-btn {
   position: absolute;
@@ -10812,16 +10912,63 @@ body.zen-reading-mode .zen-mode-floating-btn:hover {
 }
 
 /* تنسيقات وضع القراءة المريح للعين (Comfort Reading Mode Theme) */
-.comfort-reading-mode #preview-output {
-  background-color: #f8f9fa !important;
-  color: #27272a !important;
+:root {
+  --comfort-reading-bg: #f8f9fa;
+}
+
+/* انتقال سلس للألوان في مساحة العمل */
+#panel-editor,
+.editor-wrapper,
+#markdown-input,
+#panel-preview,
+#preview-output,
+.preview-container,
+#classic-output,
+#classic-markdown-input {
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
+/* تفعيل وضع القراءة المريح: تطبيق اللون المختار على مساحة العمل بكلا القسمين (المحرر والعرض) */
+body.comfort-reading-mode:not([data-theme="dark"]) #panel-editor,
+body.comfort-reading-mode:not([data-theme="dark"]) .editor-wrapper,
+body.comfort-reading-mode:not([data-theme="dark"]) #markdown-input,
+body.comfort-reading-mode:not([data-theme="dark"]) #panel-preview,
+body.comfort-reading-mode:not([data-theme="dark"]) #preview-output,
+body.comfort-reading-mode:not([data-theme="dark"]) .preview-container,
+body.comfort-reading-mode:not([data-theme="dark"]) #classic-output,
+body.comfort-reading-mode:not([data-theme="dark"]) #classic-markdown-input {
+  background-color: var(--comfort-reading-bg, #f8f9fa) !important;
+}
+
+.comfort-reading-mode #preview-output {
+  color: #27272a !important;
+}
+
+/* الوضع الداكن مع وضع القراءة المريح */
 [data-theme="dark"].comfort-reading-mode #preview-output,
-[data-theme="dark"] .comfort-reading-mode #preview-output {
+[data-theme="dark"] .comfort-reading-mode #preview-output,
+[data-theme="dark"].comfort-reading-mode #panel-editor,
+[data-theme="dark"] .comfort-reading-mode #panel-editor,
+[data-theme="dark"].comfort-reading-mode #markdown-input,
+[data-theme="dark"] .comfort-reading-mode #markdown-input,
+[data-theme="dark"].comfort-reading-mode #classic-output,
+[data-theme="dark"] .comfort-reading-mode #classic-output,
+[data-theme="dark"].comfort-reading-mode #classic-markdown-input,
+[data-theme="dark"] .comfort-reading-mode #classic-markdown-input {
   background-color: #111620 !important;
   color: #e2e8f0 !important;
+}
+
+/* عند إيقاف وضع القراءة المريح: عودة مساحة العمل بكلا القسمين (المحرر والعرض) إلى اللون الأبيض */
+body:not(.comfort-reading-mode):not([data-theme="dark"]) #panel-editor,
+body:not(.comfort-reading-mode):not([data-theme="dark"]) .editor-wrapper,
+body:not(.comfort-reading-mode):not([data-theme="dark"]) #markdown-input,
+body:not(.comfort-reading-mode):not([data-theme="dark"]) #panel-preview,
+body:not(.comfort-reading-mode):not([data-theme="dark"]) #preview-output,
+body:not(.comfort-reading-mode):not([data-theme="dark"]) .preview-container,
+body:not(.comfort-reading-mode):not([data-theme="dark"]) #classic-output,
+body:not(.comfort-reading-mode):not([data-theme="dark"]) #classic-markdown-input {
+  background-color: #ffffff !important;
 }
 
 .comfort-reading-mode .markdown-body,
