@@ -1666,6 +1666,15 @@ function exportDocument(format) {
 
   // Render Markdown with Mermaid & Syntax Highlighting
   function renderMarkdown() {
+    // تطهير فوري من أي أسطر أرقام أو مقاسات مسربة من أشرطة الأدوات
+    if (editor && editor.value && typeof cleanToolbarResidue === 'function') {
+      const sanitized = cleanToolbarResidue(editor.value);
+      if (sanitized !== editor.value) {
+        editor.value = sanitized;
+        if (classicEditor) classicEditor.value = sanitized;
+        setChamberContent(activeChamber, sanitized);
+      }
+    }
     const rawText = editor.value;
 
     // Update Stats
@@ -10066,27 +10075,68 @@ function exportDocument(format) {
       }
     });
 
-    // قاعدة تجريد عناصر واجهة المستخدم الداخلية (أزرار الزوم، أزرار النسخ، ومقابض التحجيم، وكروت النطق والترجمة)
+    // قاعدة تجريد عناصر واجهة المستخدم الداخلية (أشرطة أدوات الصور والأسهم والجداول، أزرار الزوم، أزرار النسخ، ومقابض التحجيم، وكروت النطق والترجمة)
     turndownService.addRule('stripInternalUIElements', {
       filter: function (node) {
         return (
-          node.classList &&
-          (node.classList.contains('diagram-zoom-controls') ||
-           node.classList.contains('code-copy-btn') ||
-           node.classList.contains('img-resize-handle') ||
-           node.classList.contains('image-action-overlay') ||
-           node.classList.contains('pronunciation-speaker-btn') ||
-           node.classList.contains('pronunciation-trans-btn') ||
-           node.classList.contains('inline-translation-box') ||
-           node.classList.contains('pronunciation-floating-pill') ||
-           node.classList.contains('word-trans-bubble') ||
-           node.classList.contains('itb-loading') ||
-           node.classList.contains('itb-text') ||
-           node.classList.contains('bilingual-trans-tag'))
+          (node.classList &&
+           (node.classList.contains('diagram-zoom-controls') ||
+            node.classList.contains('code-copy-btn') ||
+            node.classList.contains('img-resize-handle') ||
+            node.classList.contains('image-action-overlay') ||
+            node.classList.contains('image-resizer-toolbar') ||
+            node.classList.contains('arrow-resizer-toolbar') ||
+            node.classList.contains('table-resizer-toolbar') ||
+            node.classList.contains('resizer-handle') ||
+            node.classList.contains('resizer-corner-rotate-handle') ||
+            node.classList.contains('resizer-size-badge') ||
+            node.classList.contains('resizer-btn') ||
+            node.classList.contains('resizer-divider') ||
+            node.classList.contains('wysiwyg-floating-toolbar') ||
+            node.classList.contains('pronunciation-speaker-btn') ||
+            node.classList.contains('pronunciation-trans-btn') ||
+            node.classList.contains('inline-translation-box') ||
+            node.classList.contains('pronunciation-floating-pill') ||
+            node.classList.contains('word-trans-bubble') ||
+            node.classList.contains('itb-loading') ||
+            node.classList.contains('itb-text') ||
+            node.classList.contains('bilingual-trans-tag'))) ||
+          node.hasAttribute('data-vienix-table-toolbar')
         );
       },
       replacement: function () {
         return '';
+      }
+    });
+
+    // قاعدة تفكيك حاويات الصورimage-resizer-wrapper لمنع تسرب أي نصوص من شريط الأدوات إلى الماركداون
+    turndownService.addRule('unwrapImageResizerWrapper', {
+      filter: function (node) {
+        return (
+          node.nodeName === 'DIV' &&
+          node.classList &&
+          node.classList.contains('image-resizer-wrapper')
+        );
+      },
+      replacement: function (content, node) {
+        const img = node.querySelector('img');
+        if (!img) return '';
+        return turndownService.turndown(img.outerHTML);
+      }
+    });
+
+    // قاعدة تفكيك حاويات الأسهم arrow-resizer-wrapper لمنع تسرب أي نصوص
+    turndownService.addRule('unwrapArrowResizerWrapper', {
+      filter: function (node) {
+        return (
+          node.classList &&
+          node.classList.contains('arrow-resizer-wrapper')
+        );
+      },
+      replacement: function (content, node) {
+        const arrow = node.querySelector('.vienix-arrow') || node.querySelector('[data-arrow-id]');
+        if (!arrow) return '';
+        return turndownService.turndown(arrow.outerHTML);
       }
     });
 
@@ -10249,6 +10299,21 @@ function exportDocument(format) {
     });
   }
 
+  // تطهير نصوص الماركداون من أي بقايا أرقام أو مقاسات مسربة من أشرطة الأدوات
+  function cleanToolbarResidue(text) {
+    if (!text || typeof text !== 'string') return text;
+    return text
+      .split('\n')
+      .filter(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return true;
+        // فحص هل السطر مكوّن بالكامل من أرقام المقاسات أو نسب شريط الأدوات المسربة (مثل 820px (100%) حر 100% 75% 50% 25% أو (%100))
+        const isToolbarGarbage = /^(?:(?:\d+px|\d+%|\(\s*%\s*\d+\s*\)|\(\s*\d+%\s*\)|حر|24|48|80|•|\d+°)\s*)+$/.test(trimmed);
+        return !isToolbarGarbage;
+      })
+      .join('\n');
+  }
+
   // مزامنة محتوى المعاينة المباشر إلى نصوص الماركداون
   function syncPreviewToMarkdown(immediate = false) {
     if (!turndownService) initTurndown();
@@ -10264,14 +10329,39 @@ function exportDocument(format) {
         // نسخ مؤقت لشجرة العناصر لتنظيفها قبل التحويل
         const clone = previewContent.cloneNode(true);
 
-        // إزالة أزرار الزوم والنسخ ومقابض التحجيم وكافة كروت وملحقات الترجمة والنطق
+        // 1. إزالة جميع أشرطة الأدوات والمقابض والعناصر الداخلية الخاصة بالتطبيق نهائياً
         clone.querySelectorAll(
-          '.diagram-zoom-controls, .code-copy-btn, .img-resize-handle, .image-action-overlay, ' +
+          '.image-resizer-toolbar, .arrow-resizer-toolbar, .table-resizer-toolbar, [data-vienix-table-toolbar], ' +
+          '.resizer-handle, .resizer-corner-rotate-handle, .resizer-size-badge, .resizer-btn, .resizer-divider, ' +
+          '.wysiwyg-floating-toolbar, .diagram-zoom-controls, .code-copy-btn, .img-resize-handle, .image-action-overlay, ' +
           '.pronunciation-speaker-btn, .pronunciation-trans-btn, .inline-translation-box, ' +
           '.pronunciation-floating-pill, .word-trans-bubble, .itb-loading, .itb-text, .bilingual-trans-tag'
         ).forEach(el => el.remove());
 
-        // تفكيك واستخراج النصوص الصافية من وسوم النطق لضمان عدم تسرب أي وسوم أو أكواد للماركداون
+        // 2. تفكيك حاويات الصور المستقلة (image-resizer-wrapper) لاستخراج وسوم img فقط ومنع تسرب أي نصوص
+        clone.querySelectorAll('.image-resizer-wrapper').forEach(wrapper => {
+          const img = wrapper.querySelector('img');
+          if (img) {
+            if (!img.getAttribute('width') && wrapper.style.width) {
+              img.setAttribute('width', wrapper.style.width);
+            }
+            wrapper.parentNode.replaceChild(img, wrapper);
+          } else {
+            wrapper.remove();
+          }
+        });
+
+        // 3. تفكيك حاويات الأسهم المستقلة (arrow-resizer-wrapper) لاستخراج وسم السهم الصافي فقط
+        clone.querySelectorAll('.arrow-resizer-wrapper').forEach(wrapper => {
+          const arrowEl = wrapper.querySelector('.vienix-arrow') || wrapper.querySelector('[data-arrow-id]');
+          if (arrowEl) {
+            wrapper.parentNode.replaceChild(arrowEl, wrapper);
+          } else {
+            wrapper.remove();
+          }
+        });
+
+        // 4. تفكيك واستخراج النصوص الصافية من وسوم النطق لضمان عدم تسرب أي وسوم أو أكواد للماركداون
         clone.querySelectorAll('.pronunciation-phrase, .pronunciation-word').forEach(span => {
           const parent = span.parentNode;
           if (!parent) return;
@@ -10284,8 +10374,9 @@ function exportDocument(format) {
         // تحويل شجرة HTML إلى نصوص ماركداون دقيقة
         let md = turndownService.turndown(clone.innerHTML);
 
-        // تنظيف أي شوائب قديمة للترجمة أو فواصل زائدة
-        md = md.replace(/<br\s*\/?>\s*<br\s*\/?>\s*جارٍ?\s*استحضار\s*ترجمة\s*العبارة\s*\.\.\.?/gi, '')
+        // تنظيف أي شوائب قديمة للترجمة أو فواصل زائدة أو بقايا مسربة من أشرطة الأدوات
+        md = cleanToolbarResidue(md)
+               .replace(/<br\s*\/?>\s*<br\s*\/?>\s*جارٍ?\s*استحضار\s*ترجمة\s*العبارة\s*\.\.\.?/gi, '')
                .replace(/جارٍ?\s*استحضار\s*ترجمة\s*العبارة\s*\.\.\.?/gi, '')
                .replace(/\r\n/g, '\n');
 
