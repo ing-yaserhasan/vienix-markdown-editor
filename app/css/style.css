@@ -6565,31 +6565,13 @@ body.wysiwyg-active .image-resizer-wrapper.active .resizer-handle {
    الأيقونتان تظهران بشفافية 25% خارج تدفق النص تماماً
    ════════════════════════════════════════════════════════════════════ */
 
-/* 1. غلاف الجملة: يصبح شفافاً للتنسيق — لا عزل ثنائي الاتجاه ولا هوامش */
+/* 1. غلاف الجملة: يحافظ على اتجاه النص (ltr/isolate) مع إزالة الهوامش فقط */
 body.ghost-pron-icons .pronunciation-phrase {
-  unicode-bidi: normal !important;
-  direction: inherit !important;
   margin: 0 !important;
-  text-align: inherit !important;
   position: relative;
 }
 
-/* 2. الكلمات: تبدو كنص عادي — بدون خط منقط وبدون تأثيرات حوم */
-body.ghost-pron-icons .pronunciation-word,
-body.ghost-pron-icons .pronunciation-word.no-underline {
-  text-decoration: none !important;
-  cursor: inherit;
-}
-
-body.ghost-pron-icons .pronunciation-word:hover {
-  background: transparent !important;
-  color: inherit !important;
-  transform: none !important;
-  box-shadow: none !important;
-  text-decoration: none !important;
-}
-
-/* 3. الأيقونتان: خارج التدفق تماماً — لا تؤثران على ترتيب النص أبداً */
+/* 2. الأيقونتان: خارج التدفق تماماً — لا تؤثران على ترتيب النص أبداً */
 body.ghost-pron-icons .pronunciation-speaker-btn,
 body.ghost-pron-icons .pronunciation-trans-btn {
   position: absolute !important;
@@ -6610,7 +6592,7 @@ body.ghost-pron-icons .pronunciation-trans-btn {
   left: 24px;
 }
 
-/* 4. عند التفاعل (نقر / حوم / تركيز / نطق فعلي) → ظهور كامل 100% */
+/* 3. عند التفاعل (نقر / حوم / تركيز / نطق فعلي) → ظهور كامل 100% */
 body.ghost-pron-icons .pronunciation-speaker-btn:hover,
 body.ghost-pron-icons .pronunciation-trans-btn:hover,
 body.ghost-pron-icons .pronunciation-speaker-btn:focus,
@@ -6622,7 +6604,7 @@ body.ghost-pron-icons .pronunciation-trans-btn.is-active {
   opacity: 1 !important;
 }
 
-/* 5. غلاف بطاقة الترجمة: مخفي حتى يُفتح بالنقر */
+/* 4. غلاف بطاقة الترجمة: مخفي حتى يُفتح بالنقر */
 body.ghost-pron-icons .itb-outer-wrapper:not(.is-card-open) {
   display: none !important;
 }
