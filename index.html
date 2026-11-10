@@ -2470,6 +2470,8 @@
           <button class="ai-chat-close-btn" onclick="closeAiChatModal()" title="إغلاق">✕</button>
         </div>
       </div>
+      <!-- Context Pill (Word / Sentence context) -->
+      <div class="ai-chat-word-context-pill" id="ai-chat-word-context-pill" style="display:none;"></div>
       <!-- Body -->
       <div class="ai-chat-body" id="ai-chat-body">
         <div class="ai-chat-empty" id="ai-chat-empty">
@@ -2819,6 +2821,9 @@
       var overlay = document.getElementById('ai-chat-overlay');
       if (!overlay) return;
       window._currentAiPhraseContext = null;
+      window._currentAiWordContext = null;
+      var ctxPill = document.getElementById('ai-chat-word-context-pill');
+      if (ctxPill) ctxPill.style.display = 'none';
       var saveBtn = document.getElementById('ai-chat-save-btn');
       if (saveBtn) saveBtn.style.display = 'none';
       _aiMessages = loadAiChatHistory();
@@ -2832,7 +2837,7 @@
         modelLabel.textContent = names[m] || m;
       }
       renderAiChat();
-      setTimeout(function() { var inp = document.getElementById('ai-chat-input'); if(inp) inp.focus(); }, 200);
+      setTimeout(function() { var inp = document.getElementById('ai-chat-input'); if(inp) { inp.placeholder = 'اكتب سؤالك هنا...'; inp.focus(); } }, 200);
     };
 
     window.closeAiChatModal = function(e) {
@@ -2841,7 +2846,11 @@
       if (!overlay) return;
       overlay.classList.remove('ai-chat-visible');
       if (_aiAbortCtrl) { _aiAbortCtrl.abort(); _aiAbortCtrl = null; }
-      setTimeout(function() { overlay.style.display = 'none'; }, 300);
+      setTimeout(function() {
+        overlay.style.display = 'none';
+        var ctxPill = document.getElementById('ai-chat-word-context-pill');
+        if (ctxPill) ctxPill.style.display = 'none';
+      }, 300);
     };
 
     // ───── Layer 6: Settings UI ─────
@@ -2994,6 +3003,9 @@
       var overlay = document.getElementById('ai-chat-overlay');
       if (!overlay) return;
       window._currentAiPhraseContext = null;
+      window._currentAiWordContext = null;
+      var ctxPill = document.getElementById('ai-chat-word-context-pill');
+      if (ctxPill) ctxPill.style.display = 'none';
       var saveBtn = document.getElementById('ai-chat-save-btn');
       if (saveBtn) saveBtn.style.display = 'none';
       _aiMessages = [];
@@ -3072,7 +3084,7 @@
       renderAiChat();
       setAiLoading(true);
 
-      // Build prompt — include file context if absorbed
+      // Build prompt — include file context if absorbed, or word/sentence context if active
       var fullPrompt = AI_SYSTEM_PROMPT;
       if (_aiFileContextAbsorbed && _aiFileContextContent) {
         fullPrompt += '\n\nقاعدة إضافية مهمة جداً:\n' +
@@ -3082,6 +3094,13 @@
           '- احفظ نفس التنسيق والهيكل ما لم يطلب غير ذلك.\n' +
           '- إذا كان السؤال استفساراً (ليس أمر تعديل)، أجب عليه بشكل طبيعي.\n\n' +
           '--- محتوى الملف الحالي ---\n' + _aiFileContextContent + '\n--- نهاية المحتوى ---\n';
+      } else if (window._currentAiWordContext && window._currentAiWordContext.word) {
+        fullPrompt += '\n\n--- سياق الكلمة الحالية من النص ---\n' +
+          'الكلمة المحددة: «' + window._currentAiWordContext.word + '»\n';
+        if (window._currentAiWordContext.sentence) {
+          fullPrompt += 'الجملة التي تتموضع فيها هذه الكلمة: «' + window._currentAiWordContext.sentence + '»\n';
+        }
+        fullPrompt += 'توجيه: أنت مضطلع تماماً على هذه الكلمة وسياق الجملة المذكورة أعلاه. أجب على أسئلة واستفسارات المستخدم بذكاء ودقة وإيجاز (على قد السؤال بالضبط)، مع مراعاة هذا السياق والتركيب اللغوي والمعنى دون إطالة غير لازمة.\n';
       }
       fullPrompt += '\n\n--- سجل المحادثة ---\n';
       _aiMessages.forEach(function(m) {
@@ -3254,6 +3273,9 @@
 
       var normPhrase = (phraseText || '').trim();
       window._currentAiPhraseContext = normPhrase;
+      window._currentAiWordContext = null;
+      var ctxPill = document.getElementById('ai-chat-word-context-pill');
+      if (ctxPill) ctxPill.style.display = 'none';
 
       var saveBtn = document.getElementById('ai-chat-save-btn');
       if (saveBtn) {
@@ -3368,6 +3390,88 @@
         setAiLoading(false);
         renderAiChat();
       });
+    };
+
+    // ───── Layer 9: Ask AI About Word with Sentence Context (بدون برومبت مسبق وبدون إرسال تلقائي) ─────
+    window.openAiChatWithWord = function(wordText, sentenceText, triggerBtn) {
+      var hasKey = false;
+      try {
+        var keys = loadAiKeys();
+        hasKey = Array.isArray(keys) && keys.length > 0;
+      } catch(e) {}
+
+      var aiReady = isAiEnabled() && hasKey;
+      if (!aiReady) {
+        if (typeof _closeItbAiDisabledTip === 'function') _closeItbAiDisabledTip();
+        var msg = !isAiEnabled()
+          ? 'ميزة الذكاء الاصطناعي غير مفعلة من الإعدادات'
+          : 'يرجى إضافة مفتاح Gemini API شغال من قسم الإعدادات ⚙️';
+        showAiToast(msg, true);
+        return;
+      }
+
+      var overlay = document.getElementById('ai-chat-overlay');
+      if (!overlay) return;
+
+      var cleanWord = (wordText || '').trim();
+      var cleanSentence = (sentenceText || '').trim();
+      if (cleanSentence === cleanWord) cleanSentence = '';
+
+      window._currentAiWordContext = {
+        word: cleanWord,
+        sentence: cleanSentence
+      };
+      window._currentAiPhraseContext = null;
+      _aiFileContextAbsorbed = false;
+      _aiFileContextContent = '';
+
+      var saveBtn = document.getElementById('ai-chat-save-btn');
+      if (saveBtn) saveBtn.style.display = 'none';
+
+      // فتح محادثة جديدة نظيفة (بدون برومبت مسبق وبدون إرسال تلقائي)
+      _aiMessages = [];
+      saveAiChatHistory([]);
+
+      // تحديث شريط سياق الكلمة والجملة أعلى المحادثة
+      var ctxPill = document.getElementById('ai-chat-word-context-pill');
+      if (ctxPill) {
+        var safeWord = cleanWord.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        var pillHtml = '<div class="ai-ctx-content">' +
+          '<span class="ai-ctx-tag">✨ سياق الكلمة:</span> <strong class="ai-ctx-word" dir="ltr">' + safeWord + '</strong>';
+        if (cleanSentence) {
+          var safeSent = cleanSentence.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          pillHtml += '<span class="ai-ctx-sep">•</span><span class="ai-ctx-tag">الجملة:</span> <span class="ai-ctx-sentence" dir="ltr">«' + safeSent + '»</span>';
+        }
+        pillHtml += '</div>';
+        ctxPill.innerHTML = pillHtml;
+        ctxPill.style.display = 'flex';
+      }
+
+      overlay.style.display = 'flex';
+      setTimeout(function() { overlay.classList.add('ai-chat-visible'); }, 10);
+
+      var modelLabel = document.getElementById('ai-chat-model-label');
+      if (modelLabel) {
+        var m = loadAiModel();
+        var names = {
+          'gemini-2.0-flash-lite':'Gemini 2.0 Flash Lite',
+          'gemini-3.8-flash':'Gemini 3.8 Flash',
+          'gemini-3.5-flash-lite':'Gemini 3.5 Flash Lite',
+          'gemini-2.5-flash-lite':'Gemini 2.5 Flash Lite',
+          'gemini-1.5-flash':'Gemini 1.5 Flash'
+        };
+        modelLabel.textContent = names[m] || m;
+      }
+
+      renderAiChat();
+
+      setTimeout(function() {
+        var inp = document.getElementById('ai-chat-input');
+        if (inp) {
+          inp.placeholder = 'اسأل عن «' + cleanWord + '» أو سياقها أو أي استفسار تريده...';
+          inp.focus();
+        }
+      }, 200);
     };
 
     // ── دالة حفظ محادثة العبارة الحالية مع كافة تفرعاتها (مرتبطة بالعبارة وتدعم المزامنة السحابية) ──

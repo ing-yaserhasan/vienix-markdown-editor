@@ -13467,6 +13467,16 @@ function exportDocument(format) {
     const prefix = (langCode || '').split('-')[0].toLowerCase();
     const flag = langFlagMap[prefix] || '🌐';
 
+    const isAiActive = (typeof window.isAiEnabled === 'function') && window.isAiEnabled();
+    const aiBtnHtml = isAiActive
+      ? `<button type="button" class="wtb-ai-btn" id="wtb-btn-ai" title="دردشة الذكاء الاصطناعي مع سياق هذه الكلمة" aria-label="ذكاء اصطناعي">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20.5 11.5C20.5 16 16.5 19.5 11.5 19.5C10.2 19.5 9 19.2 7.9 18.7L3.5 20L4.8 16.1C3.7 14.8 3 13.2 3 11.5C3 7 6.8 3.5 11.5 3.5C16.5 3.5 20.5 7 20.5 11.5Z" stroke="#9333ea" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M11.5 7.5 Q11.5 11.5 15.5 11.5 Q11.5 11.5 11.5 15.5 Q11.5 11.5 7.5 11.5 Q11.5 11.5 11.5 7.5 Z" fill="#00d2ff"/>
+          </svg>
+        </button>`
+      : '';
+
     bubble.innerHTML = `
       <div class="wtb-arrow"></div>
       <div class="wtb-header">
@@ -13480,6 +13490,7 @@ function exportDocument(format) {
             <span>بطيء</span>
           </button>
           <button type="button" class="wtb-close-btn" id="wtb-btn-close" aria-label="إغلاق"><svg class="ui-icon" style="margin:0;" viewBox="0 0 24 24" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+          ${aiBtnHtml}
         </div>
       </div>
       <div class="wtb-body">
@@ -13520,6 +13531,30 @@ function exportDocument(format) {
       closeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         closeWordTranslationBubble();
+      });
+    }
+
+    // AI Chat button (يظهر فقط إذا كان الذكاء الاصطناعي مفعلاً)
+    const aiBtn = bubble.querySelector('#wtb-btn-ai');
+    if (aiBtn) {
+      aiBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const phraseWrapper = wordElement ? wordElement.closest('.pronunciation-phrase') : null;
+        let parentPhrase = phraseWrapper ? (phraseWrapper.getAttribute('data-phrase') || phraseWrapper.textContent || '').trim() : '';
+        if (!parentPhrase || parentPhrase === word) {
+          const blockParent = wordElement ? wordElement.closest('p, li, blockquote, div') : null;
+          if (blockParent) {
+            const blockText = (blockParent.textContent || '').trim();
+            if (blockText && blockText.length > word.length) {
+              parentPhrase = blockText;
+            }
+          }
+        }
+        closeWordTranslationBubble();
+        if (typeof window.openAiChatWithWord === 'function') {
+          window.openAiChatWithWord(word, parentPhrase, aiBtn);
+        }
       });
     }
 

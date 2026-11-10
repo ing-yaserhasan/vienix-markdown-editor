@@ -7358,6 +7358,33 @@ body.ghost-pron-icons .itb-outer-wrapper:not(.is-card-open) {
   background: rgba(239, 68, 68, 0.1);
 }
 
+.wtb-ai-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #9333ea;
+  transition: all 0.15s ease;
+}
+
+.wtb-ai-btn:hover {
+  background: rgba(147, 51, 234, 0.12);
+  transform: scale(1.12);
+}
+
+[data-theme="dark"] .wtb-ai-btn {
+  color: #c084fc;
+}
+
+[data-theme="dark"] .wtb-ai-btn:hover {
+  background: rgba(192, 132, 252, 0.2);
+}
+
 .wtb-body {
   min-height: 24px;
   display: flex;
@@ -9325,6 +9352,71 @@ body.wysiwyg-active .arrow-resizer-wrapper.active .resizer-corner-rotate-handle 
 .ai-chat-close-btn:hover {
   background: var(--bg-hover, rgba(0,0,0,0.06));
   color: var(--text-primary, #1e293b);
+}
+
+/* Word & Sentence Context Banner */
+.ai-chat-word-context-pill {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.08), rgba(56, 189, 248, 0.08));
+  border-bottom: 1px solid rgba(147, 51, 234, 0.15);
+  font-size: 0.78rem;
+  color: var(--text-color, #334155);
+}
+
+[data-theme="dark"] .ai-chat-word-context-pill {
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.16), rgba(56, 189, 248, 0.1));
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+}
+
+.ai-chat-word-context-pill .ai-ctx-content {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.ai-chat-word-context-pill .ai-ctx-tag {
+  font-weight: 700;
+  color: #9333ea;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+[data-theme="dark"] .ai-chat-word-context-pill .ai-ctx-tag {
+  color: #c084fc;
+}
+
+.ai-chat-word-context-pill .ai-ctx-word {
+  font-family: 'Fira Code', monospace;
+  font-weight: 700;
+  color: var(--accent-color, #6366f1);
+  background: rgba(99, 102, 241, 0.1);
+  padding: 1px 7px;
+  border-radius: 5px;
+}
+
+.ai-chat-word-context-pill .ai-ctx-sep {
+  color: var(--text-muted, #94a3b8);
+  margin: 0 2px;
+}
+
+.ai-chat-word-context-pill .ai-ctx-sentence {
+  color: var(--text-secondary, #475569);
+  font-style: italic;
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-theme="dark"] .ai-chat-word-context-pill .ai-ctx-sentence {
+  color: #cbd5e1;
 }
 
 /* Body */
