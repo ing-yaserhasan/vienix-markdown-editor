@@ -186,6 +186,9 @@
         break;
 
       case 'pronunciationEnabled':
+        if (typeof updatePronunciationQuickButtons === 'function') {
+          updatePronunciationQuickButtons();
+        }
       case 'targetLanguage':
       case 'dottedUnderline':
       case 'interactionMode':
@@ -321,6 +324,9 @@
     }
     if (typeof applyGhostIconsMode === 'function') {
       applyGhostIconsMode(vienixSettings.ghostIcons !== false);
+    }
+    if (typeof updatePronunciationQuickButtons === 'function') {
+      updatePronunciationQuickButtons();
     }
   }
 
@@ -10739,6 +10745,45 @@ function exportDocument(format) {
         saveStatus.textContent = 'تم الحفظ تلقائياً ✓';
         saveStatus.className = 'save-badge';
       }
+    }
+  };
+
+  // ── زر التبديل السريع لمساعد النطق الصوتي (Pron Quick Toggle) ──
+  window.updatePronunciationQuickButtons = function () {
+    const isPronOn = typeof vienixSettings !== 'undefined' && vienixSettings.pronunciationEnabled === true;
+    const btn1 = document.getElementById('btn-toggle-pron');
+    const btn2 = document.getElementById('btn-preview-header-pron');
+    const pronCheckbox = document.getElementById('s-pronunciation-enabled');
+
+    [btn1, btn2].forEach(btn => {
+      if (!btn) return;
+      btn.classList.toggle('active', isPronOn);
+      btn.title = isPronOn
+        ? 'إيقاف مساعد النطق الصوتي (Pron: ON)'
+        : 'تشغيل مساعد النطق الصوتي (Pron: OFF)';
+    });
+
+    if (pronCheckbox && pronCheckbox.checked !== isPronOn) {
+      pronCheckbox.checked = isPronOn;
+    }
+    if (typeof togglePronunciationSubSettings === 'function') {
+      togglePronunciationSubSettings(isPronOn);
+    }
+  };
+
+  window.togglePronunciationQuick = function () {
+    const current = typeof vienixSettings !== 'undefined' && vienixSettings.pronunciationEnabled === true;
+    const next = !current;
+    if (typeof window.applySetting === 'function') {
+      window.applySetting('pronunciationEnabled', next);
+    } else {
+      vienixSettings.pronunciationEnabled = next;
+      saveSettings();
+      renderMarkdown();
+    }
+    updatePronunciationQuickButtons();
+    if (typeof showToast === 'function') {
+      showToast(next ? 'تم تفعيل مساعد النطق الصوتي 🔊' : 'تم إيقاف مساعد النطق الصوتي 🔇', next ? 'success' : 'info');
     }
   };
 

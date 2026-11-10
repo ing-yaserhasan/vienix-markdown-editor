@@ -376,6 +376,11 @@
             <span class="wysiwyg-btn-text">Edit</span>
           </button>
 
+          <!-- زر تشغيل/إيقاف مساعد النطق الصوتي السريع (Pron Toggle) -->
+          <button type="button" class="wysiwyg-preview-btn pron-quick-toggle-btn" id="btn-toggle-pron" onclick="togglePronunciationQuick()" title="تشغيل/إيقاف مساعد النطق الصوتي (Pronunciation Assistant)">
+            <span class="wysiwyg-btn-text">Pron</span>
+          </button>
+
           <button class="tool-btn chamber-diff-btn" id="btn-chamber-diff" onclick="openChambersDiffModal()" title="مطابقة ومقارنة محتوى حجرتين جنباً إلى جنب">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M16 3h5v5"></path>
@@ -556,6 +561,10 @@
             <!-- نفس زر Edit النيومورفي الأصلي بحجم أصغر -->
             <button type="button" class="wysiwyg-preview-btn preview-wysiwyg-btn" id="btn-preview-header-edit" onclick="toggleWysiwygPreviewMode()" title="تبديل وضع تحرير المعاينة المباشر (Edit Preview)">
               <span class="wysiwyg-btn-text">Edit</span>
+            </button>
+            <!-- زر النطق السريع في شاشة العرض بالموبايل -->
+            <button type="button" class="wysiwyg-preview-btn preview-wysiwyg-btn pron-quick-toggle-btn" id="btn-preview-header-pron" onclick="togglePronunciationQuick()" title="تشغيل/إيقاف مساعد النطق الصوتي (Pronunciation Assistant)">
+              <span class="wysiwyg-btn-text">Pron</span>
             </button>
             <!-- زر المستكشف بدلاً من خيار Mermaid & HTML تماماً -->
             <button type="button" class="tool-btn win-folder-btn preview-explorer-btn" id="btn-preview-header-explorer" onclick="toggleChambersExplorer()" title="مستكشف الفصول والمجلدات">

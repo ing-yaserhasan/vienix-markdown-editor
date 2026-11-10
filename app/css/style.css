@@ -5306,6 +5306,27 @@ body.wysiwyg-active .image-resizer-wrapper.active .resizer-handle {
   box-shadow: -2.5px -2.5px 6px rgba(255, 255, 255, 0.08), 2.5px 2.5px 9px rgba(96, 165, 250, 0.7);
 }
 
+/* زر النطق السريع Pron (بنفس لغة التصميم النيومورفي مع تمييز أخضر زمردي جميل عند التفعيل) */
+.pron-quick-toggle-btn.active {
+  color: #10b981 !important;
+  box-shadow: -2.5px -2.5px 6px rgba(255, 255, 255, 0.95), 2.5px 2.5px 7.5px rgba(16, 185, 129, 0.42) !important;
+}
+
+.pron-quick-toggle-btn.active:hover {
+  color: #059669 !important;
+  box-shadow: -3px -3px 7px rgba(255, 255, 255, 1), 3px 3px 8.5px rgba(16, 185, 129, 0.55) !important;
+}
+
+[data-theme="dark"] .pron-quick-toggle-btn.active {
+  color: #34d399 !important;
+  box-shadow: -2px -2px 5px rgba(255, 255, 255, 0.05), 2px 2px 8px rgba(52, 211, 153, 0.55) !important;
+}
+
+[data-theme="dark"] .pron-quick-toggle-btn.active:hover {
+  color: #6ee7b7 !important;
+  box-shadow: -2.5px -2.5px 6px rgba(255, 255, 255, 0.08), 2.5px 2.5px 9px rgba(52, 211, 153, 0.7) !important;
+}
+
 /* ========================================================
    ØªÙ†Ø³ÙŠÙ‚Ø§Øª Ù…Ù†Ø·Ù‚Ø© Ø§Ù„Ù…Ø¹Ø§ÙŠÙ†Ø© Ø¹Ù†Ø¯ ØªÙØ¹ÙŠÙ„ Ø§Ù„ØªØ­Ø±ÙŠØ± Ø§Ù„Ù…Ø¨Ø§Ø´Ø±
    ======================================================== */
