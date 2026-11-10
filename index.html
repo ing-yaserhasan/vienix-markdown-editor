@@ -1605,6 +1605,16 @@
 
   <!-- شريط التنسيق العائم للمعاينة المباشرة (WYSIWYG Floating Formatting Toolbar) -->
   <div class="wysiwyg-floating-toolbar" id="wysiwyg-floating-toolbar" role="toolbar" aria-label="شريط التنسيق السريع">
+    <div class="wysiwyg-drag-handle" id="wysiwyg-drag-handle" title="اسحب لتحريك شريط الأدوات">
+      <svg viewBox="0 0 10 16" width="10" height="16" fill="currentColor">
+        <circle cx="3" cy="3" r="1.5"></circle>
+        <circle cx="7" cy="3" r="1.5"></circle>
+        <circle cx="3" cy="8" r="1.5"></circle>
+        <circle cx="7" cy="8" r="1.5"></circle>
+        <circle cx="3" cy="13" r="1.5"></circle>
+        <circle cx="7" cy="13" r="1.5"></circle>
+      </svg>
+    </div>
     <button type="button" class="wysiwyg-tool-btn" data-command="bold" title="غامق (Bold - Ctrl+B)">
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path></svg>
     </button>
@@ -2422,7 +2432,16 @@
             <p class="ai-chat-subtitle" id="ai-chat-model-label">Gemini 2.0 Flash Lite</p>
           </div>
         </div>
-        <button class="ai-chat-close-btn" onclick="closeAiChatModal()" title="إغلاق">✕</button>
+        <div class="ai-chat-header-actions">
+          <button class="ai-chat-save-btn" id="ai-chat-save-btn" onclick="saveCurrentPhraseAiChat()" title="حفظ محادثة هذه العبارة" style="display:none;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+          </button>
+          <button class="ai-chat-close-btn" onclick="closeAiChatModal()" title="إغلاق">✕</button>
+        </div>
       </div>
       <!-- Body -->
       <div class="ai-chat-body" id="ai-chat-body">
@@ -2637,6 +2656,14 @@
         saveAiChatHistory(_aiMessages);
         setAiLoading(false);
         renderAiChat();
+
+        if (window._currentAiPhraseContext) {
+          var saveBtn = document.getElementById('ai-chat-save-btn');
+          if (saveBtn) {
+            saveBtn.classList.remove('is-saved');
+            saveBtn.title = 'لديك ردود وتفرعات جديدة — انقر لحفظ المحادثة المحدثة 💾';
+          }
+        }
         // Smart scroll to top of AI response
         setTimeout(function() {
           var bubbles = document.querySelectorAll('.ai-bubble-bot');
@@ -2764,6 +2791,9 @@
     window.openAiChatModal = function() {
       var overlay = document.getElementById('ai-chat-overlay');
       if (!overlay) return;
+      window._currentAiPhraseContext = null;
+      var saveBtn = document.getElementById('ai-chat-save-btn');
+      if (saveBtn) saveBtn.style.display = 'none';
       _aiMessages = loadAiChatHistory();
       overlay.style.display = 'flex';
       setTimeout(function() { overlay.classList.add('ai-chat-visible'); }, 10);
@@ -2887,6 +2917,13 @@
     window.clearAiChat = function() {
       _aiMessages = [];
       saveAiChatHistory([]);
+      if (window._currentAiPhraseContext) {
+        var saveBtn = document.getElementById('ai-chat-save-btn');
+        if (saveBtn) {
+          saveBtn.classList.remove('is-saved');
+          saveBtn.title = 'حفظ محادثة هذه العبارة';
+        }
+      }
       renderAiChat();
     };
 
@@ -2929,6 +2966,9 @@
       // Open modal
       var overlay = document.getElementById('ai-chat-overlay');
       if (!overlay) return;
+      window._currentAiPhraseContext = null;
+      var saveBtn = document.getElementById('ai-chat-save-btn');
+      if (saveBtn) saveBtn.style.display = 'none';
       _aiMessages = [];
       saveAiChatHistory([]);
       overlay.style.display = 'flex';
@@ -3030,6 +3070,14 @@
         saveAiChatHistory(_aiMessages);
         setAiLoading(false);
         renderAiChat();
+
+        if (window._currentAiPhraseContext) {
+          var saveBtn = document.getElementById('ai-chat-save-btn');
+          if (saveBtn) {
+            saveBtn.classList.remove('is-saved');
+            saveBtn.title = 'لديك ردود وتفرعات جديدة — انقر لحفظ المحادثة المحدثة 💾';
+          }
+        }
 
         // Add "Apply to editor" button for context-aware responses
         if (_aiFileContextAbsorbed) {
@@ -3177,6 +3225,54 @@
       var overlay = document.getElementById('ai-chat-overlay');
       if (!overlay) return;
 
+      var normPhrase = (phraseText || '').trim();
+      window._currentAiPhraseContext = normPhrase;
+
+      var saveBtn = document.getElementById('ai-chat-save-btn');
+      if (saveBtn) {
+        saveBtn.style.display = 'inline-flex';
+        saveBtn.classList.remove('is-saved');
+        saveBtn.title = 'حفظ محادثة هذه العبارة';
+      }
+
+      // التحقق مما إذا كانت هناك محادثة سابقة محفوظة لهذه العبارة تحديداً
+      var savedStore = {};
+      try {
+        savedStore = JSON.parse(localStorage.getItem('vienix_phrase_ai_chats') || '{}');
+      } catch(e) { savedStore = {}; }
+
+      if (savedStore[normPhrase] && Array.isArray(savedStore[normPhrase].messages) && savedStore[normPhrase].messages.length > 0) {
+        _aiMessages = JSON.parse(JSON.stringify(savedStore[normPhrase].messages));
+        saveAiChatHistory(_aiMessages);
+        if (saveBtn) {
+          saveBtn.classList.add('is-saved');
+          saveBtn.title = 'تم حفظ محادثة هذه العبارة مسبقاً (انقر لتحديث الحفظ 💾)';
+        }
+
+        // افتح المودال وحدّث التسمية
+        overlay.style.display = 'flex';
+        setTimeout(function() { overlay.classList.add('ai-chat-visible'); }, 10);
+        var modelLabel = document.getElementById('ai-chat-model-label');
+        if (modelLabel) {
+          var m = loadAiModel();
+          var names = {
+            'gemini-2.0-flash-lite':'Gemini 2.0 Flash Lite',
+            'gemini-3.8-flash':'Gemini 3.8 Flash',
+            'gemini-3.5-flash-lite':'Gemini 3.5 Flash Lite',
+            'gemini-2.5-flash-lite':'Gemini 2.5 Flash Lite',
+            'gemini-1.5-flash':'Gemini 1.5 Flash'
+          };
+          modelLabel.textContent = names[m] || m;
+        }
+
+        renderAiChat();
+        setTimeout(function() {
+          var b = document.querySelectorAll('.ai-bubble-bot');
+          if (b.length) b[b.length - 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 120);
+        return;
+      }
+
       // أعد تعيين المحادثة
       _aiMessages = [];
       saveAiChatHistory([]);
@@ -3245,6 +3341,46 @@
         setAiLoading(false);
         renderAiChat();
       });
+    };
+
+    // ── دالة حفظ محادثة العبارة الحالية مع كافة تفرعاتها (مرتبطة بالعبارة وتدعم المزامنة السحابية) ──
+    window.saveCurrentPhraseAiChat = function() {
+      if (!window._currentAiPhraseContext) {
+        showAiToast('لا توجد عبارة محددة لحفظ المحادثة لها ⚠️', true);
+        return;
+      }
+      if (!_aiMessages || _aiMessages.length === 0) {
+        showAiToast('لا توجد رسائل لحفظها بعد ⚠️', true);
+        return;
+      }
+
+      var phrase = window._currentAiPhraseContext;
+      var savedStore = {};
+      try {
+        savedStore = JSON.parse(localStorage.getItem('vienix_phrase_ai_chats') || '{}');
+      } catch(e) { savedStore = {}; }
+
+      savedStore[phrase] = {
+        phrase: phrase,
+        savedAt: new Date().toISOString(),
+        messages: JSON.parse(JSON.stringify(_aiMessages))
+      };
+
+      try {
+        localStorage.setItem('vienix_phrase_ai_chats', JSON.stringify(savedStore));
+        if (window.VienixIDB && typeof window.VienixIDB.set === 'function') {
+          window.VienixIDB.set('vienix_phrase_ai_chats', savedStore);
+        }
+        var saveBtn = document.getElementById('ai-chat-save-btn');
+        if (saveBtn) {
+          saveBtn.classList.add('is-saved');
+          saveBtn.title = 'تم حفظ محادثة هذه العبارة بنجاح ✓ (انقر للتحديث)';
+        }
+        showAiToast('تم حفظ محادثة هذه العبارة بنجاح 💾✓');
+      } catch (err) {
+        console.error('Error saving phrase AI chat:', err);
+        showAiToast('تعذر الحفظ: ' + err.message, true);
+      }
     };
 
   })();

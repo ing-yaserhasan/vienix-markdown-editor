@@ -10462,13 +10462,19 @@ function exportDocument(format) {
     }
   }
 
+  // متغيرات حالة سحب شريط التنسيق العائم
+  let isWysiwygToolbarDragging = false;
+  let wysiwygToolbarManuallyMoved = false;
+
   // إخفاء شريط التنسيق العائم
   function hideFloatingFormatToolbar() {
     const toolbar = document.getElementById('wysiwyg-floating-toolbar');
     if (toolbar) {
       toolbar.classList.remove('visible');
+      toolbar.classList.remove('is-manually-dragged');
       toolbar.style.display = 'none';
     }
+    wysiwygToolbarManuallyMoved = false;
     if (typeof window.closeWysiwygColorPopover === 'function') {
       window.closeWysiwygColorPopover();
     }
@@ -10497,6 +10503,70 @@ function exportDocument(format) {
   function setupFloatingFormatToolbar() {
     const toolbar = document.getElementById('wysiwyg-floating-toolbar');
     if (!toolbar) return;
+
+    // تمكين سحب وإفلات شريط الأدوات العائم لمنع حجب النص أو قوائم التحديد بالنظام
+    const dragHandle = toolbar.querySelector('#wysiwyg-drag-handle');
+    if (dragHandle) {
+      let startX = 0;
+      let startY = 0;
+      let initialLeft = 0;
+      let initialTop = 0;
+
+      const onPointerDown = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        isWysiwygToolbarDragging = true;
+        wysiwygToolbarManuallyMoved = true;
+
+        const rect = toolbar.getBoundingClientRect();
+        toolbar.classList.add('is-manually-dragged');
+        toolbar.style.left = `${rect.left}px`;
+        toolbar.style.top = `${rect.top}px`;
+
+        startX = e.clientX;
+        startY = e.clientY;
+        initialLeft = rect.left;
+        initialTop = rect.top;
+
+        try {
+          dragHandle.setPointerCapture(e.pointerId);
+        } catch (_) {}
+      };
+
+      const onPointerMove = (e) => {
+        if (!isWysiwygToolbarDragging) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+
+        let newLeft = initialLeft + deltaX;
+        let newTop = initialTop + deltaY;
+
+        const maxLeft = Math.max(8, window.innerWidth - toolbar.offsetWidth - 8);
+        const maxTop = Math.max(8, window.innerHeight - toolbar.offsetHeight - 8);
+
+        newLeft = Math.max(8, Math.min(newLeft, maxLeft));
+        newTop = Math.max(8, Math.min(newTop, maxTop));
+
+        toolbar.style.left = `${newLeft}px`;
+        toolbar.style.top = `${newTop}px`;
+      };
+
+      const onPointerUp = (e) => {
+        if (isWysiwygToolbarDragging) {
+          isWysiwygToolbarDragging = false;
+          try {
+            dragHandle.releasePointerCapture(e.pointerId);
+          } catch (_) {}
+        }
+      };
+
+      dragHandle.addEventListener('pointerdown', onPointerDown);
+      dragHandle.addEventListener('pointermove', onPointerMove);
+      dragHandle.addEventListener('pointerup', onPointerUp);
+      dragHandle.addEventListener('pointercancel', onPointerUp);
+    }
 
     // منع فقدان التحديد عند النقر على أدوات الشريط
     toolbar.addEventListener('mousedown', (e) => {
@@ -10643,8 +10713,10 @@ function exportDocument(format) {
         top = Math.max(12, window.innerHeight - toolbarHeight - 12);
       }
 
-      toolbar.style.left = `${left}px`;
-      toolbar.style.top = `${top}px`;
+      if (!wysiwygToolbarManuallyMoved) {
+        toolbar.style.left = `${left}px`;
+        toolbar.style.top = `${top}px`;
+      }
 
       updateToolbarButtonStates();
     };
@@ -10654,7 +10726,7 @@ function exportDocument(format) {
     previewContent.addEventListener('keyup', () => setTimeout(handleSelection, 25));
 
     window.addEventListener('scroll', () => {
-      if (isWysiwygActive && toolbar.classList.contains('visible')) {
+      if (isWysiwygActive && toolbar.classList.contains('visible') && !wysiwygToolbarManuallyMoved) {
         handleSelection();
       }
     }, { passive: true });
@@ -10670,6 +10742,22 @@ function exportDocument(format) {
     const panelEditor = document.getElementById('panel-editor');
 
     if (isWysiwygActive) {
+      // 1. إذا كان مساعد النطق مفعلاً، قم بإطفائه تلقائياً وحفظ حالته السابقة
+      if (typeof vienixSettings !== 'undefined' && vienixSettings.pronunciationEnabled === true) {
+        window._pronWasActiveBeforeEdit = true;
+        if (typeof window.applySetting === 'function') {
+          window.applySetting('pronunciationEnabled', false);
+        } else {
+          vienixSettings.pronunciationEnabled = false;
+          saveSettings();
+        }
+      } else {
+        window._pronWasActiveBeforeEdit = false;
+      }
+      if (typeof updatePronunciationQuickButtons === 'function') {
+        updatePronunciationQuickButtons();
+      }
+
       document.body.classList.add('wysiwyg-active');
       // تفعيل وضع التحرير المباشر
       if (btn) {
@@ -10738,7 +10826,22 @@ function exportDocument(format) {
       // مزامنة أخيرة للمحتوى المعدل
       syncPreviewToMarkdown(true);
 
-      // إعادة تصيير المعاينة لضمان سلامة الهايلايت والأكواد والمخططات
+      // استعادة وضع النطق إذا كان مفعلاً قبل التعديل
+      if (window._pronWasActiveBeforeEdit) {
+        window._pronWasActiveBeforeEdit = false;
+        if (typeof window.applySetting === 'function') {
+          window.applySetting('pronunciationEnabled', true);
+        } else {
+          vienixSettings.pronunciationEnabled = true;
+          saveSettings();
+        }
+      }
+
+      // تحديث أزرار النطق وإعادة تصيير المعاينة
+      if (typeof updatePronunciationQuickButtons === 'function') {
+        updatePronunciationQuickButtons();
+      }
+
       renderMarkdown();
 
       if (saveStatus) {
@@ -10758,9 +10861,14 @@ function exportDocument(format) {
     [btn1, btn2].forEach(btn => {
       if (!btn) return;
       btn.classList.toggle('active', isPronOn);
-      btn.title = isPronOn
-        ? 'إيقاف مساعد النطق الصوتي (Pron: ON)'
-        : 'تشغيل مساعد النطق الصوتي (Pron: OFF)';
+      btn.classList.toggle('disabled', typeof isWysiwygActive !== 'undefined' && isWysiwygActive);
+      if (typeof isWysiwygActive !== 'undefined' && isWysiwygActive) {
+        btn.title = 'مساعد النطق معطّل أثناء وضع التعديل (أوقف زر Edit أولاً)';
+      } else {
+        btn.title = isPronOn
+          ? 'إيقاف مساعد النطق الصوتي (Pron: ON)'
+          : 'تشغيل مساعد النطق الصوتي (Pron: OFF)';
+      }
     });
 
     if (pronCheckbox && pronCheckbox.checked !== isPronOn) {
@@ -10772,6 +10880,14 @@ function exportDocument(format) {
   };
 
   window.togglePronunciationQuick = function () {
+    // إذا كان وضع التعديل المباشر Edit مفعلاً، لا يمكن تشغيل النطق معاً
+    if (typeof isWysiwygActive !== 'undefined' && isWysiwygActive) {
+      if (typeof showToast === 'function') {
+        showToast('يرجى إنهاء وضع التحرير Edit أولاً لتفعيل مساعد النطق ⚠️', 'warning', 2500);
+      }
+      return;
+    }
+
     const current = typeof vienixSettings !== 'undefined' && vienixSettings.pronunciationEnabled === true;
     const next = !current;
     if (typeof window.applySetting === 'function') {
