@@ -6559,39 +6559,73 @@ body.wysiwyg-active .image-resizer-wrapper.active .resizer-handle {
   height: 12px;
 }
 
-/* ════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════════════════════
    Ghost Icons Mode (وضع الأيقونات الشبحية)
-   body.ghost-pron-icons → أيقونات النطق شفافة 25%
-   وعند النقر أو الحوم تظهر بـ 100%
-   ════════════════════════════════════════════════ */
+   التنسيق يبقى تماماً كأن النطق مطفأ — لا تتناثر الكلمات
+   الأيقونتان تظهران بشفافية 25% خارج تدفق النص تماماً
+   ════════════════════════════════════════════════════════════════════ */
+
+/* 1. غلاف الجملة: يصبح شفافاً للتنسيق — لا عزل ثنائي الاتجاه ولا هوامش */
+body.ghost-pron-icons .pronunciation-phrase {
+  unicode-bidi: normal !important;
+  direction: inherit !important;
+  margin: 0 !important;
+  text-align: inherit !important;
+  position: relative;
+}
+
+/* 2. الكلمات: تبدو كنص عادي — بدون خط منقط وبدون تأثيرات حوم */
+body.ghost-pron-icons .pronunciation-word,
+body.ghost-pron-icons .pronunciation-word.no-underline {
+  text-decoration: none !important;
+  cursor: inherit;
+}
+
+body.ghost-pron-icons .pronunciation-word:hover {
+  background: transparent !important;
+  color: inherit !important;
+  transform: none !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+}
+
+/* 3. الأيقونتان: خارج التدفق تماماً — لا تؤثران على ترتيب النص أبداً */
 body.ghost-pron-icons .pronunciation-speaker-btn,
 body.ghost-pron-icons .pronunciation-trans-btn {
+  position: absolute !important;
   opacity: 0.25;
-  transition: opacity 0.18s ease, background 0.2s ease, border-color 0.2s ease,
-              transform 0.2s ease, box-shadow 0.2s ease;
+  z-index: 5;
+  bottom: -2px;
+  margin: 0 !important;
+  pointer-events: auto;
+  transition: opacity 0.18s ease, background 0.2s ease,
+              border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+body.ghost-pron-icons .pronunciation-speaker-btn {
+  left: 0;
+}
+
+body.ghost-pron-icons .pronunciation-trans-btn {
+  left: 24px;
+}
+
+/* 4. عند التفاعل (نقر / حوم / تركيز / نطق فعلي) → ظهور كامل 100% */
 body.ghost-pron-icons .pronunciation-speaker-btn:hover,
-body.ghost-pron-icons .pronunciation-trans-btn:hover {
-  opacity: 1;
-}
-
+body.ghost-pron-icons .pronunciation-trans-btn:hover,
 body.ghost-pron-icons .pronunciation-speaker-btn:focus,
-body.ghost-pron-icons .pronunciation-trans-btn:focus {
-  opacity: 1;
-}
-
+body.ghost-pron-icons .pronunciation-trans-btn:focus,
 body.ghost-pron-icons .pronunciation-speaker-btn:active,
-body.ghost-pron-icons .pronunciation-trans-btn:active {
-  opacity: 1;
+body.ghost-pron-icons .pronunciation-trans-btn:active,
+body.ghost-pron-icons .pronunciation-speaker-btn.speaking,
+body.ghost-pron-icons .pronunciation-trans-btn.is-active {
+  opacity: 1 !important;
 }
 
-/* أثناء النطق الفعلي تكون الأيقونة مرئية بالكامل */
-body.ghost-pron-icons .pronunciation-speaker-btn.speaking {
-  opacity: 1;
+/* 5. غلاف بطاقة الترجمة: مخفي حتى يُفتح بالنقر */
+body.ghost-pron-icons .itb-outer-wrapper:not(.is-card-open) {
+  display: none !important;
 }
-
-/* بعد إغلاق النطق تعود للشفافية (يتم ذلك تلقائياً بإزالة .speaking) */
 
 /* Translation icon button (æ–‡A) - Beautiful rounded rectangle */
 .pronunciation-trans-btn {
