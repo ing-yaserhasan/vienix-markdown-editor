@@ -70,6 +70,7 @@
     inlinePhraseTranslation: true,    // Scenario 1: Show 文A inline button beside each phrase
     globalBilingualTranslation: true, // Scenario 2: Show global bilingual icon in toolbar
     voiceName: '',
+    ghostIcons: true,  // Ghost mode: أيقونات النطق شفافة 25% وتظهر 100% عند التفاعل (مفعّل افتراضياً)
     // API
     googleTtsKey: '',
     groqKey: ''
@@ -194,6 +195,10 @@
         updateGlobalBilingualBtnVisibility();
         renderMarkdown();
         break;
+
+      case 'ghostIcons':
+        applyGhostIconsMode(!!value);
+        break;
     }
   }
 
@@ -204,6 +209,13 @@
     if (wrapper) wrapper.classList.toggle('comfort-reading-mode', isComfort);
     const prev = document.getElementById('preview-output');
     if (prev) prev.classList.toggle('comfort-reading-mode', isComfort);
+  };
+
+  // ── Ghost Icons Mode: أيقونات النطق شفافة 25% وتظهر 100% عند النقر/الحوم ──
+  window.applyGhostIconsMode = function (enabled) {
+    document.body.classList.toggle('ghost-pron-icons', !!enabled);
+    const checkbox = document.getElementById('s-ghost-icons');
+    if (checkbox) checkbox.checked = !!enabled;
   };
 
   window.toggleZenReadingMode = function () {
@@ -294,6 +306,9 @@
     }
     if (typeof updateGlobalBilingualBtnVisibility === 'function') {
       updateGlobalBilingualBtnVisibility();
+    }
+    if (typeof applyGhostIconsMode === 'function') {
+      applyGhostIconsMode(vienixSettings.ghostIcons !== false);
     }
   }
 
@@ -12597,6 +12612,9 @@ function exportDocument(format) {
 
     const globalTrans = document.getElementById('s-global-bilingual-trans');
     if (globalTrans) globalTrans.checked = s.globalBilingualTranslation !== false;
+
+    const ghostIcons = document.getElementById('s-ghost-icons');
+    if (ghostIcons) ghostIcons.checked = s.ghostIcons !== false;
 
     const ql1 = document.getElementById('s-quick-lang-1');
     if (ql1) ql1.value = s.quickLang1 || 'de-AT';

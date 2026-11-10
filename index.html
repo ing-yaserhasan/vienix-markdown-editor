@@ -2177,6 +2177,32 @@
                 </div>
               </div>
 
+              <!-- Ghost Icons Mode: أيقونات النطق شبحية شفافة 25% -->
+              <div class="settings-group" style="margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--border-color, rgba(0,0,0,0.08));">
+                <label class="settings-label">
+                  <svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.5 17.5 22 22"></path>
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <line x1="2" y1="2" x2="22" y2="22" stroke-opacity="0.4"></line>
+                  </svg>
+                  <span>وضع الأيقونات الشبحية (Ghost Icons)</span>
+                </label>
+                <div class="settings-toggle-row">
+                  <div class="settings-toggle-info" style="flex:1;">
+                    <span class="settings-toggle-desc">
+                      عند التفعيل: تبقى أيقونات النطق (🔊) و(文A) ظاهرة بشفافية 25% بجانب كل جملة دون إزعاج القراءة،
+                      وعند النقر عليها تظهر بوضوح كامل (100%) وتعمل طبيعياً، ثم تعود للشفافية بعد انتهاء التفاعل.
+                      التنسيق يبقى كما هو تماماً كأن مساعد النطق غير مفعّل.
+                    </span>
+                  </div>
+                  <label class="settings-toggle">
+                    <input type="checkbox" id="s-ghost-icons" checked onchange="applySetting('ghostIcons', this.checked)">
+                    <span class="settings-toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+
             </div>
           </div>
 

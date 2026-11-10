@@ -6559,6 +6559,40 @@ body.wysiwyg-active .image-resizer-wrapper.active .resizer-handle {
   height: 12px;
 }
 
+/* ════════════════════════════════════════════════
+   Ghost Icons Mode (وضع الأيقونات الشبحية)
+   body.ghost-pron-icons → أيقونات النطق شفافة 25%
+   وعند النقر أو الحوم تظهر بـ 100%
+   ════════════════════════════════════════════════ */
+body.ghost-pron-icons .pronunciation-speaker-btn,
+body.ghost-pron-icons .pronunciation-trans-btn {
+  opacity: 0.25;
+  transition: opacity 0.18s ease, background 0.2s ease, border-color 0.2s ease,
+              transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+body.ghost-pron-icons .pronunciation-speaker-btn:hover,
+body.ghost-pron-icons .pronunciation-trans-btn:hover {
+  opacity: 1;
+}
+
+body.ghost-pron-icons .pronunciation-speaker-btn:focus,
+body.ghost-pron-icons .pronunciation-trans-btn:focus {
+  opacity: 1;
+}
+
+body.ghost-pron-icons .pronunciation-speaker-btn:active,
+body.ghost-pron-icons .pronunciation-trans-btn:active {
+  opacity: 1;
+}
+
+/* أثناء النطق الفعلي تكون الأيقونة مرئية بالكامل */
+body.ghost-pron-icons .pronunciation-speaker-btn.speaking {
+  opacity: 1;
+}
+
+/* بعد إغلاق النطق تعود للشفافية (يتم ذلك تلقائياً بإزالة .speaking) */
+
 /* Translation icon button (æ–‡A) - Beautiful rounded rectangle */
 .pronunciation-trans-btn {
   display: inline-flex;
