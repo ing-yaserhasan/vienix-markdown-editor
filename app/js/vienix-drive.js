@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ============================================================================
  * Vienix Markdown Editor - Google Drive Cloud Sync Engine (Phase 2 - Robust)
  * ============================================================================
@@ -31,6 +31,7 @@
     userProfile: null,
     appFolderId: null,
     isSyncing: false,
+    isAutoConnecting: false,
     lastSyncTime: null,
     lastSyncError: null,
     autoSyncEnabled: true,
@@ -40,9 +41,10 @@
     // 1. INITIALIZATION & SDK LOADER
     // ─────────────────────────────────────────────────────────────
     init: function () {
-      const savedToken = sessionStorage.getItem('vienix_drive_token');
-      const savedExpiry = sessionStorage.getItem('vienix_drive_token_expires');
-      const savedProfile = sessionStorage.getItem('vienix_drive_profile');
+      const savedToken = localStorage.getItem('vienix_drive_token') || sessionStorage.getItem('vienix_drive_token');
+      const savedExpiry = localStorage.getItem('vienix_drive_token_expires') || sessionStorage.getItem('vienix_drive_token_expires');
+      const savedProfile = localStorage.getItem('vienix_drive_profile') || sessionStorage.getItem('vienix_drive_profile');
+      const savedConnected = localStorage.getItem('vienix_drive_connected') === 'true';
       const savedFolder = localStorage.getItem('vienix_drive_folder_id');
       const savedLastSync = localStorage.getItem('vienix_drive_last_sync');
 
@@ -52,12 +54,20 @@
         if (!isNaN(d.getTime())) this.lastSyncTime = d;
       }
 
-      if (savedToken && savedExpiry && Number(savedExpiry) > Date.now()) {
+      if (savedProfile) {
+        try { this.userProfile = JSON.parse(savedProfile); } catch (e) {}
+      }
+
+      const isTokenValid = savedToken && savedExpiry && Number(savedExpiry) > (Date.now() + 60000);
+
+      if (isTokenValid) {
         this.accessToken = savedToken;
         this.tokenExpiresAt = Number(savedExpiry);
-        if (savedProfile) {
-          try { this.userProfile = JSON.parse(savedProfile); } catch (e) {}
-        }
+      } else if (savedConnected || this.userProfile) {
+        // Connected previously, token expired/missing -> flag for silent auto-reconnect on startup
+        this.accessToken = null;
+        this.tokenExpiresAt = 0;
+        this.isAutoConnecting = true;
       }
 
       const autoSyncSetting = localStorage.getItem('vienix_drive_auto_sync');
@@ -117,7 +127,12 @@
               this.accessToken = tokenResponse.access_token;
               this.tokenExpiresAt = Date.now() + (Number(tokenResponse.expires_in) || 3600) * 1000;
               this.lastSyncError = null;
+              this.isAutoConnecting = false;
 
+              // Save permanently to localStorage
+              localStorage.setItem('vienix_drive_token', this.accessToken);
+              localStorage.setItem('vienix_drive_token_expires', String(this.tokenExpiresAt));
+              localStorage.setItem('vienix_drive_connected', 'true');
               sessionStorage.setItem('vienix_drive_token', this.accessToken);
               sessionStorage.setItem('vienix_drive_token_expires', String(this.tokenExpiresAt));
 
@@ -131,6 +146,7 @@
               await this.ensureAppFolder();
               this.updateUI();
             } else {
+              this.isAutoConnecting = false;
               const errMsg = (tokenResponse && tokenResponse.error_description) || (tokenResponse && tokenResponse.error) || 'تعذر الحصول على إذن الاتصال من Google';
               const resolvers = tokenRequestResolvers.slice();
               tokenRequestResolvers = [];
@@ -139,6 +155,11 @@
             }
           }
         });
+
+        // Trigger silent auto-reconnect if returning user with expired/missing token
+        if (this.isAutoConnecting || (!this.accessToken && (localStorage.getItem('vienix_drive_connected') === 'true' || this.userProfile))) {
+          this.silentAutoConnect();
+        }
       } catch (err) {
         console.warn('[VienixDrive] Failed to init GIS token client:', err);
       }
@@ -154,6 +175,36 @@
     // ─────────────────────────────────────────────────────────────
     // 2. AUTHENTICATION & TOKEN REFRESH
     // ─────────────────────────────────────────────────────────────
+    silentAutoConnect: async function () {
+      if (this.accessToken && Date.now() < (this.tokenExpiresAt - 60000)) return;
+      if (!tokenClient) return;
+
+      console.log('[VienixDrive] Attempting silent background reconnect for existing user...');
+      this.isAutoConnecting = true;
+      this.updateUI();
+
+      try {
+        await this.requestToken(false);
+        console.log('[VienixDrive] Silent auto-connect succeeded! ✓');
+        this.isAutoConnecting = false;
+        this.lastSyncError = null;
+        this.updateUI();
+
+        // If post-merge push was waiting for connection
+        if (sessionStorage.getItem('vienix_post_merge_push_needed')) {
+          sessionStorage.removeItem('vienix_post_merge_push_needed');
+          setTimeout(() => {
+            if (window.showToast) window.showToast('🔀 جارٍ رفع البيانات المدمجة إلى السحابة تلقائياً... ☁️', 'info', 3500);
+            this.syncAllToDrive({ force: true, interactive: false });
+          }, 2000);
+        }
+      } catch (err) {
+        console.log('[VienixDrive] Silent auto-connect postponed (will refresh on user action):', err && err.message);
+        this.isAutoConnecting = false;
+        this.updateUI();
+      }
+    },
+
     requestToken: function (interactive = false) {
       return new Promise((resolve, reject) => {
         if (!window.google || !window.google.accounts) {
@@ -174,8 +225,16 @@
 
         tokenRequestResolvers.push({ resolve, reject });
 
+        const email = (this.userProfile && this.userProfile.email) || localStorage.getItem('vienix_drive_connected_email');
+        const reqConfig = {
+          prompt: interactive ? 'consent' : ''
+        };
+        if (email) {
+          reqConfig.hint = email;
+        }
+
         try {
-          tokenClient.requestAccessToken({ prompt: interactive ? 'consent' : '' });
+          tokenClient.requestAccessToken(reqConfig);
         } catch (e) {
           tokenRequestResolvers = tokenRequestResolvers.filter(r => r.resolve !== resolve);
           reject(e);
@@ -184,12 +243,21 @@
     },
 
     ensureValidToken: async function (interactive = false) {
-      // If token exists and has more than 60 seconds left before expiration
+      // 1. If in-memory token is valid (more than 60 seconds left)
       if (this.accessToken && Date.now() < (this.tokenExpiresAt - 60000)) {
         return this.accessToken;
       }
 
-      // Token missing or expired -> attempt refresh
+      // 2. Check localStorage in case another tab or background call refreshed it
+      const storedToken = localStorage.getItem('vienix_drive_token');
+      const storedExpiry = localStorage.getItem('vienix_drive_token_expires');
+      if (storedToken && storedExpiry && Number(storedExpiry) > (Date.now() + 60000)) {
+        this.accessToken = storedToken;
+        this.tokenExpiresAt = Number(storedExpiry);
+        return this.accessToken;
+      }
+
+      // 3. Token missing or expired -> attempt silent refresh first (or interactive if requested)
       try {
         return await this.requestToken(interactive);
       } catch (err) {
@@ -197,6 +265,22 @@
         this.accessToken = null;
         this.updateUI();
         throw new Error('انتهت جلسة تسجيل الدخول إلى Google Drive. انقر على زر السحابة لإعادة الاتصال.');
+      }
+    },
+
+    reconnect: async function () {
+      try {
+        if (window.showToast) window.showToast('جارٍ استعادة الاتصال بـ Google Drive...', 'info', 1500);
+        await this.ensureValidToken(false);
+        await this.smartSync();
+      } catch (err) {
+        // If silent refresh failed, prompt interactively
+        try {
+          await this.requestToken(true);
+          await this.smartSync();
+        } catch (interactiveErr) {
+          alert('تعذر تنشيط الاتصال بـ Google Drive: ' + interactiveErr.message);
+        }
       }
     },
 
@@ -260,7 +344,11 @@
 
     handleCloudBtnClick: function () {
       if (!this.accessToken) {
-        this.connect();
+        if (this.userProfile || localStorage.getItem('vienix_drive_connected') === 'true') {
+          this.reconnect();
+        } else {
+          this.connect();
+        }
       } else {
         this.smartSync();
       }
@@ -280,10 +368,15 @@
       this.userProfile = null;
       this.appFolderId = null;
       this.lastSyncError = null;
+      this.isAutoConnecting = false;
 
+      localStorage.removeItem('vienix_drive_token');
+      localStorage.removeItem('vienix_drive_token_expires');
+      localStorage.removeItem('vienix_drive_profile');
+      localStorage.removeItem('vienix_drive_connected');
+      localStorage.removeItem('vienix_drive_connected_email');
       localStorage.removeItem('vienix_drive_folder_id');
       localStorage.removeItem('vienix_drive_last_sync');
-      localStorage.removeItem('vienix_drive_connected_email');
       sessionStorage.removeItem('vienix_drive_token');
       sessionStorage.removeItem('vienix_drive_token_expires');
       sessionStorage.removeItem('vienix_drive_profile');
@@ -311,6 +404,7 @@
             email: data.user.emailAddress || '',
             picture: data.user.photoLink || ''
           };
+          localStorage.setItem('vienix_drive_profile', JSON.stringify(this.userProfile));
           sessionStorage.setItem('vienix_drive_profile', JSON.stringify(this.userProfile));
           if (this.userProfile.email) {
             localStorage.setItem('vienix_drive_connected_email', this.userProfile.email);
@@ -336,6 +430,7 @@
         console.warn('[VienixDrive] 401 Unauthorized from Drive API. Attempting silent token renewal...');
         this.accessToken = null;
         sessionStorage.removeItem('vienix_drive_token');
+        localStorage.removeItem('vienix_drive_token');
         try {
           await this.ensureValidToken(false);
           return await this.driveFetch(url, options, true);
@@ -1221,12 +1316,18 @@
         if (this.isSyncing) {
           dot.classList.add('status-syncing');
           dot.title = 'جارٍ المزامنة السحابية...';
+        } else if (this.isAutoConnecting) {
+          dot.classList.add('status-syncing');
+          dot.title = 'جارٍ استعادة الاتصال بـ Google Drive تلقائياً...';
         } else if (this.lastSyncError) {
           dot.classList.add('status-error');
           dot.title = `تنبيه مزامنة Google Drive: ${this.lastSyncError}`;
         } else if (this.accessToken) {
           dot.classList.add('status-connected');
           dot.title = `متصل بـ Google Drive (${this.userProfile ? this.userProfile.name : ''})`;
+        } else if (this.userProfile) {
+          dot.classList.add('status-warning');
+          dot.title = `Google Drive (${this.userProfile.name}) - انقر للتنشيط والمزامنة`;
         } else {
           dot.classList.add('status-disconnected');
           dot.title = 'Google Drive غير متصل (انقر للربط والمزامنة)';
@@ -1238,6 +1339,7 @@
       if (!panel) return;
 
       const isConnected = !!this.accessToken;
+      const hasSavedUser = !!this.userProfile;
       const lastSyncStr = this.lastSyncTime ? this.lastSyncTime.toLocaleTimeString('ar-SA') + ' - ' + this.lastSyncTime.toLocaleDateString('ar-SA') : 'لم تتم بعد';
 
       panel.innerHTML = `
@@ -1248,22 +1350,26 @@
 
         <!-- Connection Card -->
         <div class="cloud-account-card">
-          ${isConnected && this.userProfile ? `
+          ${(isConnected || hasSavedUser) && this.userProfile ? `
             <div class="cloud-profile-wrap">
               <img src="${this.userProfile.picture || 'assets/icons/google-drive.svg'}" class="cloud-avatar" alt="Avatar">
               <div class="cloud-profile-info">
                 <span class="cloud-user-name">${this.userProfile.name}</span>
                 <span class="cloud-user-email">${this.userProfile.email}</span>
-                ${this.lastSyncError ? `
+                ${this.isAutoConnecting ? `
+                  <span class="cloud-badge-connected" style="background:rgba(99,102,241,0.15); color:var(--accent-color, #6366f1); border:1px solid rgba(99,102,241,0.3);">🔄 جارٍ استعادة الاتصال تلقائياً...</span>
+                ` : this.lastSyncError ? `
                   <span class="cloud-badge-connected" style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3);">⚠️ تنبيه: ${this.lastSyncError}</span>
-                ` : `
+                ` : isConnected ? `
                   <span class="cloud-badge-connected">✓ متصل ومفعل ومربوط</span>
+                ` : `
+                  <span class="cloud-badge-connected" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3);">⚡ في وضع الاستعداد (انقر للمزامنة)</span>
                 `}
               </div>
             </div>
             <div class="cloud-card-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button type="button" class="btn btn-primary btn-sync-now ${this.isSyncing ? 'loading' : ''}" onclick="VienixDrive.smartSync()" style="flex:1;">
-                ${this.isSyncing ? '🔄 جارٍ المزامنة...' : '🔄 مزامنة ذكية الآن'}
+              <button type="button" class="btn btn-primary btn-sync-now ${this.isSyncing ? 'loading' : ''}" onclick="VienixDrive.handleCloudBtnClick()" style="flex:1;">
+                ${this.isSyncing ? '🔄 جارٍ المزامنة...' : isConnected ? '🔄 مزامنة ذكية الآن' : '⚡ تنشيط ومزامنة الآن'}
               </button>
               <button type="button" class="btn btn-ghost btn-disconnect" onclick="VienixDrive.disconnect()">
                 فصل الحساب
@@ -1308,7 +1414,7 @@
         </div>
 
         <!-- Direct Push & Pull Controls -->
-        ${isConnected ? `
+        ${(isConnected || hasSavedUser) ? `
           <div class="settings-group">
             <label class="settings-label">التحكم اليدوي المباشر في المزامنة</label>
             <p class="settings-hint">يمكنك فرض رفع مساحة العمل وتحديث السحابة الآن، أو استيراد ملفات السحابة وتحديث الجهاز.</p>
