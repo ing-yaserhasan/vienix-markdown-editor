@@ -2460,7 +2460,7 @@
           </div>
         </div>
         <div class="ai-chat-header-actions">
-          <button class="ai-chat-save-btn" id="ai-chat-save-btn" onclick="saveCurrentPhraseAiChat()" title="حفظ محادثة هذه العبارة" style="display:none;">
+          <button class="ai-chat-save-btn" id="ai-chat-save-btn" onclick="handleAiChatSaveClick()" title="حفظ المحادثة" style="display:none;">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
               <polyline points="17 21 17 13 7 13 7 21"></polyline>
@@ -2850,6 +2850,8 @@
         overlay.style.display = 'none';
         var ctxPill = document.getElementById('ai-chat-word-context-pill');
         if (ctxPill) ctxPill.style.display = 'none';
+        window._currentAiWordContext = null;
+        window._currentAiPhraseContext = null;
       }, 300);
     };
 
@@ -2952,13 +2954,24 @@
 
     window.clearAiChat = function() {
       _aiMessages = [];
-      saveAiChatHistory([]);
-      if (window._currentAiPhraseContext) {
+      if (window._currentAiWordContext) {
+        var wKey = window._currentAiWordContext.word;
+        if (wKey && typeof _wordSessionChats !== 'undefined' && _wordSessionChats[wKey]) {
+          delete _wordSessionChats[wKey];
+        }
+        var saveBtn = document.getElementById('ai-chat-save-btn');
+        if (saveBtn) {
+          saveBtn.classList.remove('is-saved');
+          saveBtn.title = 'حفظ محادثة هذه الكلمة';
+        }
+      } else if (window._currentAiPhraseContext) {
         var saveBtn = document.getElementById('ai-chat-save-btn');
         if (saveBtn) {
           saveBtn.classList.remove('is-saved');
           saveBtn.title = 'حفظ محادثة هذه العبارة';
         }
+      } else {
+        saveAiChatHistory([]);
       }
       renderAiChat();
     };
@@ -3081,6 +3094,17 @@
 
       var userMsg = { role: 'user', content: text, time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) };
       _aiMessages.push(userMsg);
+      if (window._currentAiWordContext) {
+        var wKey = window._currentAiWordContext.word;
+        if (wKey && typeof _wordSessionChats !== 'undefined') {
+          _wordSessionChats[wKey] = JSON.parse(JSON.stringify(_aiMessages));
+        }
+        var saveBtn = document.getElementById('ai-chat-save-btn');
+        if (saveBtn) {
+          saveBtn.classList.remove('is-saved');
+          saveBtn.title = 'لديك رسائل غير محفوظة لهذه الكلمة — انقر للحفظ 💾';
+        }
+      }
       renderAiChat();
       setAiLoading(true);
 
@@ -3113,17 +3137,29 @@
       callGeminiAPI(fullPrompt, { signal: _aiAbortCtrl.signal }).then(function(reply) {
         var aiMsg = { role: 'model', content: reply, time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) };
         _aiMessages.push(aiMsg);
-        saveAiChatHistory(_aiMessages);
-        setAiLoading(false);
-        renderAiChat();
 
-        if (window._currentAiPhraseContext) {
+        if (window._currentAiWordContext) {
+          var wKey = window._currentAiWordContext.word;
+          if (wKey && typeof _wordSessionChats !== 'undefined') {
+            _wordSessionChats[wKey] = JSON.parse(JSON.stringify(_aiMessages));
+          }
+          var saveBtn = document.getElementById('ai-chat-save-btn');
+          if (saveBtn) {
+            saveBtn.classList.remove('is-saved');
+            saveBtn.title = 'لديك ردود وتفرعات جديدة — انقر لتحديث حفظ الكلمة 💾';
+          }
+        } else if (window._currentAiPhraseContext) {
           var saveBtn = document.getElementById('ai-chat-save-btn');
           if (saveBtn) {
             saveBtn.classList.remove('is-saved');
             saveBtn.title = 'لديك ردود وتفرعات جديدة — انقر لحفظ المحادثة المحدثة 💾';
           }
+        } else {
+          saveAiChatHistory(_aiMessages);
         }
+
+        setAiLoading(false);
+        renderAiChat();
 
         // Add "Apply to editor" button for context-aware responses
         if (_aiFileContextAbsorbed) {
@@ -3392,7 +3428,16 @@
       });
     };
 
-    // ───── Layer 9: Ask AI About Word with Sentence Context (بدون برومبت مسبق وبدون إرسال تلقائي) ─────
+    // ───── Layer 9: Word Bubble AI Chat (ذاكرة معزولة لكل فقاعة كلمة + زر حفظ مستقل) ─────
+    var AI_WORD_CHATS_STORAGE = 'vienix_word_ai_chats';
+    var _wordSessionChats = {};
+
+    function loadWordAiChatsStore() {
+      try {
+        return JSON.parse(localStorage.getItem(AI_WORD_CHATS_STORAGE) || '{}');
+      } catch(e) { return {}; }
+    }
+
     window.openAiChatWithWord = function(wordText, sentenceText, triggerBtn) {
       var hasKey = false;
       try {
@@ -3416,7 +3461,9 @@
       var cleanWord = (wordText || '').trim();
       var cleanSentence = (sentenceText || '').trim();
       if (cleanSentence === cleanWord) cleanSentence = '';
+      var wordKey = cleanWord;
 
+      // ضبط سياق الكلمة الحالي وعزل أي سياق آخر
       window._currentAiWordContext = {
         word: cleanWord,
         sentence: cleanSentence
@@ -3426,11 +3473,30 @@
       _aiFileContextContent = '';
 
       var saveBtn = document.getElementById('ai-chat-save-btn');
-      if (saveBtn) saveBtn.style.display = 'none';
+      if (saveBtn) {
+        saveBtn.style.display = 'inline-flex';
+        saveBtn.classList.remove('is-saved');
+        saveBtn.title = 'حفظ محادثة هذه الكلمة';
+      }
 
-      // فتح محادثة جديدة نظيفة (بدون برومبت مسبق وبدون إرسال تلقائي)
-      _aiMessages = [];
-      saveAiChatHistory([]);
+      // استرجاع ذاكرة هذه الفقاعة/الكلمة المحددة (معزولة تماماً عن الزر العلوي العام)
+      var savedWordStore = loadWordAiChatsStore();
+      if (savedWordStore[wordKey] && Array.isArray(savedWordStore[wordKey].messages) && savedWordStore[wordKey].messages.length > 0) {
+        _aiMessages = JSON.parse(JSON.stringify(savedWordStore[wordKey].messages));
+        if (saveBtn) {
+          saveBtn.classList.add('is-saved');
+          saveBtn.title = 'تم حفظ محادثة هذه الكلمة مسبقاً (انقر لتحديث الحفظ 💾)';
+        }
+      } else if (_wordSessionChats[wordKey] && Array.isArray(_wordSessionChats[wordKey]) && _wordSessionChats[wordKey].length > 0) {
+        _aiMessages = JSON.parse(JSON.stringify(_wordSessionChats[wordKey]));
+        if (saveBtn) {
+          saveBtn.classList.remove('is-saved');
+          saveBtn.title = 'لديك رسائل غير محفوظة لهذه الكلمة — انقر للحفظ 💾';
+        }
+      } else {
+        // محادثة جديدة نظيفة وخاصة بهذه الكلمة حصراً (لا تمس التاريخ العام)
+        _aiMessages = [];
+      }
 
       // تحديث شريط سياق الكلمة والجملة أعلى المحادثة
       var ctxPill = document.getElementById('ai-chat-word-context-pill');
@@ -3472,6 +3538,56 @@
           inp.focus();
         }
       }, 200);
+    };
+
+    // ── دالة حفظ محادثة الكلمة الحالية الخاصة بفقاعتها وتدعم المزامنة السحابية ──
+    window.saveCurrentWordAiChat = function() {
+      if (!window._currentAiWordContext || !window._currentAiWordContext.word) {
+        showAiToast('لا توجد كلمة محددة لحفظ المحادثة لها ⚠️', true);
+        return;
+      }
+      if (!_aiMessages || _aiMessages.length === 0) {
+        showAiToast('لا توجد رسائل لحفظها بعد ⚠️', true);
+        return;
+      }
+
+      var wordKey = window._currentAiWordContext.word;
+      var sentence = window._currentAiWordContext.sentence || '';
+      var savedStore = loadWordAiChatsStore();
+
+      savedStore[wordKey] = {
+        word: wordKey,
+        sentence: sentence,
+        savedAt: new Date().toISOString(),
+        messages: JSON.parse(JSON.stringify(_aiMessages))
+      };
+
+      _wordSessionChats[wordKey] = JSON.parse(JSON.stringify(_aiMessages));
+
+      try {
+        localStorage.setItem(AI_WORD_CHATS_STORAGE, JSON.stringify(savedStore));
+        if (window.VienixIDB && typeof window.VienixIDB.set === 'function') {
+          window.VienixIDB.set(AI_WORD_CHATS_STORAGE, savedStore);
+        }
+        var saveBtn = document.getElementById('ai-chat-save-btn');
+        if (saveBtn) {
+          saveBtn.classList.add('is-saved');
+          saveBtn.title = 'تم حفظ محادثة هذه الكلمة بنجاح ✓ (انقر للتحديث 💾)';
+        }
+        showAiToast('تم حفظ محادثة الكلمة «' + wordKey + '» بنجاح 💾✓');
+      } catch (err) {
+        console.error('Error saving word AI chat:', err);
+        showAiToast('تعذر الحفظ: ' + err.message, true);
+      }
+    };
+
+    // ── الموزع الموحد لزر الحفظ (لكل من الكلمات والعبارات) ──
+    window.handleAiChatSaveClick = function() {
+      if (window._currentAiWordContext) {
+        window.saveCurrentWordAiChat();
+      } else if (window._currentAiPhraseContext) {
+        window.saveCurrentPhraseAiChat();
+      }
     };
 
     // ── دالة حفظ محادثة العبارة الحالية مع كافة تفرعاتها (مرتبطة بالعبارة وتدعم المزامنة السحابية) ──
