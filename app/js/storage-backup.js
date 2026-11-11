@@ -695,7 +695,242 @@
     },
 
     // ─────────────────────────────────────────────────────────────
-    // 6. QUOTA EXCEEDED ALERT SHIELD
+    // 6. SILENT PRE-PULL BACKUP (Feature 3: Safety Net)
+    // ─────────────────────────────────────────────────────────────
+    /**
+     * Creates a silent in-memory backup of the entire workspace BEFORE any
+     * cloud pull or merge overwrites local data.  The backup is stored in
+     * sessionStorage so the user can download it during this browser session.
+     * Returns the backup JSON string for optional external use.
+     */
+    createSilentBackup: function () {
+      try {
+        const maxCh = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
+        const scanLimit = Math.max(16, maxCh);
+        const snapshot = { timestamp: new Date().toISOString(), chambers: {}, rawKeys: {} };
+
+        for (let ch = 1; ch <= scanLimit; ch++) {
+          let content = '';
+          let meta = null;
+          if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
+            content = window.VienixIDB.getSync('vienix_chamber_' + ch, 'yaser_chamber_' + ch) || '';
+            meta = window.VienixIDB.getSync('vienix_chamber_meta_' + ch, 'yaser_chamber_meta_' + ch) || null;
+          } else {
+            content = localStorage.getItem('vienix_chamber_' + ch) || localStorage.getItem('yaser_chamber_' + ch) || '';
+            meta = localStorage.getItem('vienix_chamber_meta_' + ch) || localStorage.getItem('yaser_chamber_meta_' + ch) || null;
+          }
+          if (ch === 1 && !content) {
+            content = (window.VienixIDB && typeof window.VienixIDB.getSync === 'function')
+              ? (window.VienixIDB.getSync('vienix_md_content', 'yaser_md_content') || '')
+              : (localStorage.getItem('vienix_md_content') || localStorage.getItem('yaser_md_content') || '');
+          }
+          if (content && content.trim().length > 0) {
+            snapshot.chambers[ch] = { content: content, meta: meta };
+          }
+        }
+
+        // Also snapshot all vienix_ / yaser_ keys
+        const keySet = new Set();
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && (k.startsWith('vienix_') || k.startsWith('yaser_')) && !k.startsWith('vienix_history_')) keySet.add(k);
+        }
+        if (window.VienixIDB && window.VienixIDB.memoryCache) {
+          Object.keys(window.VienixIDB.memoryCache).forEach(k => {
+            if ((k.startsWith('vienix_') || k.startsWith('yaser_')) && !k.startsWith('vienix_history_')) keySet.add(k);
+          });
+        }
+        keySet.forEach(k => {
+          const val = (window.VienixIDB && window.VienixIDB.memoryCache && window.VienixIDB.memoryCache[k] !== undefined)
+            ? window.VienixIDB.memoryCache[k]
+            : localStorage.getItem(k);
+          if (val !== null) snapshot.rawKeys[k] = val;
+        });
+
+        const jsonStr = JSON.stringify(snapshot);
+        try { sessionStorage.setItem('vienix_pre_pull_backup', jsonStr); } catch (e) {
+          console.warn('[VienixStorage] Pre-pull backup too large for sessionStorage, keeping in memory only.');
+          window._vienixPrePullBackup = jsonStr;
+        }
+        console.log('[VienixStorage] Silent pre-pull backup created (' + Object.keys(snapshot.chambers).length + ' chambers).');
+        return jsonStr;
+      } catch (err) {
+        console.error('[VienixStorage] Failed to create silent backup:', err);
+        return null;
+      }
+    },
+
+    /**
+     * Downloads the most recent silent pre-pull backup as a JSON file.
+     */
+    downloadPrePullBackup: function () {
+      const raw = sessionStorage.getItem('vienix_pre_pull_backup') || window._vienixPrePullBackup;
+      if (!raw) {
+        if (window.showToast) window.showToast('لا توجد نسخة احتياطية مؤقتة متاحة حالياً.', 'warning', 3000);
+        return;
+      }
+      const blob = new Blob([raw], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const now = new Date();
+      const filename = `vienix-pre-pull-backup-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}.json`;
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+      if (window.showToast) window.showToast('💾 تم تنزيل النسخة الاحتياطية المؤقتة بنجاح.', 'success', 2500);
+    },
+
+    // ─────────────────────────────────────────────────────────────
+    // 7. SMART MERGE (Feature 2: Merge Instead of Replace)
+    // ─────────────────────────────────────────────────────────────
+    /**
+     * Merges incoming cloud payload with local data:
+     *  - Chambers present in cloud → overwrite local with cloud version
+     *  - Chambers present ONLY locally (not in cloud) → KEEP them as-is
+     *  - Then triggers auto-push to upload the merged result back to cloud
+     */
+    applyMerge: async function (payload) {
+      try {
+        const idbPromises = [];
+
+        const mergeSet = (k, v) => {
+          if (v === null || v === undefined) return;
+          const strVal = typeof v === 'string' ? v : JSON.stringify(v);
+          try { localStorage.setItem(k, strVal); } catch (e) {}
+          if (window.VienixIDB && typeof window.VienixIDB.set === 'function') {
+            idbPromises.push(window.VienixIDB.set(k, strVal));
+          } else if (window.VienixIDB && window.VienixIDB.memoryCache) {
+            window.VienixIDB.memoryCache[k] = strVal;
+          }
+        };
+
+        // 1. Identify chambers in the incoming cloud payload
+        const cloudChambers = new Map();
+
+        if (payload.rawKeys && typeof payload.rawKeys === 'object') {
+          Object.keys(payload.rawKeys).forEach(k => {
+            const m = k.match(/^(?:vienix|yaser)_chamber_(\d+)$/);
+            if (m) {
+              const chNum = parseInt(m[1], 10);
+              const val = payload.rawKeys[k];
+              if (val !== null && val !== undefined && String(val).trim().length > 0) {
+                if (!cloudChambers.has(chNum)) cloudChambers.set(chNum, {});
+                cloudChambers.get(chNum).content = String(val);
+              }
+            }
+            const mMeta = k.match(/^(?:vienix|yaser)_chamber_meta_(\d+)$/);
+            if (mMeta) {
+              const chNum = parseInt(mMeta[1], 10);
+              if (payload.rawKeys[k]) {
+                if (!cloudChambers.has(chNum)) cloudChambers.set(chNum, {});
+                cloudChambers.get(chNum).meta = payload.rawKeys[k];
+              }
+            }
+          });
+          const legacyCh1 = payload.rawKeys['vienix_md_content'] || payload.rawKeys['yaser_md_content'];
+          if (legacyCh1 && String(legacyCh1).trim().length > 0) {
+            if (!cloudChambers.has(1)) cloudChambers.set(1, {});
+            if (!cloudChambers.get(1).content) cloudChambers.get(1).content = String(legacyCh1);
+          }
+        }
+
+        if (Array.isArray(payload.chambers)) {
+          payload.chambers.forEach(ch => {
+            if (ch && ch.chamberId) {
+              const chNum = parseInt(ch.chamberId, 10);
+              if (ch.content !== undefined && String(ch.content).trim().length > 0) {
+                if (!cloudChambers.has(chNum)) cloudChambers.set(chNum, {});
+                cloudChambers.get(chNum).content = ch.content;
+              }
+              if (ch.meta) {
+                if (!cloudChambers.has(chNum)) cloudChambers.set(chNum, {});
+                cloudChambers.get(chNum).meta = ch.meta;
+              }
+            }
+          });
+        }
+
+        // 2. MERGE: only overwrite chambers that exist in cloud, leave the rest untouched
+        const maxChambers = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
+        const scanLimit = Math.max(16, maxChambers);
+        let mergedFromCloud = 0;
+        let keptLocal = 0;
+
+        for (let ch = 1; ch <= scanLimit; ch++) {
+          if (cloudChambers.has(ch)) {
+            // Cloud has this chamber → overwrite local
+            const chData = cloudChambers.get(ch);
+            if (chData.content !== undefined) {
+              mergeSet('vienix_chamber_' + ch, chData.content);
+              mergeSet('yaser_chamber_' + ch, chData.content);
+              if (ch === 1) {
+                mergeSet('vienix_md_content', chData.content);
+                mergeSet('yaser_md_content', chData.content);
+              }
+            }
+            if (chData.meta) {
+              const metaStr = typeof chData.meta === 'string' ? chData.meta : JSON.stringify(chData.meta);
+              mergeSet('vienix_chamber_meta_' + ch, metaStr);
+              mergeSet('yaser_chamber_meta_' + ch, metaStr);
+            }
+            mergedFromCloud++;
+          } else {
+            // Cloud does NOT have this chamber → CHECK if local has content → KEEP IT
+            let localContent = '';
+            if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
+              localContent = window.VienixIDB.getSync('vienix_chamber_' + ch, 'yaser_chamber_' + ch) || '';
+            } else {
+              localContent = localStorage.getItem('vienix_chamber_' + ch) || localStorage.getItem('yaser_chamber_' + ch) || '';
+            }
+            if (localContent && localContent.trim().length > 0) {
+              keptLocal++;
+              // Do nothing — keep local chamber as-is
+            }
+            // If local is also empty, do nothing (no need to wipe)
+          }
+        }
+
+        // 3. Restore non-chamber keys from cloud (settings, folders, etc.)
+        if (payload.rawKeys && typeof payload.rawKeys === 'object') {
+          Object.keys(payload.rawKeys).forEach(k => {
+            if (/^(?:vienix|yaser)_chamber_/.test(k) || k === 'vienix_md_content' || k === 'yaser_md_content') {
+              return; // Already handled above
+            }
+            mergeSet(k, payload.rawKeys[k]);
+          });
+        }
+
+        if (payload.settings) {
+          const val = typeof payload.settings === 'string' ? payload.settings : JSON.stringify(payload.settings);
+          mergeSet('vienix_settings', val);
+        }
+
+        // 4. Await IndexedDB writes
+        if (idbPromises.length > 0) {
+          await Promise.all(idbPromises);
+        }
+
+        // 5. Mark that a post-merge push is needed (to upload local-only files to cloud)
+        if (keptLocal > 0) {
+          sessionStorage.setItem('vienix_post_merge_push_needed', 'true');
+        }
+
+        // 6. Flash notification
+        sessionStorage.setItem('vienix_merge_success_flash', JSON.stringify({
+          mergedFromCloud: mergedFromCloud,
+          keptLocal: keptLocal
+        }));
+
+        console.log(`[VienixStorage] Smart Merge complete: ${mergedFromCloud} from cloud, ${keptLocal} kept local.`);
+        window.location.reload();
+      } catch (err) {
+        alert('حدث خطأ أثناء دمج البيانات: ' + err.message);
+        console.error(err);
+      }
+    },
+
+    // ─────────────────────────────────────────────────────────────
+    // 8. QUOTA EXCEEDED ALERT SHIELD
     // ─────────────────────────────────────────────────────────────
     handleQuotaExceeded: function (failedKey, error) {
       console.error('[VienixStorage] LocalStorage Quota Exceeded on key:', failedKey, error);
@@ -754,7 +989,7 @@
             ${options.content}
           </div>
           <div class="vienix-custom-modal-footer">
-            ${options.cancelText ? `<button class="btn btn-ghost" onclick="document.getElementById('vienix-custom-modal-overlay').remove()">${options.cancelText}</button>` : ''}
+            ${options.cancelText ? `<button class="btn btn-ghost" id="vienix-custom-modal-cancel-btn">${options.cancelText}</button>` : ''}
             <button class="btn btn-primary" id="vienix-custom-modal-confirm-btn" style="${options.confirmColor ? `background:${options.confirmColor}; border-color:${options.confirmColor};` : ''}">
               ${options.confirmText || 'موافق'}
             </button>
@@ -771,6 +1006,16 @@
           options.onConfirm();
         }
       });
+
+      const cancelBtn = document.getElementById('vienix-custom-modal-cancel-btn');
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+          overlay.remove();
+          if (typeof options.onCancel === 'function') {
+            options.onCancel();
+          }
+        });
+      }
     },
 
     // ─────────────────────────────────────────────────────────────
@@ -791,6 +1036,30 @@
             confirmText: 'رائع، فلنبدأ'
           });
         }, 300);
+      }
+
+      // 2b. Check for post-merge flash notification
+      const mergeFlash = sessionStorage.getItem('vienix_merge_success_flash');
+      if (mergeFlash) {
+        sessionStorage.removeItem('vienix_merge_success_flash');
+        try {
+          const info = JSON.parse(mergeFlash);
+          setTimeout(() => {
+            this.showCustomModal({
+              title: 'تم دمج مساحة العمل بنجاح! 🔀✅',
+              icon: '🔀',
+              content: `
+                <p style="color:var(--text-secondary); margin-bottom:12px;">تم دمج بياناتك بذكاء:</p>
+                <div style="background:var(--bg-canvas); border:1px solid var(--border-color); border-radius:8px; padding:12px; font-size:0.85rem; line-height:1.8;">
+                  <div>☁️ حجرات تم تحديثها من السحابة: <strong style="color:var(--accent-color);">${info.mergedFromCloud}</strong></div>
+                  <div>📱 حجرات محلية تم الاحتفاظ بها: <strong style="color:#10b981;">${info.keptLocal}</strong></div>
+                </div>
+                ${info.keptLocal > 0 ? '<p style="color:var(--text-muted); font-size:0.8rem; margin-top:10px;">💡 سيتم رفع الحجرات المحلية إلى السحابة تلقائياً خلال لحظات لضمان تطابق كامل.</p>' : ''}
+              `,
+              confirmText: 'ممتاز!'
+            });
+          }, 400);
+        } catch (e) {}
       }
 
       // 3. Periodic check every 45 seconds to catch external tab modifications

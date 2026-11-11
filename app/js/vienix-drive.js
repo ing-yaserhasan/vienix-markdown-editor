@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ============================================================================
  * Vienix Markdown Editor - Google Drive Cloud Sync Engine (Phase 2 - Robust)
  * ============================================================================
@@ -62,6 +62,26 @@
 
       const autoSyncSetting = localStorage.getItem('vienix_drive_auto_sync');
       this.autoSyncEnabled = autoSyncSetting !== 'false';
+
+      // ── After a Smart-Merge pull: auto-push the merged workspace back to Drive
+      if (sessionStorage.getItem('vienix_post_merge_push_needed')) {
+        sessionStorage.removeItem('vienix_post_merge_push_needed');
+        if (this.accessToken) {
+          setTimeout(() => {
+            if (window.showToast) window.showToast('🔀 جارٍ رفع البيانات المدمجة إلى السحابة تلقائياً... ☁️', 'info', 3500);
+            this.syncAllToDrive({ force: true, interactive: false });
+          }, 2500);
+        }
+      }
+
+      // ── Notify user that a pre-pull backup is still available in this session
+      if (sessionStorage.getItem('vienix_pre_pull_backup')) {
+        setTimeout(() => {
+          if (window.showToast) {
+            window.showToast('💾 نسخة احتياطية مؤقتة من بياناتك السابقة متاحة. يمكن تنزيلها من لوحة المزامنة.', 'info', 7000);
+          }
+        }, 1800);
+      }
 
       this.loadGoogleSDK();
       this.updateUI();
@@ -214,6 +234,22 @@
               content: `<p style="color:var(--text-secondary);">أهلاً بك <strong>${this.userProfile ? this.userProfile.name : ''}</strong>! تم ربط حسابك السحابي، وأصبح بإمكانك مزامنة نصوصك وحجراتك مع مجلد <strong>Vienix Notes</strong> على Google Drive بأمان تام.</p>`,
               confirmText: 'ابدأ المزامنة الآن',
               onConfirm: () => { this.syncAllToDrive({ force: true, interactive: false }); }
+            });
+          }
+        } else if (!isLocalEmpty && inventory && inventory.hasRemoteData) {
+          // Both local and cloud have data — offer the user the diff preview
+          if (window.VienixStorage && typeof window.VienixStorage.showCustomModal === 'function') {
+            window.VienixStorage.showCustomModal({
+              title: 'يوجد ملفات على جهازك وعلى السحابة! 📱☁️',
+              icon: '🔀',
+              content: '<p style="color:var(--text-secondary);">' +
+                'أهلاً بك <strong>' + (this.userProfile ? this.userProfile.name : '') + '</strong>!<br>' +
+                'وجدنا ملفات على <strong>هذا الجهاز</strong> وأيضاً على <strong>Google Drive</strong>.<br><br>' +
+                'اختر الإجراء المناسب:</p>',
+              confirmText: '📥 استيراد من السحابة (مع مقارنة بصرية)',
+              cancelText: '☁️ رفع ملفات الجهاز إلى السحابة',
+              onConfirm: () => { this.pullFromDrive({ force: false, interactive: false }); },
+              onCancel: () => { this.syncAllToDrive({ force: true, interactive: false }); }
             });
           }
         }
@@ -674,13 +710,245 @@
     },
 
     // ─────────────────────────────────────────────────────────────
-    // 7. PULL FROM DRIVE (RESTORE & MIRROR WORKSPACE)
+    // 7. PULL FROM DRIVE (WITH DIFF PREVIEW + SILENT BACKUP + SMART MERGE)
     // ─────────────────────────────────────────────────────────────
-    pullFromDrive: async function (options = {}) {
-      if (!options.force && !confirm('هل ترغب في استيراد ومطابقة مساحة عملك من Google Drive؟ سيتم استبدال الحجرات لتطابق ملفات السحابة وتفريغ أي حجرات زائدة لضمان عدم تداخل الملفات.')) {
-        return;
+
+    /**
+     * Collects local chamber data for comparison purposes.
+     * Returns a Map of chNum -> { content, meta, title, wordCount }
+     */
+    _getLocalChamberSnapshot: function () {
+      const localChambers = new Map();
+      const maxCh = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
+      const scanLimit = Math.max(16, maxCh);
+
+      for (let ch = 1; ch <= scanLimit; ch++) {
+        let content = '';
+        let metaRaw = null;
+        if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
+          content = window.VienixIDB.getSync('vienix_chamber_' + ch, 'yaser_chamber_' + ch) || '';
+          metaRaw = window.VienixIDB.getSync('vienix_chamber_meta_' + ch, 'yaser_chamber_meta_' + ch) || null;
+        } else {
+          content = localStorage.getItem('vienix_chamber_' + ch) || localStorage.getItem('yaser_chamber_' + ch) || '';
+          metaRaw = localStorage.getItem('vienix_chamber_meta_' + ch) || localStorage.getItem('yaser_chamber_meta_' + ch) || null;
+        }
+        if (ch === 1 && !content) {
+          content = (window.VienixIDB && typeof window.VienixIDB.getSync === 'function')
+            ? (window.VienixIDB.getSync('vienix_md_content', 'yaser_md_content') || '')
+            : (localStorage.getItem('vienix_md_content') || localStorage.getItem('yaser_md_content') || '');
+        }
+        if (content && content.trim().length > 0) {
+          let title = '';
+          if (metaRaw) {
+            try {
+              const meta = typeof metaRaw === 'string' ? JSON.parse(metaRaw) : metaRaw;
+              title = (meta && meta.customTitle) ? meta.customTitle : '';
+            } catch (e) {}
+          }
+          localChambers.set(ch, {
+            content: content,
+            meta: metaRaw,
+            title: title || ('\u062d\u062c\u0631\u0629 ' + ch),
+            wordCount: (content.trim().match(/\S+/g) || []).length
+          });
+        }
+      }
+      return localChambers;
+    },
+
+    /**
+     * Extracts cloud chamber info from a manifest for comparison.
+     * Returns a Map of chNum -> { content, meta, title, wordCount }
+     */
+    _getCloudChamberSnapshot: function (manifest) {
+      const cloudChambers = new Map();
+      if (!manifest || !manifest.rawKeys) return cloudChambers;
+
+      Object.keys(manifest.rawKeys).forEach(k => {
+        const m = k.match(/^(?:vienix|yaser)_chamber_(\d+)$/);
+        if (m) {
+          const chNum = parseInt(m[1], 10);
+          const val = manifest.rawKeys[k];
+          if (val && String(val).trim().length > 0) {
+            if (!cloudChambers.has(chNum)) cloudChambers.set(chNum, { content: '', title: '', meta: null, wordCount: 0 });
+            cloudChambers.get(chNum).content = String(val);
+            cloudChambers.get(chNum).wordCount = (String(val).trim().match(/\S+/g) || []).length;
+          }
+        }
+        const mMeta = k.match(/^(?:vienix|yaser)_chamber_meta_(\d+)$/);
+        if (mMeta) {
+          const chNum = parseInt(mMeta[1], 10);
+          const val = manifest.rawKeys[k];
+          if (val) {
+            if (!cloudChambers.has(chNum)) cloudChambers.set(chNum, { content: '', title: '', meta: null, wordCount: 0 });
+            cloudChambers.get(chNum).meta = val;
+            try {
+              const meta = typeof val === 'string' ? JSON.parse(val) : val;
+              if (meta && meta.customTitle) cloudChambers.get(chNum).title = meta.customTitle;
+            } catch (e) {}
+          }
+        }
+      });
+
+      // Fill missing titles
+      cloudChambers.forEach((data, chNum) => {
+        if (!data.title) data.title = '\u062d\u062c\u0631\u0629 ' + chNum;
+      });
+
+      return cloudChambers;
+    },
+
+    /**
+     * Builds and shows the Diff Preview modal (Feature 4).
+     * The user chooses: Full Replace, Smart Merge, or Cancel.
+     */
+    _showDiffPreviewModal: function (localChambers, cloudChambers, manifest) {
+      const allChNums = new Set([...localChambers.keys(), ...cloudChambers.keys()]);
+      const sorted = Array.from(allChNums).sort((a, b) => a - b);
+
+      let tableRows = '';
+      let localOnlyCount = 0;
+      let cloudOnlyCount = 0;
+      let bothCount = 0;
+
+      sorted.forEach(ch => {
+        const hasLocal = localChambers.has(ch);
+        const hasCloud = cloudChambers.has(ch);
+        const localTitle = hasLocal ? localChambers.get(ch).title : '';
+        const cloudTitle = hasCloud ? cloudChambers.get(ch).title : '';
+        const localWords = hasLocal ? localChambers.get(ch).wordCount : 0;
+        const cloudWords = hasCloud ? cloudChambers.get(ch).wordCount : 0;
+        const displayTitle = cloudTitle || localTitle || ('\u062d\u062c\u0631\u0629 ' + ch);
+
+        let action = '';
+        let actionColor = '';
+        let actionIcon = '';
+
+        if (hasCloud && hasLocal) {
+          action = '\u0633\u064a\u064f\u0633\u062a\u0628\u062f\u0644 \u0628\u0627\u0644\u0633\u062d\u0627\u0628\u0629';
+          actionColor = '#6366f1';
+          actionIcon = '\uD83D\uDD04';
+          bothCount++;
+        } else if (hasCloud && !hasLocal) {
+          action = '\u0633\u064a\u064f\u0636\u0627\u0641 \u0645\u0646 \u0627\u0644\u0633\u062d\u0627\u0628\u0629';
+          actionColor = '#10b981';
+          actionIcon = '\uD83D\uDCE5';
+          cloudOnlyCount++;
+        } else if (!hasCloud && hasLocal) {
+          action = '\u26A0\uFE0F \u0633\u064a\u064f\u062d\u0630\u0641 (\u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f \u0641\u064a \u0627\u0644\u0633\u062d\u0627\u0628\u0629)';
+          actionColor = '#ef4444';
+          actionIcon = '\uD83D\uDDD1\uFE0F';
+          localOnlyCount++;
+        }
+
+        tableRows += '<tr style="border-bottom:1px solid var(--border-color);">' +
+          '<td style="padding:8px 10px; font-weight:600; white-space:nowrap;">\u062d\u062c\u0631\u0629 ' + ch + '</td>' +
+          '<td style="padding:8px 10px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + displayTitle + '">' + displayTitle + '</td>' +
+          '<td style="padding:8px 10px; text-align:center;">' +
+            (hasLocal ? '<span style="color:#10b981;">\u2705 (' + localWords + ' \u0643\u0644\u0645\u0629)</span>' : '<span style="color:var(--text-muted);">\u2014</span>') +
+          '</td>' +
+          '<td style="padding:8px 10px; text-align:center;">' +
+            (hasCloud ? '<span style="color:#6366f1;">\u2705 (' + cloudWords + ' \u0643\u0644\u0645\u0629)</span>' : '<span style="color:var(--text-muted);">\u2014</span>') +
+          '</td>' +
+          '<td style="padding:8px 10px; color:' + actionColor + '; font-size:0.8rem; font-weight:600;">' +
+            actionIcon + ' ' + action +
+          '</td>' +
+          '</tr>';
+      });
+
+      // Summary badges
+      var summaryParts = [];
+      if (bothCount > 0) summaryParts.push('<span style="background:rgba(99,102,241,0.12); color:#6366f1; padding:4px 10px; border-radius:6px; font-size:0.78rem; font-weight:600; border:1px solid rgba(99,102,241,0.3);">\uD83D\uDD04 ' + bothCount + ' \u0645\u0634\u062a\u0631\u0643\u0629</span>');
+      if (cloudOnlyCount > 0) summaryParts.push('<span style="background:rgba(16,185,129,0.12); color:#10b981; padding:4px 10px; border-radius:6px; font-size:0.78rem; font-weight:600; border:1px solid rgba(16,185,129,0.3);">\uD83D\uDCE5 ' + cloudOnlyCount + ' \u062c\u062f\u064a\u062f\u0629 \u0645\u0646 \u0627\u0644\u0633\u062d\u0627\u0628\u0629</span>');
+      if (localOnlyCount > 0) summaryParts.push('<span style="background:rgba(239,68,68,0.12); color:#ef4444; padding:4px 10px; border-radius:6px; font-size:0.78rem; font-weight:600; border:1px solid rgba(239,68,68,0.3);">\u26A0\uFE0F ' + localOnlyCount + ' \u0633\u062a\u064f\u062d\u0630\u0641 \u0625\u0646 \u0644\u0645 \u062a\u062f\u0645\u062c</span>');
+      var summaryHtml = '<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">' + summaryParts.join('') + '</div>';
+
+      var modalContent =
+        summaryHtml +
+        '<div style="max-height:260px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px;">' +
+          '<table style="width:100%; border-collapse:collapse; font-size:0.82rem;">' +
+            '<thead>' +
+              '<tr style="background:var(--bg-canvas); position:sticky; top:0; z-index:1;">' +
+                '<th style="padding:8px 10px; text-align:right; font-weight:700; white-space:nowrap;">\u0627\u0644\u0631\u0642\u0645</th>' +
+                '<th style="padding:8px 10px; text-align:right; font-weight:700;">\u0627\u0644\u0639\u0646\u0648\u0627\u0646</th>' +
+                '<th style="padding:8px 10px; text-align:center; font-weight:700;">\uD83D\uDCF1 \u0627\u0644\u062c\u0647\u0627\u0632</th>' +
+                '<th style="padding:8px 10px; text-align:center; font-weight:700;">\u2601\uFE0F \u0627\u0644\u0633\u062d\u0627\u0628\u0629</th>' +
+                '<th style="padding:8px 10px; text-align:right; font-weight:700;">\u0627\u0644\u0625\u062c\u0631\u0627\u0621</th>' +
+              '</tr>' +
+            '</thead>' +
+            '<tbody>' + tableRows + '</tbody>' +
+          '</table>' +
+        '</div>';
+
+      var hasLocalOnly = localOnlyCount > 0;
+
+      var overlay = document.getElementById('vienix-custom-modal-overlay');
+      if (overlay) overlay.remove();
+
+      overlay = document.createElement('div');
+      overlay.id = 'vienix-custom-modal-overlay';
+      overlay.className = 'vienix-custom-modal-overlay active';
+
+      var footerButtons;
+      if (hasLocalOnly) {
+        footerButtons =
+          '<div style="display:flex; gap:8px; flex-wrap:wrap; width:100%;">' +
+            '<button class="btn btn-ghost" id="vienix-diff-cancel-btn" style="flex:0 0 auto;">\u0625\u0644\u063a\u0627\u0621</button>' +
+            '<button class="btn btn-primary" id="vienix-diff-replace-btn" style="flex:1; background:#ef4444; border-color:#ef4444;">' +
+              '\uD83D\uDDD1\uFE0F \u0627\u0633\u062a\u0628\u062f\u0627\u0644 \u0643\u0627\u0645\u0644 (\u062d\u0630\u0641 ' + localOnlyCount + ' \u062d\u062c\u0631\u0629 \u0645\u062d\u0644\u064a\u0629)' +
+            '</button>' +
+            '<button class="btn btn-primary" id="vienix-diff-merge-btn" style="flex:1; background:#10b981; border-color:#10b981;">' +
+              '\uD83D\uDD00 \u062f\u0645\u062c \u0630\u0643\u064a (\u0627\u0644\u0627\u062d\u062a\u0641\u0627\u0638 \u0628\u0627\u0644\u062d\u062c\u0631\u0627\u062a \u0627\u0644\u0645\u062d\u0644\u064a\u0629)' +
+            '</button>' +
+          '</div>';
+      } else {
+        footerButtons =
+          '<div style="display:flex; gap:8px; flex-wrap:wrap; width:100%;">' +
+            '<button class="btn btn-ghost" id="vienix-diff-cancel-btn" style="flex:0 0 auto;">\u0625\u0644\u063a\u0627\u0621</button>' +
+            '<button class="btn btn-primary" id="vienix-diff-replace-btn" style="flex:1;">' +
+              '\u2705 \u0645\u062a\u0627\u0628\u0639\u0629 \u0627\u0644\u0627\u0633\u062a\u064a\u0631\u0627\u062f \u0645\u0646 \u0627\u0644\u0633\u062d\u0627\u0628\u0629' +
+            '</button>' +
+          '</div>';
       }
 
+      overlay.innerHTML =
+        '<div class="vienix-custom-modal" onclick="event.stopPropagation()" style="max-width:680px;">' +
+          '<div class="vienix-custom-modal-header">' +
+            '<div style="display:flex; align-items:center; gap:8px;">' +
+              '<span style="font-size:1.4rem;">\uD83D\uDCCA</span>' +
+              '<h3 style="margin:0; font-size:1.05rem; font-weight:700;">\u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u064a\u0627\u0646\u0627\u062a\u0643 \u0642\u0628\u0644 \u0627\u0644\u0627\u0633\u062a\u064a\u0631\u0627\u062f</h3>' +
+            '</div>' +
+            '<button class="vienix-custom-modal-close" id="vienix-diff-close-btn">&times;</button>' +
+          '</div>' +
+          '<div class="vienix-custom-modal-body" style="padding:16px 20px;">' +
+            modalContent +
+            '<p style="color:var(--text-muted); font-size:0.75rem; margin-top:12px;">\uD83D\uDCBE \u0633\u064a\u062a\u0645 \u0625\u0646\u0634\u0627\u0621 \u0646\u0633\u062e\u0629 \u0627\u062d\u062a\u064a\u0627\u0637\u064a\u0629 \u0645\u0624\u0642\u062a\u0629 \u062a\u0644\u0642\u0627\u0626\u064a\u0627\u064b \u0642\u0628\u0644 \u0623\u064a \u062a\u063a\u064a\u064a\u0631 \u0644\u062d\u0645\u0627\u064a\u0629 \u0628\u064a\u0627\u0646\u0627\u062a\u0643.</p>' +
+          '</div>' +
+          '<div class="vienix-custom-modal-footer" style="padding:12px 20px;">' +
+            footerButtons +
+          '</div>' +
+        '</div>';
+
+      document.body.appendChild(overlay);
+
+      return new Promise(function (resolve) {
+        var closeBtn = document.getElementById('vienix-diff-close-btn');
+        var cancelBtn = document.getElementById('vienix-diff-cancel-btn');
+        var replaceBtn = document.getElementById('vienix-diff-replace-btn');
+        var mergeBtn = document.getElementById('vienix-diff-merge-btn');
+
+        var cleanup = function () { if (overlay.parentNode) overlay.remove(); };
+
+        closeBtn.addEventListener('click', function () { cleanup(); resolve('cancel'); });
+        cancelBtn.addEventListener('click', function () { cleanup(); resolve('cancel'); });
+        replaceBtn.addEventListener('click', function () { cleanup(); resolve('replace'); });
+        if (mergeBtn) {
+          mergeBtn.addEventListener('click', function () { cleanup(); resolve('merge'); });
+        }
+      });
+    },
+
+    pullFromDrive: async function (options = {}) {
       this.isSyncing = true;
       this.updateUI();
 
@@ -692,7 +960,7 @@
         // 1. Read manifest if present
         if (inventory.manifestFile) {
           try {
-            const res = await this.driveFetch(`https://www.googleapis.com/drive/v3/files/${inventory.manifestFile.id}?alt=media`);
+            const res = await this.driveFetch('https://www.googleapis.com/drive/v3/files/' + inventory.manifestFile.id + '?alt=media');
             manifest = await res.json();
           } catch (e) {
             console.warn('[VienixDrive] Could not parse manifest from Drive:', e);
@@ -709,11 +977,11 @@
         // 2. Read every chamber file directly from Drive inventory
         for (const [chNum, files] of inventory.chamberFiles.entries()) {
           const file = files[0];
-          const match = file.name.match(/^Chamber_(\d+)(?:_(.*))?\.md$/i);
+          const match = file.name.match(/^Chamber_(\d+)(?:_(.*))?\\.md$/i);
           const title = match && match[2] ? match[2].replace(/_/g, ' ') : '';
 
           try {
-            const res = await this.driveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`);
+            const res = await this.driveFetch('https://www.googleapis.com/drive/v3/files/' + file.id + '?alt=media');
             const text = await res.text();
             if (text && text.trim().length > 0) {
               manifest.rawKeys['vienix_chamber_' + chNum] = text;
@@ -745,28 +1013,80 @@
           }
         });
 
-        if (hasChambers && window.VienixStorage && typeof window.VienixStorage.applyRestore === 'function') {
-          this.lastSyncTime = new Date();
-          this.lastSyncError = null;
-          localStorage.setItem('vienix_drive_last_sync', this.lastSyncTime.toISOString());
-          await window.VienixStorage.applyRestore(manifest);
+        if (!hasChambers) {
+          if (window.VienixStorage && typeof window.VienixStorage.showCustomModal === 'function') {
+            window.VienixStorage.showCustomModal({
+              title: '\u062a\u0646\u0628\u064a\u0647 \u0627\u0644\u0627\u0633\u062a\u064a\u0631\u0627\u062f',
+              icon: '\u26A0\uFE0F',
+              content: '<p style="color:var(--text-secondary);">\u0644\u0645 \u064a\u062a\u0645 \u0627\u0644\u0639\u062b\u0648\u0631 \u0639\u0644\u0649 \u0645\u0644\u0641\u0627\u062a \u0623\u0648 \u0646\u0635\u0648\u0635 \u0633\u0627\u0628\u0642\u0629 \u0641\u064a \u0645\u062c\u0644\u062f Vienix Notes \u0639\u0644\u0649 Google Drive.</p>',
+              confirmText: '\u062d\u0633\u0646\u0627\u064b'
+            });
+          } else {
+            alert('\u0644\u0645 \u064a\u062a\u0645 \u0627\u0644\u0639\u062b\u0648\u0631 \u0639\u0644\u0649 \u0645\u0644\u0641\u0627\u062a \u0633\u0627\u0628\u0642\u0629 \u0641\u064a \u0645\u062c\u0644\u062f Vienix Notes \u0639\u0644\u0649 Google Drive.');
+          }
           return;
         }
 
-        if (window.VienixStorage && typeof window.VienixStorage.showCustomModal === 'function') {
-          window.VienixStorage.showCustomModal({
-            title: 'تنبيه الاستيراد',
-            icon: '⚠️',
-            content: '<p style="color:var(--text-secondary);">لم يتم العثور على ملفات أو نصوص سابقة في مجلد Vienix Notes على Google Drive.</p>',
-            confirmText: 'حسناً'
-          });
-        } else {
-          alert('لم يتم العثور على ملفات سابقة في مجلد Vienix Notes على Google Drive.');
+        // ──────────────────────────────────────────────
+        // Feature 4: DIFF PREVIEW — compare before acting
+        // ──────────────────────────────────────────────
+        const localChambers = this._getLocalChamberSnapshot();
+        const cloudChambers = this._getCloudChamberSnapshot(manifest);
+
+        // Check if there are local-only chambers that would be lost
+        let hasLocalOnlyFiles = false;
+        localChambers.forEach(function (_, ch) {
+          if (!cloudChambers.has(ch)) hasLocalOnlyFiles = true;
+        });
+
+        let userChoice = 'replace';
+
+        if (!options.force || hasLocalOnlyFiles) {
+          // Show the diff preview modal and let the user choose
+          this.isSyncing = false;
+          this.updateUI();
+          userChoice = await this._showDiffPreviewModal(localChambers, cloudChambers, manifest);
+          this.isSyncing = true;
+          this.updateUI();
         }
+
+        if (userChoice === 'cancel') {
+          console.log('[VienixDrive] Pull cancelled by user after diff preview.');
+          return;
+        }
+
+        // ──────────────────────────────────────────────
+        // Feature 3: SILENT BACKUP — safety net before any destructive action
+        // ──────────────────────────────────────────────
+        if (localChambers.size > 0 && window.VienixStorage && typeof window.VienixStorage.createSilentBackup === 'function') {
+          console.log('[VienixDrive] Creating silent pre-pull backup...');
+          window.VienixStorage.createSilentBackup();
+        }
+
+        // ──────────────────────────────────────────────
+        // Execute the chosen strategy
+        // ──────────────────────────────────────────────
+        this.lastSyncTime = new Date();
+        this.lastSyncError = null;
+        localStorage.setItem('vienix_drive_last_sync', this.lastSyncTime.toISOString());
+
+        if (userChoice === 'merge' && window.VienixStorage && typeof window.VienixStorage.applyMerge === 'function') {
+          // Feature 2: SMART MERGE — keep local-only chambers, update cloud chambers
+          console.log('[VienixDrive] Applying Smart Merge...');
+          await window.VienixStorage.applyMerge(manifest);
+        } else {
+          // Full Replace (original behavior)
+          if (window.VienixStorage && typeof window.VienixStorage.applyRestore === 'function') {
+            console.log('[VienixDrive] Applying Full Replace...');
+            await window.VienixStorage.applyRestore(manifest);
+          }
+        }
+        // applyRestore / applyMerge will reload the page
+        return;
       } catch (err) {
         console.error('[VienixDrive] Pull error:', err);
         this.lastSyncError = err.message;
-        alert('حدث خطأ أثناء الاستيراد من Google Drive: ' + err.message);
+        alert('\u062d\u062f\u062b \u062e\u0637\u0623 \u0623\u062b\u0646\u0627\u0621 \u0627\u0644\u0627\u0633\u062a\u064a\u0631\u0627\u062f \u0645\u0646 Google Drive: ' + err.message);
       } finally {
         this.isSyncing = false;
         this.updateUI();
