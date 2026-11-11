@@ -658,10 +658,10 @@
           restoreDelete('vienix_folder_name_overrides');
         }
 
-        // 7. Restore remaining non-chamber rawKeys (settings, theme, layout)
+        // 7. Restore remaining non-chamber rawKeys (settings, theme) - excluding device-specific screen geometry
         if (payload.rawKeys && typeof payload.rawKeys === 'object') {
           Object.keys(payload.rawKeys).forEach(k => {
-            if (/^(?:vienix|yaser)_chamber_/.test(k) || k === 'vienix_md_content' || k === 'yaser_md_content' || k === 'vienix_custom_folders' || k.startsWith('vienix_folder_files_')) {
+            if (/^(?:vienix|yaser)_chamber_/.test(k) || k === 'vienix_md_content' || k === 'yaser_md_content' || k === 'vienix_custom_folders' || k.startsWith('vienix_folder_files_') || /^(?:vienix|yaser)_(?:dock_pos|split_pct|dock_version)/.test(k)) {
               return;
             }
             restoreSet(k, payload.rawKeys[k]);
