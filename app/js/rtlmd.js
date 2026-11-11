@@ -15172,40 +15172,99 @@ function exportDocument(format) {
 /* ============================================================
    نظام السحب والإفلات للوحة الأدوات العائمة
    يستخدم Pointer Events API + setPointerCapture لموثوقية أعلى
+   مع عزل تام لإحداثيات الموبايل وحماية ضد خروج الشريط من الشاشة
    ============================================================ */
 (function initFloatingDockDrag() {
 
-  /* مسح أي موضع قديم بعد تحديث البنية (v4) */
-  const DOCK_VERSION = 'v4';
+  /* مسح أي موضع قديم بعد تحديث البنية (v5) لمنع إحداثيات الديسكتوب من إخفاء الموبايل */
+  const DOCK_VERSION = 'v5';
   if (localStorage.getItem('vienix_dock_version') !== DOCK_VERSION) {
     localStorage.removeItem('vienix_dock_pos');
+    localStorage.removeItem('vienix_dock_pos_mobile');
     localStorage.removeItem('vienix_classic_dock_pos');
+    localStorage.removeItem('vienix_classic_dock_pos_mobile');
+    localStorage.removeItem('vienix_preview_dock_pos');
+    localStorage.removeItem('vienix_preview_dock_pos_mobile');
     localStorage.setItem('vienix_dock_version', DOCK_VERSION);
+  }
+
+  function isMobile() {
+    return window.innerWidth <= 768;
   }
 
   function makeDraggable(wrapperId, storageKey) {
     const wrapper = document.getElementById(wrapperId);
     if (!wrapper) return;
 
-    /* --- استعادة الموضع المحفوظ --- */
-    try {
-      const saved = JSON.parse(localStorage.getItem(storageKey));
-      if (saved && typeof saved.left === 'number' && typeof saved.bottom === 'number') {
-        wrapper.style.left   = saved.left   + 'px';
-        wrapper.style.bottom = saved.bottom + 'px';
-        wrapper.style.right  = 'auto';
-        wrapper.style.top    = 'auto';
-      }
-    } catch (_) {}
-
-    let startX, startY, startLeft, startBottom;
-    let isDragging = false;
-    let hasMoved   = false;
+    function getStorageKey() {
+      return isMobile() ? (storageKey + '_mobile') : storageKey;
+    }
 
     function getParentRect() {
       const p = wrapper.offsetParent || wrapper.parentElement || document.body;
       return p.getBoundingClientRect();
     }
+
+    function clampPosition() {
+      const parent = getParentRect();
+      if (!parent || parent.width <= 0 || parent.height <= 0) return;
+      const wRect = wrapper.getBoundingClientRect();
+      const mobile = isMobile();
+
+      const curLeft = parseFloat(wrapper.style.left);
+      const curBottom = parseFloat(wrapper.style.bottom);
+
+      if (mobile) {
+        const maxL = Math.max(0, parent.width - (wRect.width || 220) - 8);
+        const maxB = Math.max(0, parent.height - (wRect.height || 42) - 8);
+        if (isNaN(curLeft) || curLeft > maxL || curLeft < 6) {
+          wrapper.style.left = '12px';
+          wrapper.style.right = 'auto';
+        } else {
+          wrapper.style.left = Math.max(6, Math.min(curLeft, maxL)) + 'px';
+        }
+
+        if (isNaN(curBottom) || curBottom > maxB || curBottom < 6) {
+          wrapper.style.bottom = '12px';
+          wrapper.style.top = 'auto';
+        } else {
+          wrapper.style.bottom = Math.max(6, Math.min(curBottom, maxB)) + 'px';
+        }
+      } else {
+        if (!isNaN(curLeft)) {
+          const maxL = Math.max(0, parent.width - (wRect.width || 50) - 10);
+          wrapper.style.left = Math.max(10, Math.min(curLeft, maxL)) + 'px';
+        }
+        if (!isNaN(curBottom)) {
+          const maxB = Math.max(0, parent.height - (wRect.height || 180) - 10);
+          wrapper.style.bottom = Math.max(10, Math.min(curBottom, maxB)) + 'px';
+        }
+      }
+    }
+
+    /* --- استعادة الموضع المحفوظ مع فحص الحدود --- */
+    try {
+      const curKey = getStorageKey();
+      const saved = JSON.parse(localStorage.getItem(curKey));
+      if (saved && typeof saved.left === 'number' && typeof saved.bottom === 'number') {
+        const parent = getParentRect();
+        const maxL = Math.max(0, parent.width - 60);
+        const maxB = Math.max(0, parent.height - 40);
+        if (saved.left >= 0 && saved.left <= maxL && saved.bottom >= 0 && saved.bottom <= maxB) {
+          wrapper.style.left   = saved.left   + 'px';
+          wrapper.style.bottom = saved.bottom + 'px';
+          wrapper.style.right  = 'auto';
+          wrapper.style.top    = 'auto';
+        }
+      }
+    } catch (_) {}
+
+    // ضبط الموضع فوراً لضمان عدم خروج الشريط
+    clampPosition();
+
+    let startX, startY, startLeft, startBottom;
+    let isDragging = false;
+    let hasMoved   = false;
 
     wrapper.addEventListener('pointerdown', function (e) {
       /* تجاهُل الأزرار الداخلية */
@@ -15224,7 +15283,7 @@ function exportDocument(format) {
       startLeft   = rect.left - parent.left;
       startBottom = parent.bottom - rect.bottom;
 
-      /* تثبيت القيم الحالية inline لمنع أي CSS من تغييرها */
+      /* تثبيت القيم الحالية inline لمنع أي CSS من تغييرها أثناء السحب */
       wrapper.style.left       = startLeft   + 'px';
       wrapper.style.bottom     = startBottom + 'px';
       wrapper.style.right      = 'auto';
@@ -15249,8 +15308,8 @@ function exportDocument(format) {
       const parent = getParentRect();
       const wRect  = wrapper.getBoundingClientRect();
 
-      let newLeft   = Math.max(0, Math.min(startLeft   + dx, parent.width  - wRect.width));
-      let newBottom = Math.max(0, Math.min(startBottom - dy, parent.height - wRect.height));
+      let newLeft   = Math.max(6, Math.min(startLeft   + dx, parent.width  - wRect.width - 6));
+      let newBottom = Math.max(6, Math.min(startBottom - dy, parent.height - wRect.height - 6));
 
       wrapper.style.left   = newLeft   + 'px';
       wrapper.style.bottom = newBottom + 'px';
@@ -15263,7 +15322,8 @@ function exportDocument(format) {
 
       if (hasMoved) {
         try {
-          localStorage.setItem(storageKey, JSON.stringify({
+          const curKey = getStorageKey();
+          localStorage.setItem(curKey, JSON.stringify({
             left:   parseFloat(wrapper.style.left),
             bottom: parseFloat(wrapper.style.bottom)
           }));
@@ -15277,6 +15337,8 @@ function exportDocument(format) {
       hasMoved   = false;
       wrapper.style.transition = '';
     });
+
+    window.addEventListener('resize', clampPosition);
   }
 
   function initDrag() {
