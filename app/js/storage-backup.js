@@ -513,7 +513,7 @@
           }
         };
 
-        // 1. Identify all chambers present and populated in incoming payload
+        // 1. Identify all chambers present in incoming payload
         const presentChambers = new Map(); // chNum -> { content, meta }
 
         if (payload.rawKeys && typeof payload.rawKeys === 'object') {
@@ -522,7 +522,7 @@
             if (m) {
               const chNum = parseInt(m[1], 10);
               const val = payload.rawKeys[k];
-              if (val !== null && val !== undefined && String(val).trim().length > 0) {
+              if (val !== null && val !== undefined) {
                 if (!presentChambers.has(chNum)) presentChambers.set(chNum, {});
                 presentChambers.get(chNum).content = String(val);
               }
@@ -540,9 +540,9 @@
 
           // Check legacy Chamber 1 content keys
           const legacyCh1 = payload.rawKeys['vienix_md_content'] || payload.rawKeys['yaser_md_content'];
-          if (legacyCh1 && String(legacyCh1).trim().length > 0) {
+          if (legacyCh1 !== null && legacyCh1 !== undefined) {
             if (!presentChambers.has(1)) presentChambers.set(1, {});
-            if (!presentChambers.get(1).content) presentChambers.get(1).content = String(legacyCh1);
+            if (presentChambers.get(1).content === undefined) presentChambers.get(1).content = String(legacyCh1);
           }
         }
 
@@ -550,9 +550,9 @@
           payload.chambers.forEach(ch => {
             if (ch && ch.chamberId) {
               const chNum = parseInt(ch.chamberId, 10);
-              if (ch.content !== undefined && String(ch.content).trim().length > 0) {
+              if (ch.content !== undefined && ch.content !== null) {
                 if (!presentChambers.has(chNum)) presentChambers.set(chNum, {});
-                presentChambers.get(chNum).content = ch.content;
+                presentChambers.get(chNum).content = String(ch.content);
               }
               if (ch.meta) {
                 if (!presentChambers.has(chNum)) presentChambers.set(chNum, {});
@@ -569,13 +569,12 @@
         for (let ch = 1; ch <= scanLimit; ch++) {
           if (presentChambers.has(ch)) {
             const chData = presentChambers.get(ch);
-            if (chData.content !== undefined) {
-              restoreSet('vienix_chamber_' + ch, chData.content);
-              restoreSet('yaser_chamber_' + ch, chData.content);
-              if (ch === 1) {
-                restoreSet('vienix_md_content', chData.content);
-                restoreSet('yaser_md_content', chData.content);
-              }
+            const contentToRestore = (chData.content !== undefined && chData.content !== null) ? chData.content : '';
+            restoreSet('vienix_chamber_' + ch, contentToRestore);
+            restoreSet('yaser_chamber_' + ch, contentToRestore);
+            if (ch === 1) {
+              restoreSet('vienix_md_content', contentToRestore);
+              restoreSet('yaser_md_content', contentToRestore);
             }
             if (chData.meta) {
               const metaStr = typeof chData.meta === 'string' ? chData.meta : JSON.stringify(chData.meta);
@@ -813,7 +812,7 @@
             if (m) {
               const chNum = parseInt(m[1], 10);
               const val = payload.rawKeys[k];
-              if (val !== null && val !== undefined && String(val).trim().length > 0) {
+              if (val !== null && val !== undefined) {
                 if (!cloudChambers.has(chNum)) cloudChambers.set(chNum, {});
                 cloudChambers.get(chNum).content = String(val);
               }
@@ -828,9 +827,9 @@
             }
           });
           const legacyCh1 = payload.rawKeys['vienix_md_content'] || payload.rawKeys['yaser_md_content'];
-          if (legacyCh1 && String(legacyCh1).trim().length > 0) {
+          if (legacyCh1 !== null && legacyCh1 !== undefined) {
             if (!cloudChambers.has(1)) cloudChambers.set(1, {});
-            if (!cloudChambers.get(1).content) cloudChambers.get(1).content = String(legacyCh1);
+            if (cloudChambers.get(1).content === undefined) cloudChambers.get(1).content = String(legacyCh1);
           }
         }
 
@@ -838,9 +837,9 @@
           payload.chambers.forEach(ch => {
             if (ch && ch.chamberId) {
               const chNum = parseInt(ch.chamberId, 10);
-              if (ch.content !== undefined && String(ch.content).trim().length > 0) {
+              if (ch.content !== undefined && ch.content !== null) {
                 if (!cloudChambers.has(chNum)) cloudChambers.set(chNum, {});
-                cloudChambers.get(chNum).content = ch.content;
+                cloudChambers.get(chNum).content = String(ch.content);
               }
               if (ch.meta) {
                 if (!cloudChambers.has(chNum)) cloudChambers.set(chNum, {});
@@ -860,13 +859,12 @@
           if (cloudChambers.has(ch)) {
             // Cloud has this chamber → overwrite local
             const chData = cloudChambers.get(ch);
-            if (chData.content !== undefined) {
-              mergeSet('vienix_chamber_' + ch, chData.content);
-              mergeSet('yaser_chamber_' + ch, chData.content);
-              if (ch === 1) {
-                mergeSet('vienix_md_content', chData.content);
-                mergeSet('yaser_md_content', chData.content);
-              }
+            const contentToSet = (chData.content !== undefined && chData.content !== null) ? chData.content : '';
+            mergeSet('vienix_chamber_' + ch, contentToSet);
+            mergeSet('yaser_chamber_' + ch, contentToSet);
+            if (ch === 1) {
+              mergeSet('vienix_md_content', contentToSet);
+              mergeSet('yaser_md_content', contentToSet);
             }
             if (chData.meta) {
               const metaStr = typeof chData.meta === 'string' ? chData.meta : JSON.stringify(chData.meta);

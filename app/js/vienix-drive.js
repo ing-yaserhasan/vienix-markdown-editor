@@ -866,7 +866,7 @@
         if (m) {
           const chNum = parseInt(m[1], 10);
           const val = manifest.rawKeys[k];
-          if (val && String(val).trim().length > 0) {
+          if (val !== null && val !== undefined) {
             if (!cloudChambers.has(chNum)) cloudChambers.set(chNum, { content: '', title: '', meta: null, wordCount: 0 });
             cloudChambers.get(chNum).content = String(val);
             cloudChambers.get(chNum).wordCount = (String(val).trim().match(/\S+/g) || []).length;
@@ -1074,30 +1074,29 @@
         // 2. Read every chamber file directly from Drive inventory
         for (const [chNum, files] of inventory.chamberFiles.entries()) {
           const file = files[0];
-          const match = file.name.match(/^Chamber_(\d+)(?:_(.*))?\\.md$/i);
+          const match = file.name.match(/^Chamber_(\d+)(?:_(.*))?\.md$/i);
           const title = match && match[2] ? match[2].replace(/_/g, ' ') : '';
 
           try {
             const res = await this.driveFetch('https://www.googleapis.com/drive/v3/files/' + file.id + '?alt=media');
             const text = await res.text();
-            if (text && text.trim().length > 0) {
-              manifest.rawKeys['vienix_chamber_' + chNum] = text;
-              manifest.rawKeys['yaser_chamber_' + chNum] = text;
-              if (chNum === 1) {
-                manifest.rawKeys['vienix_md_content'] = text;
-                manifest.rawKeys['yaser_md_content'] = text;
-              }
-              if (title) {
-                const metaObj = {
-                  customTitle: title,
-                  folder: 'book',
-                  updatedAt: file.modifiedTime ? new Date(file.modifiedTime).getTime() : Date.now()
-                };
-                manifest.rawKeys['vienix_chamber_meta_' + chNum] = JSON.stringify(metaObj);
-                manifest.rawKeys['yaser_chamber_meta_' + chNum] = JSON.stringify(metaObj);
-              }
-              hasChambers = true;
+            const cleanText = (text !== null && text !== undefined) ? text : '';
+            manifest.rawKeys['vienix_chamber_' + chNum] = cleanText;
+            manifest.rawKeys['yaser_chamber_' + chNum] = cleanText;
+            if (chNum === 1) {
+              manifest.rawKeys['vienix_md_content'] = cleanText;
+              manifest.rawKeys['yaser_md_content'] = cleanText;
             }
+            if (title) {
+              const metaObj = {
+                customTitle: title,
+                folder: 'book',
+                updatedAt: file.modifiedTime ? new Date(file.modifiedTime).getTime() : Date.now()
+              };
+              manifest.rawKeys['vienix_chamber_meta_' + chNum] = JSON.stringify(metaObj);
+              manifest.rawKeys['yaser_chamber_meta_' + chNum] = JSON.stringify(metaObj);
+            }
+            hasChambers = true;
           } catch (err) {
             console.warn('[VienixDrive] Failed reading chamber file from Drive:', file.name, err);
           }
@@ -1105,7 +1104,7 @@
 
         // Check if manifest had chambers even if individual files were absent
         Object.keys(manifest.rawKeys).forEach(k => {
-          if (k.includes('chamber') && !k.includes('meta') && String(manifest.rawKeys[k]).trim().length > 0) {
+          if (k.includes('chamber') && !k.includes('meta') && manifest.rawKeys[k] !== null && manifest.rawKeys[k] !== undefined) {
             hasChambers = true;
           }
         });
