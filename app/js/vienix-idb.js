@@ -96,6 +96,8 @@
               // localStorage has the authoritative new data — force it to win over stale IDB values.
               if (sessionStorage.getItem('vienix_just_restored')) {
                 sessionStorage.removeItem('vienix_just_restored');
+                // Authoritative source is localStorage: wipe memoryCache so deleted IDB keys cannot linger
+                this.memoryCache = {};
                 try {
                   for (let i = 0; i < localStorage.length; i++) {
                     const key = localStorage.key(i);
@@ -104,6 +106,18 @@
                     }
                   }
                 } catch (e) {}
+
+                // Sync IDB store so deleted keys are also completely purged from IndexedDB
+                if (this.db) {
+                  try {
+                    const tx = this.db.transaction([STORE_NAME], 'readwrite');
+                    const store = tx.objectStore(STORE_NAME);
+                    store.clear();
+                    Object.keys(this.memoryCache).forEach(k => {
+                      store.put(this.memoryCache[k], k);
+                    });
+                  } catch (e) {}
+                }
               } else {
                 // Normal path: merge localStorage only for keys missing in IDB
                 this.hydrateFromLocalStorage();
@@ -266,6 +280,22 @@
           const tx = this.db.transaction([STORE_NAME], 'readwrite');
           const store = tx.objectStore(STORE_NAME);
           store.delete(key);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        } catch (e) {
+          resolve();
+        }
+      });
+    },
+
+    clear: function () {
+      this.memoryCache = {};
+      return new Promise((resolve) => {
+        if (!this.db) return resolve();
+        try {
+          const tx = this.db.transaction([STORE_NAME], 'readwrite');
+          const store = tx.objectStore(STORE_NAME);
+          store.clear();
           tx.oncomplete = () => resolve();
           tx.onerror = () => resolve();
         } catch (e) {

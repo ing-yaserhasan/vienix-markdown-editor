@@ -705,6 +705,10 @@
           }
           manifest.rawKeys['vienix_chamber_' + ch] = chVal;
           manifest.rawKeys['yaser_chamber_' + ch] = chVal;
+          if (!chVal || chVal.trim().length === 0) {
+            delete manifest.rawKeys['vienix_chamber_meta_' + ch];
+            delete manifest.rawKeys['yaser_chamber_meta_' + ch];
+          }
         });
 
         // Strip orphan chamber keys not in current workspace
@@ -714,6 +718,32 @@
             delete manifest.rawKeys[k];
           }
         });
+
+        // 2b. Explicitly bundle folder files (including book explorer files 8, 9, 10...)
+        manifest.folderFiles = {};
+        try {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('vienix_folder_files_')) {
+              try {
+                manifest.folderFiles[k] = JSON.parse(localStorage.getItem(k));
+              } catch (e) {
+                manifest.folderFiles[k] = localStorage.getItem(k);
+              }
+            }
+          }
+          if (window.VienixIDB && window.VienixIDB.memoryCache) {
+            Object.keys(window.VienixIDB.memoryCache).forEach(k => {
+              if (k.startsWith('vienix_folder_files_') && !manifest.folderFiles[k]) {
+                try {
+                  manifest.folderFiles[k] = JSON.parse(window.VienixIDB.memoryCache[k]);
+                } catch (e) {
+                  manifest.folderFiles[k] = window.VienixIDB.memoryCache[k];
+                }
+              }
+            });
+          }
+        } catch (e) {}
 
         await this.uploadOrUpdateDriveFile(
           'vienix_workspace_manifest.json',
@@ -962,10 +992,11 @@
           if (m) {
             const chNum = parseInt(m[1], 10);
             const val = manifest.rawKeys[k];
-            if (val !== null && val !== undefined) {
+            if (val !== null && val !== undefined && String(val).trim().length > 0) {
+              const strVal = String(val);
               if (!cloudChambers.has(chNum)) cloudChambers.set(chNum, { content: '', title: '', meta: null, wordCount: 0 });
-              cloudChambers.get(chNum).content = String(val);
-              cloudChambers.get(chNum).wordCount = (String(val).trim().match(/\S+/g) || []).length;
+              cloudChambers.get(chNum).content = strVal;
+              cloudChambers.get(chNum).wordCount = (strVal.trim().match(/\S+/g) || []).length;
             }
           }
           const mMeta = k.match(/^(?:vienix|yaser)_chamber_meta_(\d+)$/);
@@ -973,11 +1004,12 @@
             const chNum = parseInt(mMeta[1], 10);
             const val = manifest.rawKeys[k];
             if (val) {
-              if (!cloudChambers.has(chNum)) cloudChambers.set(chNum, { content: '', title: '', meta: null, wordCount: 0 });
-              cloudChambers.get(chNum).meta = val;
               try {
                 const meta = typeof val === 'string' ? JSON.parse(val) : val;
-                if (meta && meta.customTitle) cloudChambers.get(chNum).title = meta.customTitle;
+                if (meta && meta.customTitle && cloudChambers.has(chNum)) {
+                  cloudChambers.get(chNum).title = meta.customTitle;
+                  cloudChambers.get(chNum).meta = val;
+                }
               } catch (e) {}
             }
           }
@@ -998,21 +1030,23 @@
             if (!f) return;
             const num = typeof f.num === 'number' ? f.num : 8;
             const fileContent = f.content || '';
-            if (!cloudChambers.has(num) || (fileContent && !cloudChambers.get(num).content)) {
-              cloudChambers.set(num, {
-                content: fileContent,
-                meta: null,
-                title: f.title || ('ملف ' + num),
-                wordCount: (fileContent.trim().match(/\S+/g) || []).length
-              });
-            } else if (f.title && cloudChambers.has(num)) {
-              cloudChambers.get(num).title = f.title;
+            if (fileContent && fileContent.trim().length > 0) {
+              if (!cloudChambers.has(num)) {
+                cloudChambers.set(num, {
+                  content: fileContent,
+                  meta: null,
+                  title: f.title || ('ملف ' + num),
+                  wordCount: (fileContent.trim().match(/\S+/g) || []).length
+                });
+              } else if (f.title) {
+                cloudChambers.get(num).title = f.title;
+              }
             }
           });
         }
       } catch (e) {}
 
-      // Fill missing titles
+      // Fill missing titles for populated cloud chambers
       cloudChambers.forEach((data, chNum) => {
         if (!data.title) {
           data.title = chNum >= 8 ? ('ملف ' + chNum) : ('حجرة ' + chNum);
@@ -1232,29 +1266,50 @@
         // If a chamber has NO file in Drive inventory, mark it as empty so local data gets cleared!
         const localSnap = this._getLocalChamberSnapshot();
         const allNumsToCheck = new Set([...Array.from({length: 7}, (_, i) => i + 1), ...localSnap.keys(), ...inventory.chamberFiles.keys()]);
-        for (const ch of allNumsToCheck) {
-          if (!inventory.chamberFiles.has(ch)) {
-            // No .md file on Drive for this chamber -> if not in manifest, it is empty!
-            if (!manifest.rawKeys['vienix_chamber_' + ch]) {
+
+        if (inventory.chamberFiles.size > 0) {
+          for (const ch of allNumsToCheck) {
+            if (!inventory.chamberFiles.has(ch)) {
+              // Chamber file does NOT exist on Drive -> mark empty so local data gets wiped!
               manifest.rawKeys['vienix_chamber_' + ch] = '';
               manifest.rawKeys['yaser_chamber_' + ch] = '';
+              if (ch === 1) {
+                manifest.rawKeys['vienix_md_content'] = '';
+                manifest.rawKeys['yaser_md_content'] = '';
+              }
               delete manifest.rawKeys['vienix_chamber_meta_' + ch];
               delete manifest.rawKeys['yaser_chamber_meta_' + ch];
             }
           }
         }
 
-        // If inventory has manifest or files, we consider chambers present
-        if (inventory.manifestFile || inventory.chamberFiles.size > 0) {
-          hasChambers = true;
+        // Ensure folderFiles structure exists in manifest for clean restore
+        if (!manifest.folderFiles) {
+          manifest.folderFiles = {};
+          if (manifest.rawKeys) {
+            Object.keys(manifest.rawKeys).forEach(k => {
+              if (k.startsWith('vienix_folder_files_')) {
+                try {
+                  manifest.folderFiles[k] = JSON.parse(manifest.rawKeys[k]);
+                } catch (e) {
+                  manifest.folderFiles[k] = manifest.rawKeys[k];
+                }
+              }
+            });
+          }
         }
 
-        // Check if manifest had chambers even if individual files were absent
-        Object.keys(manifest.rawKeys).forEach(k => {
-          if (k.includes('chamber') && !k.includes('meta') && manifest.rawKeys[k] !== null && manifest.rawKeys[k] !== undefined) {
-            hasChambers = true;
-          }
-        });
+        // If inventory has manifest or files, we consider chambers present
+        if (inventory.chamberFiles.size > 0) {
+          hasChambers = true;
+        } else if (inventory.manifestFile) {
+          Object.keys(manifest.rawKeys).forEach(k => {
+            if (k.includes('chamber') && !k.includes('meta')) {
+              const v = manifest.rawKeys[k];
+              if (v && String(v).trim().length > 0) hasChambers = true;
+            }
+          });
+        }
 
         if (!hasChambers) {
           if (window.VienixStorage && typeof window.VienixStorage.showCustomModal === 'function') {

@@ -672,12 +672,44 @@
           restoreSet('vienix_custom_folders', '[]');
         }
 
-        // 5. Restore folder files from explicit payload if provided
+        // 5. Restore folder files from explicit payload or rawKeys
         if (payload.folderFiles && typeof payload.folderFiles === 'object') {
           Object.keys(payload.folderFiles).forEach(k => {
             restoreSet(k, payload.folderFiles[k]);
           });
         }
+        if (payload.rawKeys && typeof payload.rawKeys === 'object') {
+          Object.keys(payload.rawKeys).forEach(k => {
+            if (k.startsWith('vienix_folder_files_')) {
+              if (!payload.folderFiles || !payload.folderFiles[k]) {
+                restoreSet(k, payload.rawKeys[k]);
+              }
+            }
+          });
+        }
+
+        // Synchronize content of folder files (book files 8, 9, 10...) with presentChambers
+        try {
+          const rawBf = localStorage.getItem('vienix_folder_files_book');
+          if (rawBf) {
+            let bfList = JSON.parse(rawBf);
+            if (Array.isArray(bfList)) {
+              let updated = false;
+              bfList.forEach(f => {
+                if (f && typeof f.num === 'number' && presentChambers.has(f.num)) {
+                  const chC = presentChambers.get(f.num).content;
+                  if (chC !== undefined && chC !== null && f.content !== chC) {
+                    f.content = chC;
+                    updated = true;
+                  }
+                }
+              });
+              if (updated) {
+                restoreSet('vienix_folder_files_book', JSON.stringify(bfList));
+              }
+            }
+          }
+        } catch (e) {}
 
         // 6. Restore folder name overrides
         if (payload.folderNameOverrides) {
