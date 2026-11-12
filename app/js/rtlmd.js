@@ -581,21 +581,20 @@
   const classicEditor = document.getElementById('classic-markdown-input');
   const classicOutput = document.getElementById('classic-output');
 
-  // Chambers System (نظام الحجرات: 7 حجرات أساسية + الحجرة الثامنة المخصصة لعرض الملفات فقط)
-  const TOTAL_CHAMBERS = 8;
-  window.VienixGetTotalChambers = () => TOTAL_CHAMBERS;
-
-  // تنظيف أي حجرات قديمة غير صالحة تتجاوز 8 وحذف الترقيم العشوائي من الذاكرة
-  try {
-    localStorage.removeItem('vienix_total_chambers');
-    localStorage.removeItem('yaser_total_chambers');
-    for (let ch = 9; ch <= 100; ch++) {
-      localStorage.removeItem('vienix_chamber_' + ch);
-      localStorage.removeItem('yaser_chamber_' + ch);
-      localStorage.removeItem('vienix_chamber_meta_' + ch);
-      localStorage.removeItem('yaser_chamber_meta_' + ch);
-    }
-  } catch (e) {}
+  // Chambers System (نظام الحجرات: 7 حجرات أساسية + ملفات المستكشف من 8 فما فوق)
+  let TOTAL_CHAMBERS = 8;
+  window.VienixGetTotalChambers = () => {
+    let max = typeof TOTAL_CHAMBERS !== 'undefined' ? TOTAL_CHAMBERS : 8;
+    try {
+      const bookFiles = getFolderFiles('book');
+      if (Array.isArray(bookFiles)) {
+        bookFiles.forEach(f => {
+          if (typeof f.num === 'number' && f.num > max) max = f.num;
+        });
+      }
+    } catch (e) {}
+    return max;
+  };
 
   // ضمان أن الحجرة ضمن النطاق الثابت (1 إلى 8)
   function ensureChamberExists(chNum) {

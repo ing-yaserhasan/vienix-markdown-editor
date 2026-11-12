@@ -611,34 +611,26 @@
         const inventory = await this.getFolderInventory();
         let syncedChambers = 0;
 
-        const maxCh = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
+        const localSnapshot = this._getLocalChamberSnapshot();
+        const allTargetNums = new Set([...Array.from({length: 7}, (_, i) => i + 1), ...localSnapshot.keys()]);
+        let maxCh = 8;
+        allTargetNums.forEach(n => { if (n > maxCh) maxCh = n; });
 
-        // 1. Sync every active chamber
-        for (let ch = 1; ch <= maxCh; ch++) {
+        // 1. Sync every active chamber and folder file
+        for (const ch of Array.from(allTargetNums).sort((a, b) => a - b)) {
           let content = '';
-          let meta = null;
+          let title = '';
 
-          if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
-            content = window.VienixIDB.getSync('vienix_chamber_' + ch, 'yaser_chamber_' + ch) || '';
-            const raw = window.VienixIDB.getSync('vienix_chamber_meta_' + ch, 'yaser_chamber_meta_' + ch);
-            if (raw) {
-              try { meta = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch (e) {}
-            }
-          } else {
-            content = localStorage.getItem('vienix_chamber_' + ch) || localStorage.getItem('yaser_chamber_' + ch) || '';
-          }
-
-          if (ch === 1 && !content) {
-            content = localStorage.getItem('vienix_md_content') || '';
+          if (localSnapshot.has(ch)) {
+            const item = localSnapshot.get(ch);
+            content = item.content || '';
+            title = item.title || (ch >= 8 ? `ملف ${ch}` : `Chamber_${ch}`);
           }
 
           const remoteFiles = inventory.chamberFiles.get(ch) || [];
 
           if (content.trim().length > 0) {
-            const rawTitle = (meta && meta.customTitle && meta.customTitle.trim().length > 0)
-              ? meta.customTitle.trim()
-              : `Chamber_${ch}`;
-            const cleanTitle = rawTitle.replace(/[/\\?%*:|"<>]/g, '_').trim();
+            const cleanTitle = title.replace(/[/\\?%*:|"<>]/g, '_').trim();
             const targetFilename = `Chamber_${ch}_${cleanTitle}.md`;
 
             // Existing remote file mapped to this chamber number
@@ -670,9 +662,9 @@
           }
         }
 
-        // Clean up any orphan files on Google Drive for chambers beyond maxCh (e.g. Chamber_9, Chamber_10)
+        // Clean up any orphan files on Google Drive for chambers not in current workspace
         for (const [chNum, files] of inventory.chamberFiles.entries()) {
-          if (chNum > maxCh) {
+          if (!allTargetNums.has(chNum)) {
             for (const rf of files) {
               try {
                 await this.driveFetch(`https://www.googleapis.com/drive/v3/files/${rf.id}`, { method: 'DELETE' });
@@ -705,25 +697,20 @@
           });
         }
 
-        // Explicitly set chambers 1..maxCh in manifest to reflect actual values (including empty strings)
-        for (let ch = 1; ch <= maxCh; ch++) {
+        // Explicitly set chambers in manifest from localSnapshot to reflect actual values
+        allTargetNums.forEach(ch => {
           let chVal = '';
-          if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
-            chVal = window.VienixIDB.getSync('vienix_chamber_' + ch, 'yaser_chamber_' + ch) || '';
-          } else {
-            chVal = localStorage.getItem('vienix_chamber_' + ch) || localStorage.getItem('yaser_chamber_' + ch) || '';
-          }
-          if (ch === 1 && !chVal) {
-            chVal = localStorage.getItem('vienix_md_content') || '';
+          if (localSnapshot.has(ch)) {
+            chVal = localSnapshot.get(ch).content || '';
           }
           manifest.rawKeys['vienix_chamber_' + ch] = chVal;
           manifest.rawKeys['yaser_chamber_' + ch] = chVal;
-        }
+        });
 
-        // Strip legacy or orphan keys beyond maxCh
+        // Strip orphan chamber keys not in current workspace
         Object.keys(manifest.rawKeys).forEach(k => {
           const m = k.match(/^(?:vienix|yaser)_chamber_(?:meta_)?(\d+)$/);
-          if (m && parseInt(m[1], 10) > maxCh) {
+          if (m && !allTargetNums.has(parseInt(m[1], 10))) {
             delete manifest.rawKeys[k];
           }
         });
@@ -844,15 +831,14 @@
     // ─────────────────────────────────────────────────────────────
 
     /**
-     * Collects local chamber data for comparison purposes.
+     * Collects local chamber and folder file data for comparison purposes.
      * Returns a Map of chNum -> { content, meta, title, wordCount }
      */
     _getLocalChamberSnapshot: function () {
       const localChambers = new Map();
-      const maxCh = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
-      const scanLimit = maxCh;
 
-      for (let ch = 1; ch <= scanLimit; ch++) {
+      // 1. Gather fixed chambers 1 to 7
+      for (let ch = 1; ch <= 7; ch++) {
         let content = '';
         let metaRaw = null;
         if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
@@ -878,11 +864,87 @@
           localChambers.set(ch, {
             content: content,
             meta: metaRaw,
-            title: title || ('\u062d\u062c\u0631\u0629 ' + ch),
+            title: title || ('حجرة ' + ch),
             wordCount: (content.trim().match(/\S+/g) || []).length
           });
         }
       }
+
+      // 2. Gather Explorer Folder Files (Book files starting from 8, 9, 10...)
+      try {
+        let bookFiles = null;
+        if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
+          const raw = window.VienixIDB.getSync('vienix_folder_files_book');
+          if (raw) bookFiles = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        }
+        if (!bookFiles) {
+          const raw = localStorage.getItem('vienix_folder_files_book');
+          if (raw) bookFiles = JSON.parse(raw);
+        }
+        if (Array.isArray(bookFiles)) {
+          let activeExpFile = null;
+          try {
+            const rawAct = localStorage.getItem('vienix_active_explorer_file');
+            if (rawAct) activeExpFile = JSON.parse(rawAct);
+          } catch (e) {}
+
+          let activeCh8Val = '';
+          if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
+            activeCh8Val = window.VienixIDB.getSync('vienix_chamber_8', 'yaser_chamber_8') || '';
+          } else {
+            activeCh8Val = localStorage.getItem('vienix_chamber_8') || '';
+          }
+
+          bookFiles.forEach(f => {
+            if (!f) return;
+            const num = typeof f.num === 'number' ? f.num : 8;
+            let fileContent = f.content || '';
+            if (activeExpFile && activeExpFile.fileId === f.id && activeCh8Val && activeCh8Val.trim().length > 0) {
+              fileContent = activeCh8Val;
+            }
+            if (fileContent && fileContent.trim().length > 0) {
+              localChambers.set(num, {
+                content: fileContent,
+                meta: null,
+                title: f.title || ('ملف ' + num),
+                wordCount: (fileContent.trim().match(/\S+/g) || []).length
+              });
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('[VienixDrive] Error reading folder files for snapshot:', e);
+      }
+
+      // 3. Gather any other explicit chamber keys stored in memoryCache / localStorage (8..50)
+      for (let ch = 8; ch <= 50; ch++) {
+        if (localChambers.has(ch)) continue;
+        let content = '';
+        let metaRaw = null;
+        if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
+          content = window.VienixIDB.getSync('vienix_chamber_' + ch, 'yaser_chamber_' + ch) || '';
+          metaRaw = window.VienixIDB.getSync('vienix_chamber_meta_' + ch, 'yaser_chamber_meta_' + ch) || null;
+        } else {
+          content = localStorage.getItem('vienix_chamber_' + ch) || localStorage.getItem('yaser_chamber_' + ch) || '';
+          metaRaw = localStorage.getItem('vienix_chamber_meta_' + ch) || localStorage.getItem('yaser_chamber_meta_' + ch) || null;
+        }
+        if (content && content.trim().length > 0) {
+          let title = '';
+          if (metaRaw) {
+            try {
+              const meta = typeof metaRaw === 'string' ? JSON.parse(metaRaw) : metaRaw;
+              title = (meta && meta.customTitle) ? meta.customTitle : '';
+            } catch (e) {}
+          }
+          localChambers.set(ch, {
+            content: content,
+            meta: metaRaw,
+            title: title || (ch >= 8 ? ('ملف ' + ch) : ('حجرة ' + ch)),
+            wordCount: (content.trim().match(/\S+/g) || []).length
+          });
+        }
+      }
+
       return localChambers;
     },
 
@@ -892,40 +954,69 @@
      */
     _getCloudChamberSnapshot: function (manifest) {
       const cloudChambers = new Map();
-      if (!manifest || !manifest.rawKeys) return cloudChambers;
-      const maxCh = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
+      if (!manifest) return cloudChambers;
 
-      Object.keys(manifest.rawKeys).forEach(k => {
-        const m = k.match(/^(?:vienix|yaser)_chamber_(\d+)$/);
-        if (m) {
-          const chNum = parseInt(m[1], 10);
-          if (chNum > maxCh) return;
-          const val = manifest.rawKeys[k];
-          if (val !== null && val !== undefined) {
-            if (!cloudChambers.has(chNum)) cloudChambers.set(chNum, { content: '', title: '', meta: null, wordCount: 0 });
-            cloudChambers.get(chNum).content = String(val);
-            cloudChambers.get(chNum).wordCount = (String(val).trim().match(/\S+/g) || []).length;
+      if (manifest.rawKeys) {
+        Object.keys(manifest.rawKeys).forEach(k => {
+          const m = k.match(/^(?:vienix|yaser)_chamber_(\d+)$/);
+          if (m) {
+            const chNum = parseInt(m[1], 10);
+            const val = manifest.rawKeys[k];
+            if (val !== null && val !== undefined) {
+              if (!cloudChambers.has(chNum)) cloudChambers.set(chNum, { content: '', title: '', meta: null, wordCount: 0 });
+              cloudChambers.get(chNum).content = String(val);
+              cloudChambers.get(chNum).wordCount = (String(val).trim().match(/\S+/g) || []).length;
+            }
           }
-        }
-        const mMeta = k.match(/^(?:vienix|yaser)_chamber_meta_(\d+)$/);
-        if (mMeta) {
-          const chNum = parseInt(mMeta[1], 10);
-          if (chNum > maxCh) return;
-          const val = manifest.rawKeys[k];
-          if (val) {
-            if (!cloudChambers.has(chNum)) cloudChambers.set(chNum, { content: '', title: '', meta: null, wordCount: 0 });
-            cloudChambers.get(chNum).meta = val;
-            try {
-              const meta = typeof val === 'string' ? JSON.parse(val) : val;
-              if (meta && meta.customTitle) cloudChambers.get(chNum).title = meta.customTitle;
-            } catch (e) {}
+          const mMeta = k.match(/^(?:vienix|yaser)_chamber_meta_(\d+)$/);
+          if (mMeta) {
+            const chNum = parseInt(mMeta[1], 10);
+            const val = manifest.rawKeys[k];
+            if (val) {
+              if (!cloudChambers.has(chNum)) cloudChambers.set(chNum, { content: '', title: '', meta: null, wordCount: 0 });
+              cloudChambers.get(chNum).meta = val;
+              try {
+                const meta = typeof val === 'string' ? JSON.parse(val) : val;
+                if (meta && meta.customTitle) cloudChambers.get(chNum).title = meta.customTitle;
+              } catch (e) {}
+            }
           }
+        });
+      }
+
+      // Check cloud folderFiles (book files: 8, 9, 10...)
+      try {
+        let cloudBookFiles = null;
+        if (manifest.folderFiles && manifest.folderFiles['vienix_folder_files_book']) {
+          cloudBookFiles = manifest.folderFiles['vienix_folder_files_book'];
+        } else if (manifest.rawKeys && manifest.rawKeys['vienix_folder_files_book']) {
+          const raw = manifest.rawKeys['vienix_folder_files_book'];
+          cloudBookFiles = typeof raw === 'string' ? JSON.parse(raw) : raw;
         }
-      });
+        if (Array.isArray(cloudBookFiles)) {
+          cloudBookFiles.forEach(f => {
+            if (!f) return;
+            const num = typeof f.num === 'number' ? f.num : 8;
+            const fileContent = f.content || '';
+            if (!cloudChambers.has(num) || (fileContent && !cloudChambers.get(num).content)) {
+              cloudChambers.set(num, {
+                content: fileContent,
+                meta: null,
+                title: f.title || ('ملف ' + num),
+                wordCount: (fileContent.trim().match(/\S+/g) || []).length
+              });
+            } else if (f.title && cloudChambers.has(num)) {
+              cloudChambers.get(num).title = f.title;
+            }
+          });
+        }
+      } catch (e) {}
 
       // Fill missing titles
       cloudChambers.forEach((data, chNum) => {
-        if (!data.title) data.title = '\u062d\u062c\u0631\u0629 ' + chNum;
+        if (!data.title) {
+          data.title = chNum >= 8 ? ('ملف ' + chNum) : ('حجرة ' + chNum);
+        }
       });
 
       return cloudChambers;
@@ -936,10 +1027,8 @@
      * The user chooses: Full Replace, Smart Merge, or Cancel.
      */
     _showDiffPreviewModal: function (localChambers, cloudChambers, manifest) {
-      const maxSupportedCh = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
       const allChNums = new Set([...localChambers.keys(), ...cloudChambers.keys()]);
-      // Only show chambers within the supported range (rtlmd.js deletes 9+ on every load)
-      const sorted = Array.from(allChNums).filter(ch => ch <= maxSupportedCh).sort((a, b) => a - b);
+      const sorted = Array.from(allChNums).sort((a, b) => a - b);
 
       let tableRows = '';
       let localOnlyCount = 0;
@@ -977,7 +1066,7 @@
         }
 
         tableRows += '<tr style="border-bottom:1px solid var(--border-color);">' +
-          '<td style="padding:8px 10px; font-weight:600; white-space:nowrap;">\u062d\u062c\u0631\u0629 ' + ch + '</td>' +
+          '<td style="padding:8px 10px; font-weight:600; white-space:nowrap;">' + (ch >= 8 ? ('ملف ' + ch) : ('حجرة ' + ch)) + '</td>' +
           '<td style="padding:8px 10px; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + displayTitle + '">' + displayTitle + '</td>' +
           '<td style="padding:8px 10px; text-align:center;">' +
             (hasLocal ? '<span style="color:#10b981;">\u2705 (' + localWords + ' \u0643\u0644\u0645\u0629)</span>' : '<span style="color:var(--text-muted);">\u2014</span>') +
@@ -1107,13 +1196,10 @@
         }
         if (!manifest.rawKeys) manifest.rawKeys = {};
 
-        const maxCh = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
-
         let hasChambers = false;
 
-        // 2. Read every chamber file directly from Drive inventory (up to maxCh only)
+        // 2. Read every chamber file directly from Drive inventory (all chambers and files)
         for (const [chNum, files] of inventory.chamberFiles.entries()) {
-          if (chNum > maxCh) continue;
           const file = files[0];
           const match = file.name.match(/^Chamber_(\d+)(?:_(.*))?\.md$/i);
           const title = match && match[2] ? match[2].replace(/_/g, ' ') : '';
@@ -1144,7 +1230,9 @@
         }
 
         // If a chamber has NO file in Drive inventory, mark it as empty so local data gets cleared!
-        for (let ch = 1; ch <= maxCh; ch++) {
+        const localSnap = this._getLocalChamberSnapshot();
+        const allNumsToCheck = new Set([...Array.from({length: 7}, (_, i) => i + 1), ...localSnap.keys(), ...inventory.chamberFiles.keys()]);
+        for (const ch of allNumsToCheck) {
           if (!inventory.chamberFiles.has(ch)) {
             // No .md file on Drive for this chamber -> if not in manifest, it is empty!
             if (!manifest.rawKeys['vienix_chamber_' + ch]) {

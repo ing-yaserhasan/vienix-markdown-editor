@@ -563,7 +563,31 @@
         }
 
         // 2. CLEAN FULL MIRRORING: Active scan from Chamber 1 up to maximum chambers
-        const maxChambers = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
+        let maxChambers = 8;
+        if (typeof window.VienixGetTotalChambers === 'function') {
+          maxChambers = Math.max(maxChambers, window.VienixGetTotalChambers());
+        }
+        presentChambers.forEach((_, chNum) => {
+          if (chNum > maxChambers) maxChambers = chNum;
+        });
+        if (payload.folderFiles && payload.folderFiles['vienix_folder_files_book']) {
+          const bf = payload.folderFiles['vienix_folder_files_book'];
+          if (Array.isArray(bf)) {
+            bf.forEach(f => {
+              if (f && typeof f.num === 'number' && f.num > maxChambers) maxChambers = f.num;
+            });
+          }
+        }
+        if (payload.rawKeys && payload.rawKeys['vienix_folder_files_book']) {
+          try {
+            const bf = JSON.parse(payload.rawKeys['vienix_folder_files_book']);
+            if (Array.isArray(bf)) {
+              bf.forEach(f => {
+                if (f && typeof f.num === 'number' && f.num > maxChambers) maxChambers = f.num;
+              });
+            }
+          } catch (e) {}
+        }
 
         for (let ch = 1; ch <= maxChambers; ch++) {
           if (presentChambers.has(ch)) {
@@ -597,7 +621,7 @@
           }
         }
 
-        // Clean up any legacy or rogue chamber keys beyond maxChambers (9..100)
+        // Clean up any legacy or rogue chamber keys beyond maxChambers
         for (let ch = maxChambers + 1; ch <= 100; ch++) {
           restoreDelete('vienix_chamber_' + ch);
           restoreDelete('yaser_chamber_' + ch);
