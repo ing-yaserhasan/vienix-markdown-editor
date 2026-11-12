@@ -2493,16 +2493,8 @@ body.wysiwyg-active .image-resizer-wrapper.active .resizer-handle {
     border-radius: 7px;
   }
 
-  /* Status Bar: Compact Single Row */
+  /* Status Bar: إزالة شريط الحالة السفلي بالكامل في وضع الموبايل */
   .status-bar {
-    padding: 4px 10px;
-    min-height: 28px;
-    font-size: 0.75rem;
-    justify-content: space-between;
-  }
-
-  .status-copyright,
-  .status-bar .status-group:last-child {
     display: none !important;
   }
 
@@ -5380,6 +5372,61 @@ body.wysiwyg-active .pron-quick-toggle-btn {
   cursor: not-allowed !important;
   pointer-events: auto !important;
   filter: grayscale(0.8);
+}
+
+/* ========================================================
+   زر تبديل الأيقونتين (Icons Toggle Button)
+   بنفس تصميم زر Pron النيومورفي مع توهج رماني ناري فخم
+   ======================================================== */
+.pron-icons-toggle-btn {
+  display: none; /* مخفي افتراضياً ولا يظهر إلا عند تفعيل النطق */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pron-icons-toggle-btn.active {
+  background: #efefef;
+  color: #e11d48 !important; /* لون رماني ناري ساطع */
+  box-shadow: -2.5px -2.5px 6px rgba(255, 255, 255, 0.95), 
+              2.5px 2.5px 7.5px rgba(225, 29, 72, 0.48),
+              0 0 10px rgba(244, 63, 94, 0.42) !important; /* هالة إضاءة رمانية متوهجة */
+}
+
+.pron-icons-toggle-btn.active:hover {
+  background: #f5f5f5;
+  color: #be123c !important;
+  box-shadow: -3px -3px 7px rgba(255, 255, 255, 1), 
+              3px 3px 9px rgba(225, 29, 72, 0.65),
+              0 0 14px rgba(244, 63, 94, 0.58) !important;
+}
+
+[data-theme="dark"] .pron-icons-toggle-btn.active {
+  background: #232730;
+  color: #fb7185 !important; /* رماني ناري فاقع في الوضع الليلي */
+  box-shadow: -2px -2px 5px rgba(255, 255, 255, 0.05), 
+              2px 2px 8px rgba(251, 113, 133, 0.58),
+              0 0 12px rgba(244, 63, 94, 0.52) !important;
+}
+
+[data-theme="dark"] .pron-icons-toggle-btn.active:hover {
+  background: #282d38;
+  color: #fda4af !important;
+  box-shadow: -2.5px -2.5px 6px rgba(255, 255, 255, 0.08), 
+              2.5px 2.5px 10px rgba(251, 113, 133, 0.75),
+              0 0 16px rgba(244, 63, 94, 0.68) !important;
+}
+
+.pron-icons-toggle-btn.disabled,
+body.wysiwyg-active .pron-icons-toggle-btn {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+  pointer-events: auto !important;
+  filter: grayscale(0.8);
+}
+
+/* إخفاء الأيقونتين تماماً عند إطفاء زر الأيقونات */
+body.hide-pron-phrase-icons .pronunciation-speaker-btn,
+body.hide-pron-phrase-icons .pronunciation-trans-btn {
+  display: none !important;
 }
 
 /* ========================================================

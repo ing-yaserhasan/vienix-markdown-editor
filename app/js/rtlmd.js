@@ -72,6 +72,7 @@
     globalBilingualTranslation: true, // Scenario 2: Show global bilingual icon in toolbar
     voiceName: '',
     ghostIcons: true,  // Ghost mode: أيقونات النطق شفافة 25% وتظهر 100% عند التفاعل (مفعّل افتراضياً)
+    pronIconsVisible: true, // إظهار أيقونتي النطق والترجمة (الأيقونتان: 🔊 و 文A)
     // API
     googleTtsKey: '',
     groqKey: ''
@@ -206,6 +207,12 @@
 
       case 'ghostIcons':
         applyGhostIconsMode(!!value);
+        break;
+
+      case 'pronIconsVisible':
+        if (typeof updatePronunciationQuickButtons === 'function') {
+          updatePronunciationQuickButtons();
+        }
         break;
     }
   }
@@ -10913,11 +10920,72 @@ function exportDocument(format) {
       }
     });
 
+    // ── تحديث زر تبديل الأيقونتين (Icons Toggle) بإضاءة رمانية نارية ──
+    const isIconsOn = typeof vienixSettings === 'undefined' || vienixSettings.pronIconsVisible !== false;
+    const iconBtn1 = document.getElementById('btn-toggle-pron-icons');
+    const iconBtn2 = document.getElementById('btn-preview-header-pron-icons');
+    const iconsCheckbox = document.getElementById('s-pron-icons-visible');
+
+    [iconBtn1, iconBtn2].forEach(btn => {
+      if (!btn) return;
+      if (!isPronOn) {
+        // يظهر ويعمل فقط في حال كان زر النطق الصوتي شغال
+        btn.style.display = 'none';
+        btn.classList.remove('active');
+      } else {
+        btn.style.display = 'inline-flex';
+        btn.classList.toggle('active', isIconsOn);
+        btn.classList.toggle('disabled', typeof isWysiwygActive !== 'undefined' && isWysiwygActive);
+        btn.title = isIconsOn
+          ? 'إخفاء أيقونتي النطق والترجمة (Icons: ON)'
+          : 'إظهار أيقونتي النطق والترجمة (Icons: OFF)';
+      }
+    });
+
+    if (iconsCheckbox && iconsCheckbox.checked !== isIconsOn) {
+      iconsCheckbox.checked = isIconsOn;
+    }
+
+    // إخفاء أو إظهار الأيقونتين في النص
+    document.body.classList.toggle('hide-pron-phrase-icons', isPronOn && !isIconsOn);
+
     if (pronCheckbox && pronCheckbox.checked !== isPronOn) {
       pronCheckbox.checked = isPronOn;
     }
     if (typeof togglePronunciationSubSettings === 'function') {
       togglePronunciationSubSettings(isPronOn);
+    }
+  };
+
+  // ── زر التبديل السريع لظهور أيقونتي النطق والترجمة (Icons Quick Toggle) ──
+  window.togglePronunciationIconsQuick = function () {
+    const isPronOn = typeof vienixSettings !== 'undefined' && vienixSettings.pronunciationEnabled === true;
+    if (!isPronOn) return; // يظهر ويعمل فقط في حال كان زر النطق الصوتي شغال
+
+    if (typeof isWysiwygActive !== 'undefined' && isWysiwygActive) {
+      if (typeof showToast === 'function') {
+        showToast('يرجى إنهاء وضع التحرير Edit أولاً ⚠️', 'warning', 2500);
+      }
+      return;
+    }
+
+    const current = typeof vienixSettings === 'undefined' || vienixSettings.pronIconsVisible !== false;
+    const next = !current;
+
+    if (typeof window.applySetting === 'function') {
+      window.applySetting('pronIconsVisible', next);
+    } else {
+      vienixSettings.pronIconsVisible = next;
+      saveSettings();
+    }
+    updatePronunciationQuickButtons();
+
+    if (typeof showToast === 'function') {
+      showToast(
+        next ? 'تم إظهار أيقونتي النطق والترجمة 🔔' : 'تم إخفاء أيقونتي النطق والترجمة لقراءة هادئة 🔕',
+        next ? 'success' : 'info',
+        1600
+      );
     }
   };
 
@@ -12841,6 +12909,9 @@ function exportDocument(format) {
 
     const ghostIcons = document.getElementById('s-ghost-icons');
     if (ghostIcons) ghostIcons.checked = s.ghostIcons !== false;
+
+    const pronIcons = document.getElementById('s-pron-icons-visible');
+    if (pronIcons) pronIcons.checked = s.pronIconsVisible !== false;
 
     const ql1 = document.getElementById('s-quick-lang-1');
     if (ql1) ql1.value = s.quickLang1 || 'de-AT';
