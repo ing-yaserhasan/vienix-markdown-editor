@@ -2255,15 +2255,59 @@
                 <div class="settings-toggle-row">
                   <div class="settings-toggle-info" style="flex:1;">
                     <span class="settings-toggle-desc">
-                      عند التفعيل: تبقى أيقونات النطق (🔊) و(文A) ظاهرة بشفافية 25% بجانب كل جملة دون إزعاج القراءة،
-                      وعند النقر عليها تظهر بوضوح كامل (100%) وتعمل طبيعياً، ثم تعود للشفافية بعد انتهاء التفاعل.
-                      التنسيق يبقى كما هو تماماً كأن مساعد النطق غير مفعّل.
+                      عند التفعيل: تبقى أيقونات النطق (🔊) و(文A) ظاهرة بشفافية هادئة بجانب كل جملة دون إزعاج القراءة،
+                      وعند النقر عليها تظهر بوضوح كامل (100%) وتعمل طبيعياً، ثم تعود للشفافية المحددة بعد انتهاء التفاعل.
                     </span>
                   </div>
                   <label class="settings-toggle">
                     <input type="checkbox" id="s-ghost-icons" checked onchange="applySetting('ghostIcons', this.checked)">
                     <span class="settings-toggle-slider"></span>
                   </label>
+                </div>
+              </div>
+
+              <!-- Slider 1: مستوى شفافية الأيقونتين (Opacity) -->
+              <div class="settings-group" style="margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--border-color, rgba(0,0,0,0.08));">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <label class="settings-label" style="margin: 0;">
+                    <svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <path d="M12 2a10 10 0 0 1 0 20Z"></path>
+                    </svg>
+                    <span>مستوى شفافية الأيقونتين (Opacity)</span>
+                  </label>
+                  <span class="settings-slider-value" id="s-pron-icons-opacity-val">25%</span>
+                </div>
+                <div class="settings-toggle-desc" style="margin-bottom: 8px;">
+                  التحكم في درجة شفافية أيقونتي السماعة (🔊) والترجمة (文A) بجانب النصوص (الافتراضي: 25%)
+                </div>
+                <div class="settings-slider-row">
+                  <span class="settings-slider-label-start">0%</span>
+                  <input type="range" class="settings-slider" id="s-pron-icons-opacity" min="0" max="100" value="25" step="5" oninput="applySetting('pronIconsOpacity', this.value); document.getElementById('s-pron-icons-opacity-val').textContent = this.value + '%'">
+                  <span class="settings-slider-label-end">100%</span>
+                </div>
+              </div>
+
+              <!-- Slider 2: التموضع والارتفاع العمودي للأيقونتين (Vertical Position) -->
+              <div class="settings-group" style="margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--border-color, rgba(0,0,0,0.08));">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <label class="settings-label" style="margin: 0;">
+                    <svg class="ui-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="3" x2="12" y2="21"></line>
+                      <polyline points="8 7 12 3 16 7"></polyline>
+                      <polyline points="8 17 12 21 16 17"></polyline>
+                    </svg>
+                    <span>التموضع العمودي للأيقونتين (Vertical Position)</span>
+                  </label>
+                  <span class="settings-slider-value" id="s-pron-icons-offset-y-val">-2px</span>
+                </div>
+                <div class="settings-toggle-desc" style="margin-bottom: 8px;">
+                  تحريك تموضع الأيقونتين للأعلى أو للأسفل عمودياً فقط بالنسبة للسطر والنص (الافتراضي: -2px)
+                </div>
+                <div class="settings-slider-row">
+                  <span class="settings-slider-label-start">أسفل (-16px)</span>
+                  <input type="range" class="settings-slider" id="s-pron-icons-offset-y" min="-16" max="16" value="-2" step="1" oninput="applySetting('pronIconsOffsetY', this.value); document.getElementById('s-pron-icons-offset-y-val').textContent = (parseInt(this.value,10)>0?'+':'') + this.value + 'px'">
+                  <span class="settings-slider-label-end">أعلى (+16px)</span>
                 </div>
               </div>
 

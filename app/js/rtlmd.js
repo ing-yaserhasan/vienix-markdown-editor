@@ -73,6 +73,8 @@
     voiceName: '',
     ghostIcons: true,  // Ghost mode: أيقونات النطق شفافة 25% وتظهر 100% عند التفاعل (مفعّل افتراضياً)
     pronIconsVisible: true, // إظهار أيقونتي النطق والترجمة (الأيقونتان: 🔊 و 文A)
+    pronIconsOpacity: 25,   // درجة شفافية الأيقونتين (الافتراضي: 25%)
+    pronIconsOffsetY: -2,   // تموضع الأيقونتين العمودي بالنسبة للنص (الافتراضي: -2px)
     // API
     googleTtsKey: '',
     groqKey: ''
@@ -214,6 +216,18 @@
           updatePronunciationQuickButtons();
         }
         break;
+
+      case 'pronIconsOpacity':
+        if (typeof applyPronIconsOpacity === 'function') {
+          applyPronIconsOpacity(value);
+        }
+        break;
+
+      case 'pronIconsOffsetY':
+        if (typeof applyPronIconsOffsetY === 'function') {
+          applyPronIconsOffsetY(value);
+        }
+        break;
     }
   }
 
@@ -280,6 +294,29 @@
         phrases[i].setAttribute('dir', 'ltr');
       }
     }
+  };
+
+  // ── التحكم في مستوى شفافية أيقونتي النطق والترجمة (🔊 و 文A) ──
+  window.applyPronIconsOpacity = function (value) {
+    const num = parseFloat(value);
+    const opacityPct = isNaN(num) ? 25 : Math.max(0, Math.min(100, num));
+    const opacityVal = opacityPct / 100;
+    document.documentElement.style.setProperty('--pron-icons-opacity', opacityVal);
+    const label = document.getElementById('s-pron-icons-opacity-val');
+    if (label) label.textContent = opacityPct + '%';
+    const slider = document.getElementById('s-pron-icons-opacity');
+    if (slider && slider.value != opacityPct) slider.value = opacityPct;
+  };
+
+  // ── التحكم في التموضع العمودي لأيقونتي النطق والترجمة بالنسبة للسطر ──
+  window.applyPronIconsOffsetY = function (value) {
+    const num = parseInt(value, 10);
+    const offsetVal = isNaN(num) ? -2 : Math.max(-25, Math.min(25, num));
+    document.documentElement.style.setProperty('--pron-icons-offset-y', offsetVal + 'px');
+    const label = document.getElementById('s-pron-icons-offset-y-val');
+    if (label) label.textContent = (offsetVal > 0 ? '+' : '') + offsetVal + 'px';
+    const slider = document.getElementById('s-pron-icons-offset-y');
+    if (slider && slider.value != offsetVal) slider.value = offsetVal;
   };
 
   window.toggleZenReadingMode = function () {
@@ -373,6 +410,12 @@
     }
     if (typeof applyGhostIconsMode === 'function') {
       applyGhostIconsMode(vienixSettings.ghostIcons !== false);
+    }
+    if (typeof applyPronIconsOpacity === 'function') {
+      applyPronIconsOpacity(vienixSettings.pronIconsOpacity !== undefined ? vienixSettings.pronIconsOpacity : 25);
+    }
+    if (typeof applyPronIconsOffsetY === 'function') {
+      applyPronIconsOffsetY(vienixSettings.pronIconsOffsetY !== undefined ? vienixSettings.pronIconsOffsetY : -2);
     }
     if (typeof updatePronunciationQuickButtons === 'function') {
       updatePronunciationQuickButtons();
@@ -12912,6 +12955,17 @@ function exportDocument(format) {
 
     const pronIcons = document.getElementById('s-pron-icons-visible');
     if (pronIcons) pronIcons.checked = s.pronIconsVisible !== false;
+
+    const pronOpacitySlider = document.getElementById('s-pron-icons-opacity');
+    if (pronOpacitySlider) pronOpacitySlider.value = s.pronIconsOpacity !== undefined ? s.pronIconsOpacity : 25;
+    const pronOpacityVal = document.getElementById('s-pron-icons-opacity-val');
+    if (pronOpacityVal) pronOpacityVal.textContent = (s.pronIconsOpacity !== undefined ? s.pronIconsOpacity : 25) + '%';
+
+    const pronOffsetYSlider = document.getElementById('s-pron-icons-offset-y');
+    if (pronOffsetYSlider) pronOffsetYSlider.value = s.pronIconsOffsetY !== undefined ? s.pronIconsOffsetY : -2;
+    const pronOffsetYVal = document.getElementById('s-pron-icons-offset-y-val');
+    const offNum = s.pronIconsOffsetY !== undefined ? parseInt(s.pronIconsOffsetY, 10) : -2;
+    if (pronOffsetYVal) pronOffsetYVal.textContent = (offNum > 0 ? '+' : '') + offNum + 'px';
 
     const ql1 = document.getElementById('s-quick-lang-1');
     if (ql1) ql1.value = s.quickLang1 || 'de-AT';
