@@ -3182,17 +3182,16 @@ body.wysiwyg-active .image-resizer-wrapper.active .resizer-handle {
 
 /* Ø²Ø± Ù…Ø¬Ù„Ø¯ Ø§Ù„ÙˆÙŠÙ†Ø¯ÙˆØ² Ø§Ù„Ø£ØµÙØ± (Windows Yellow Folder Button) */
 .win-folder-btn {
-  height: 26px;
-  padding: 0 8px;
-  font-size: 0.78rem;
-  font-weight: 700;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border-radius: 6px;
   background: rgba(245, 158, 11, 0.1);
   border: 1px solid rgba(245, 158, 11, 0.38);
   color: #b45309;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
   cursor: pointer;
   transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   margin-right: 3px;
@@ -3225,8 +3224,7 @@ body.wysiwyg-active .image-resizer-wrapper.active .resizer-handle {
 }
 
 .win-folder-label {
-  display: inline-block;
-  letter-spacing: -0.2px;
+  display: none !important;
 }
 
 /* Context Menu for Chambers */
