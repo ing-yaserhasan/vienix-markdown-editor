@@ -564,9 +564,8 @@
 
         // 2. CLEAN FULL MIRRORING: Active scan from Chamber 1 up to maximum chambers
         const maxChambers = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
-        const scanLimit = Math.max(16, maxChambers);
 
-        for (let ch = 1; ch <= scanLimit; ch++) {
+        for (let ch = 1; ch <= maxChambers; ch++) {
           if (presentChambers.has(ch)) {
             const chData = presentChambers.get(ch);
             const contentToRestore = (chData.content !== undefined && chData.content !== null) ? chData.content : '';
@@ -596,6 +595,15 @@
             restoreDelete('yaser_chamber_meta_' + ch);
             restoreDelete('vienix_history_chamber_' + ch);
           }
+        }
+
+        // Clean up any legacy or rogue chamber keys beyond maxChambers (9..100)
+        for (let ch = maxChambers + 1; ch <= 100; ch++) {
+          restoreDelete('vienix_chamber_' + ch);
+          restoreDelete('yaser_chamber_' + ch);
+          restoreDelete('vienix_chamber_meta_' + ch);
+          restoreDelete('yaser_chamber_meta_' + ch);
+          restoreDelete('vienix_history_chamber_' + ch);
         }
 
         // 3. Clean up folder files (vienix_folder_files_*) to prevent cross-account pollution

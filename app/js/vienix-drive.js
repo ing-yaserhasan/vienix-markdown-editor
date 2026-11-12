@@ -660,9 +660,20 @@
                 } catch (e) {}
               }
             }
-          } else if (options.force && remoteFiles.length > 0) {
-            // Force push: remove empty chamber files from remote Drive
+          } else if (remoteFiles.length > 0) {
+            // Chamber is empty locally -> ALWAYS delete stale remote files from Google Drive!
             for (const rf of remoteFiles) {
+              try {
+                await this.driveFetch(`https://www.googleapis.com/drive/v3/files/${rf.id}`, { method: 'DELETE' });
+              } catch (e) {}
+            }
+          }
+        }
+
+        // Clean up any orphan files on Google Drive for chambers beyond maxCh (e.g. Chamber_9, Chamber_10)
+        for (const [chNum, files] of inventory.chamberFiles.entries()) {
+          if (chNum > maxCh) {
+            for (const rf of files) {
               try {
                 await this.driveFetch(`https://www.googleapis.com/drive/v3/files/${rf.id}`, { method: 'DELETE' });
               } catch (e) {}
@@ -693,6 +704,29 @@
             }
           });
         }
+
+        // Explicitly set chambers 1..maxCh in manifest to reflect actual values (including empty strings)
+        for (let ch = 1; ch <= maxCh; ch++) {
+          let chVal = '';
+          if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
+            chVal = window.VienixIDB.getSync('vienix_chamber_' + ch, 'yaser_chamber_' + ch) || '';
+          } else {
+            chVal = localStorage.getItem('vienix_chamber_' + ch) || localStorage.getItem('yaser_chamber_' + ch) || '';
+          }
+          if (ch === 1 && !chVal) {
+            chVal = localStorage.getItem('vienix_md_content') || '';
+          }
+          manifest.rawKeys['vienix_chamber_' + ch] = chVal;
+          manifest.rawKeys['yaser_chamber_' + ch] = chVal;
+        }
+
+        // Strip legacy or orphan keys beyond maxCh
+        Object.keys(manifest.rawKeys).forEach(k => {
+          const m = k.match(/^(?:vienix|yaser)_chamber_(?:meta_)?(\d+)$/);
+          if (m && parseInt(m[1], 10) > maxCh) {
+            delete manifest.rawKeys[k];
+          }
+        });
 
         await this.uploadOrUpdateDriveFile(
           'vienix_workspace_manifest.json',
@@ -816,7 +850,7 @@
     _getLocalChamberSnapshot: function () {
       const localChambers = new Map();
       const maxCh = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
-      const scanLimit = Math.max(16, maxCh);
+      const scanLimit = maxCh;
 
       for (let ch = 1; ch <= scanLimit; ch++) {
         let content = '';
@@ -859,11 +893,13 @@
     _getCloudChamberSnapshot: function (manifest) {
       const cloudChambers = new Map();
       if (!manifest || !manifest.rawKeys) return cloudChambers;
+      const maxCh = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
 
       Object.keys(manifest.rawKeys).forEach(k => {
         const m = k.match(/^(?:vienix|yaser)_chamber_(\d+)$/);
         if (m) {
           const chNum = parseInt(m[1], 10);
+          if (chNum > maxCh) return;
           const val = manifest.rawKeys[k];
           if (val !== null && val !== undefined) {
             if (!cloudChambers.has(chNum)) cloudChambers.set(chNum, { content: '', title: '', meta: null, wordCount: 0 });
@@ -874,6 +910,7 @@
         const mMeta = k.match(/^(?:vienix|yaser)_chamber_meta_(\d+)$/);
         if (mMeta) {
           const chNum = parseInt(mMeta[1], 10);
+          if (chNum > maxCh) return;
           const val = manifest.rawKeys[k];
           if (val) {
             if (!cloudChambers.has(chNum)) cloudChambers.set(chNum, { content: '', title: '', meta: null, wordCount: 0 });
@@ -1070,10 +1107,13 @@
         }
         if (!manifest.rawKeys) manifest.rawKeys = {};
 
+        const maxCh = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
+
         let hasChambers = false;
 
-        // 2. Read every chamber file directly from Drive inventory
+        // 2. Read every chamber file directly from Drive inventory (up to maxCh only)
         for (const [chNum, files] of inventory.chamberFiles.entries()) {
+          if (chNum > maxCh) continue;
           const file = files[0];
           const match = file.name.match(/^Chamber_(\d+)(?:_(.*))?\.md$/i);
           const title = match && match[2] ? match[2].replace(/_/g, ' ') : '';
@@ -1101,6 +1141,24 @@
           } catch (err) {
             console.warn('[VienixDrive] Failed reading chamber file from Drive:', file.name, err);
           }
+        }
+
+        // If a chamber has NO file in Drive inventory, mark it as empty so local data gets cleared!
+        for (let ch = 1; ch <= maxCh; ch++) {
+          if (!inventory.chamberFiles.has(ch)) {
+            // No .md file on Drive for this chamber -> if not in manifest, it is empty!
+            if (!manifest.rawKeys['vienix_chamber_' + ch]) {
+              manifest.rawKeys['vienix_chamber_' + ch] = '';
+              manifest.rawKeys['yaser_chamber_' + ch] = '';
+              delete manifest.rawKeys['vienix_chamber_meta_' + ch];
+              delete manifest.rawKeys['yaser_chamber_meta_' + ch];
+            }
+          }
+        }
+
+        // If inventory has manifest or files, we consider chambers present
+        if (inventory.manifestFile || inventory.chamberFiles.size > 0) {
+          hasChambers = true;
         }
 
         // Check if manifest had chambers even if individual files were absent
@@ -1276,7 +1334,7 @@
         // Local is newer or equal -> Push local changes to Drive
         console.log('[VienixDrive] SmartSync: Local is up-to-date or newer -> Pushing to Drive...');
         this.isSyncing = false;
-        await this.syncAllToDrive({ force: false, interactive: false });
+        await this.syncAllToDrive({ force: true, interactive: false });
       } catch (err) {
         console.error('[VienixDrive] SmartSync error:', err);
         this.lastSyncError = err.message;
@@ -1297,7 +1355,7 @@
 
       if (autoSyncDebounceTimer) clearTimeout(autoSyncDebounceTimer);
       autoSyncDebounceTimer = setTimeout(() => {
-        this.syncAllToDrive({ force: false, interactive: false });
+        this.syncAllToDrive({ force: true, interactive: false });
       }, 120000); // 2 minutes debounce
     },
 
