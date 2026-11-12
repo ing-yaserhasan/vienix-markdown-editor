@@ -685,6 +685,9 @@
         // Mark flash notification in sessionStorage for post-reload display
         sessionStorage.setItem('vienix_restore_success_flash', 'true');
 
+        // Signal to vienix-idb that a restore just happened so localStorage wins over stale IDB
+        sessionStorage.setItem('vienix_just_restored', 'true');
+
         // Reload to fresh, fully mirrored state
         window.location.reload();
       } catch (err) {
@@ -920,6 +923,8 @@
         }));
 
         console.log(`[VienixStorage] Smart Merge complete: ${mergedFromCloud} from cloud, ${keptLocal} kept local.`);
+        // Signal to vienix-idb that a restore/merge just happened so localStorage wins over stale IDB
+        sessionStorage.setItem('vienix_just_restored', 'true');
         window.location.reload();
       } catch (err) {
         alert('حدث خطأ أثناء دمج البيانات: ' + err.message);

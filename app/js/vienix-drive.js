@@ -720,9 +720,8 @@
         if (window.showToast) {
           window.showToast(`تعذر إتمام المزامنة مع Google Drive: ${err.message} ⚠️`, 'error', 4500);
         }
-        if (options.interactive) {
-          alert(`تعذر إتمام المزامنة مع Google Drive:\n${err.message}`);
-        }
+        // Always alert on push failure so user knows it didn't work
+        alert(`تعذر إتمام المزامنة مع Google Drive:\n${err.message}`);
       } finally {
         this.isSyncing = false;
         this.updateUI();
@@ -900,8 +899,10 @@
      * The user chooses: Full Replace, Smart Merge, or Cancel.
      */
     _showDiffPreviewModal: function (localChambers, cloudChambers, manifest) {
+      const maxSupportedCh = typeof window.VienixGetTotalChambers === 'function' ? window.VienixGetTotalChambers() : 8;
       const allChNums = new Set([...localChambers.keys(), ...cloudChambers.keys()]);
-      const sorted = Array.from(allChNums).sort((a, b) => a - b);
+      // Only show chambers within the supported range (rtlmd.js deletes 9+ on every load)
+      const sorted = Array.from(allChNums).filter(ch => ch <= maxSupportedCh).sort((a, b) => a - b);
 
       let tableRows = '';
       let localOnlyCount = 0;
@@ -1168,13 +1169,13 @@
 
         if (userChoice === 'merge' && window.VienixStorage && typeof window.VienixStorage.applyMerge === 'function') {
           // Feature 2: SMART MERGE — keep local-only chambers, update cloud chambers
-          console.log('[VienixDrive] Applying Smart Merge...');
           await window.VienixStorage.applyMerge(manifest);
         } else {
           // Full Replace (original behavior)
           if (window.VienixStorage && typeof window.VienixStorage.applyRestore === 'function') {
-            console.log('[VienixDrive] Applying Full Replace...');
             await window.VienixStorage.applyRestore(manifest);
+          } else {
+            console.error('[VienixDrive] CANNOT RESTORE: VienixStorage or applyRestore not available!', window.VienixStorage);
           }
         }
         // applyRestore / applyMerge will reload the page

@@ -92,8 +92,22 @@
               this.memoryCache[cursor.key] = cursor.value;
               cursor.continue();
             } else {
-              // Also merge any existing localStorage items into memoryCache for safety
-              this.hydrateFromLocalStorage();
+              // After IDB hydration, if a restore was just performed,
+              // localStorage has the authoritative new data — force it to win over stale IDB values.
+              if (sessionStorage.getItem('vienix_just_restored')) {
+                sessionStorage.removeItem('vienix_just_restored');
+                try {
+                  for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && (key.startsWith('vienix_') || key.startsWith('yaser_')) && !key.startsWith('vienix_history_')) {
+                      this.memoryCache[key] = localStorage.getItem(key);
+                    }
+                  }
+                } catch (e) {}
+              } else {
+                // Normal path: merge localStorage only for keys missing in IDB
+                this.hydrateFromLocalStorage();
+              }
               resolve();
             }
           };
