@@ -1884,10 +1884,16 @@ function exportDocument(format) {
     if (typeof isWysiwygActive !== 'undefined' && isWysiwygActive) {
       previewContent.setAttribute('contenteditable', 'true');
       previewContent.classList.add('preview-editable');
+
+      // على الموبايل: منع ظهور الكيبورد افتراضياً (تظهر فقط عند النقر لوضع المؤشر)
+      if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        previewContent.setAttribute('inputmode', 'none');
+      }
       document.body.classList.add('wysiwyg-active');
       protectNonEditableElements();
     } else {
       previewContent.removeAttribute('contenteditable');
+      previewContent.removeAttribute('inputmode');
       previewContent.classList.remove('preview-editable');
       document.body.classList.remove('wysiwyg-active');
     }
@@ -10868,6 +10874,59 @@ function exportDocument(format) {
         handleSelection();
       }
     }, { passive: true });
+
+    // ── نظام التحكم الذكي بلوحة مفاتيح الموبايل في وضع Edit ──
+    // الكيبورد تظهر فقط عند النقر القصير (وضع المؤشر) ولا تظهر عند تحديد النص للتنسيق
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+      let _kbTouchStartT = 0;
+      let _kbTouchStartX = 0;
+      let _kbTouchStartY = 0;
+
+      previewContent.addEventListener('touchstart', function (e) {
+        if (!isWysiwygActive) return;
+        _kbTouchStartT = Date.now();
+        _kbTouchStartX = e.touches[0].clientX;
+        _kbTouchStartY = e.touches[0].clientY;
+      }, { passive: true });
+
+      previewContent.addEventListener('touchend', function (e) {
+        if (!isWysiwygActive) return;
+        const dt = Date.now() - _kbTouchStartT;
+        const dx = e.changedTouches[0].clientX - _kbTouchStartX;
+        const dy = e.changedTouches[0].clientY - _kbTouchStartY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // نقرة قصيرة (< 350ms) بدون حركة (< 12px) = وضع المؤشر → نُظهر الكيبورد
+        if (dt < 350 && dist < 12) {
+          setTimeout(function () {
+            const sel = window.getSelection();
+            if (sel && sel.isCollapsed && sel.rangeCount > 0) {
+              // حفظ موقع المؤشر
+              const range = sel.getRangeAt(0).cloneRange();
+              // إظهار الكيبورد
+              previewContent.removeAttribute('inputmode');
+              previewContent.blur();
+              setTimeout(function () {
+                previewContent.focus();
+                try {
+                  sel.removeAllRanges();
+                  sel.addRange(range);
+                } catch (_) {}
+              }, 60);
+            }
+          }, 80);
+        }
+      }, { passive: true });
+
+      // عند تحديد نص (ليس مؤشر) → نُعيد إخفاء الكيبورد لمنع ظهورها في المرة القادمة
+      document.addEventListener('selectionchange', function () {
+        if (!isWysiwygActive) return;
+        const sel = window.getSelection();
+        if (sel && !sel.isCollapsed) {
+          previewContent.setAttribute('inputmode', 'none');
+        }
+      });
+    }
   }
 
   // التبديل بين وضع القراءة ووضع التحرير المباشر
@@ -10916,6 +10975,11 @@ function exportDocument(format) {
       previewContent.setAttribute('contenteditable', 'true');
       previewContent.classList.add('preview-editable');
 
+      // على الموبايل: منع ظهور الكيبورد افتراضياً (تظهر فقط عند النقر لوضع المؤشر)
+      if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        previewContent.setAttribute('inputmode', 'none');
+      }
+
       // حماية المخططات والأزرار الداخلية من التعديل
       protectNonEditableElements();
 
@@ -10945,6 +11009,7 @@ function exportDocument(format) {
       }
 
       previewContent.removeAttribute('contenteditable');
+      previewContent.removeAttribute('inputmode');
       previewContent.classList.remove('preview-editable');
 
       hideFloatingFormatToolbar();
