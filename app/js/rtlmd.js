@@ -10306,7 +10306,7 @@ function exportDocument(format) {
     turndownService.addRule('preserveColorsAndHighlights', {
       filter: function (node) {
         if (node.nodeName === 'MARK') return true;
-        if (node.nodeName === 'SPAN') {
+        if (node.nodeName === 'SPAN' || node.nodeName === 'STRONG' || node.nodeName === 'B') {
           return !!(node.style && (node.style.color || node.style.backgroundColor));
         }
         if (node.nodeName === 'FONT' && (node.color || node.getAttribute('color'))) {
@@ -10326,7 +10326,33 @@ function exportDocument(format) {
         if (color) styles.push(`color: ${color}`);
         if (bg) styles.push(`background-color: ${bg}`);
         if (styles.length > 0) {
-          return `<span style="${styles.join('; ')}">${content}</span>`;
+          let innerContent = content;
+
+          // تحويل علامات markdown إلى HTML tags لأن marked لا يُصيِّر ** أو * داخل HTML spans
+          // الخطوة 1: تحويل **نص** إلى <strong>نص</strong>
+          innerContent = innerContent.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+          // الخطوة 2: تحويل *نص* إلى <em>نص</em> (بعد إزالة **)
+          innerContent = innerContent.replace(/\*([^*]+?)\*/g, '<em>$1</em>');
+
+          // فحص font-weight في الستايل (بعض المتصفحات تدمج bold+color في span واحد)
+          const fw = node.style && node.style.fontWeight;
+          const isBoldStyle = fw && (fw === 'bold' || fw === '700' || parseInt(fw) >= 600);
+          if (isBoldStyle && !/\<strong/.test(innerContent)) {
+            innerContent = `<strong>${innerContent}</strong>`;
+          }
+
+          // فحص font-style: italic
+          const isItalicStyle = node.style && node.style.fontStyle === 'italic';
+          if (isItalicStyle && !/\<em/.test(innerContent)) {
+            innerContent = `<em>${innerContent}</em>`;
+          }
+
+          // إذا كان العنصر الأصلي STRONG أو B (نص عريض مع لون مباشر)
+          if (node.nodeName === 'STRONG' || node.nodeName === 'B') {
+            return `<strong><span style="${styles.join('; ')}">${innerContent}</span></strong>`;
+          }
+
+          return `<span style="${styles.join('; ')}">${innerContent}</span>`;
         }
         return content;
       }
