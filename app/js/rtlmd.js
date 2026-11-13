@@ -4885,31 +4885,44 @@ function exportDocument(format) {
     } catch (e) {}
   }
 
-  // الحصول على الرقم التسلسلي التصاعدي التالي لملفات المجلد (ليأتي بعد الحجرات وأعلى ملف)
+  // الحصول على الرقم التسلسلي التصاعدي التالي لملفات أي مجلد عبر مساحة العمل كلها
+  // بحيث تكون الأرقام متفردة دائماً ولا تتعارض مع الحجرات الأساسية 1-7
   function getNextFolderFileNum(folderKey) {
-    const files = getFolderFiles(folderKey);
-    let maxNum = 0;
-    // الحجرات 1 إلى 7 هي حجرات النظام الأساسية المخصصة للمجلد الرئيسي book
-    if (folderKey === 'book') {
-      maxNum = 7;
-    }
-    if (Array.isArray(files)) {
-      files.forEach(f => {
-        if (typeof f.num === 'number' && f.num > maxNum) {
-          maxNum = f.num;
+    let maxNum = 7; // البداية دائماً بعد الحجرات 1-7
+    try {
+      const allFolders = getAppFolders();
+      allFolders.forEach(folder => {
+        const files = getFolderFiles(folder.key);
+        if (Array.isArray(files)) {
+          files.forEach(f => {
+            if (f && typeof f.num === 'number' && f.num > maxNum) {
+              maxNum = f.num;
+            }
+          });
         }
       });
-    }
+      // فحص أي حجرات نشطة 8 فما فوق
+      for (let ch = 8; ch <= 50; ch++) {
+        const content = getChamberContent(ch);
+        if (content && content.trim().length > 0 && ch > maxNum) {
+          maxNum = ch;
+        }
+      }
+    } catch (e) {}
     return maxNum + 1;
   }
 
   // إعادة ترقيم ملفات المجلد بتسلسل تصاعدي دقيق يبدأ بعد أعلى حجرة في هذا المجلد
   function resequenceFolderFiles(folderKey, files) {
     if (!files || !Array.isArray(files) || files.length === 0) return files;
-    let startNum = folderKey === 'book' ? 8 : 1;
-    files.forEach((f, idx) => {
-      f.num = startNum + idx;
-    });
+    let needsFix = files.some(f => !f.num || f.num < 8);
+    if (needsFix) {
+      files.forEach(f => {
+        if (!f.num || f.num < 8) {
+          f.num = getNextFolderFileNum(folderKey);
+        }
+      });
+    }
     return files;
   }
 
@@ -5304,6 +5317,12 @@ function exportDocument(format) {
     } else if (activeChamber === 8 && activeExplorerFile) {
       syncActiveExplorerFile(currentVal);
       safeSaveToStorage('vienix_chamber_8', currentVal);
+    }
+
+    // معالجة رقم الملف وضمان ألا يتعارض مع الحجرات 1-7
+    if (!file.num || file.num < 8) {
+      file.num = getNextFolderFileNum(folderKey);
+      saveFolderFiles(folderKey, files);
     }
 
     // 2. تعيين بيانات الملف المعروض حالياً

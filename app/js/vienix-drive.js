@@ -738,7 +738,23 @@
           }
         });
 
-        // 2b. Explicitly bundle folder files (including book explorer files 8, 9, 10...)
+        // 2b. Explicitly bundle custom folders and nested folders hierarchy
+        try {
+          const rawCustomFolders = localStorage.getItem('vienix_custom_folders');
+          if (rawCustomFolders) {
+            manifest.customFolders = JSON.parse(rawCustomFolders);
+          }
+          const rawFolderOverrides = localStorage.getItem('vienix_folder_name_overrides');
+          if (rawFolderOverrides) {
+            manifest.folderNameOverrides = JSON.parse(rawFolderOverrides);
+          }
+          const rawDeletedFolders = localStorage.getItem('vienix_deleted_default_folders');
+          if (rawDeletedFolders) {
+            manifest.deletedDefaultFolders = JSON.parse(rawDeletedFolders);
+          }
+        } catch (e) {}
+
+        // 2c. Explicitly bundle folder files across ALL folders (including custom/nested folders)
         manifest.folderFiles = {};
         try {
           for (let i = 0; i < localStorage.length; i++) {
@@ -761,6 +777,25 @@
                 }
               }
             });
+          }
+
+          // Ensure latest content of active explorer file in Chamber 8 is embedded in manifest.folderFiles
+          let activeExpFile = null;
+          const rawAct = localStorage.getItem('vienix_active_explorer_file');
+          if (rawAct) activeExpFile = JSON.parse(rawAct);
+          const ch8Content = (window.VienixIDB && typeof window.VienixIDB.getSync === 'function')
+            ? (window.VienixIDB.getSync('vienix_chamber_8', 'yaser_chamber_8') || '')
+            : (localStorage.getItem('vienix_chamber_8') || '');
+
+          if (activeExpFile && activeExpFile.folderKey && activeExpFile.fileId && ch8Content) {
+            const fKey = 'vienix_folder_files_' + activeExpFile.folderKey;
+            if (manifest.folderFiles[fKey] && Array.isArray(manifest.folderFiles[fKey])) {
+              const activeF = manifest.folderFiles[fKey].find(item => item && item.id === activeExpFile.fileId);
+              if (activeF) {
+                activeF.content = ch8Content;
+                activeF.updatedAt = Date.now();
+              }
+            }
           }
         } catch (e) {}
 
@@ -919,48 +954,112 @@
         }
       }
 
-      // 2. Gather Explorer Folder Files (Book files starting from 8, 9, 10...)
+      // 2. Gather Explorer Folder Files from ALL folders (book, drafts, archive, and all custom/nested folders)
       try {
-        let bookFiles = null;
+        let activeExpFile = null;
+        try {
+          const rawAct = localStorage.getItem('vienix_active_explorer_file');
+          if (rawAct) activeExpFile = JSON.parse(rawAct);
+        } catch (e) {}
+
+        let activeCh8Val = '';
         if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
-          const raw = window.VienixIDB.getSync('vienix_folder_files_book');
-          if (raw) bookFiles = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          activeCh8Val = window.VienixIDB.getSync('vienix_chamber_8', 'yaser_chamber_8') || '';
+        } else {
+          activeCh8Val = localStorage.getItem('vienix_chamber_8') || '';
         }
-        if (!bookFiles) {
-          const raw = localStorage.getItem('vienix_folder_files_book');
-          if (raw) bookFiles = JSON.parse(raw);
+
+        // Collect all folder file keys from localStorage and memoryCache
+        const allFolderKeys = new Set();
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('vienix_folder_files_')) allFolderKeys.add(k);
         }
-        if (Array.isArray(bookFiles)) {
-          let activeExpFile = null;
-          try {
-            const rawAct = localStorage.getItem('vienix_active_explorer_file');
-            if (rawAct) activeExpFile = JSON.parse(rawAct);
-          } catch (e) {}
-
-          let activeCh8Val = '';
-          if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
-            activeCh8Val = window.VienixIDB.getSync('vienix_chamber_8', 'yaser_chamber_8') || '';
-          } else {
-            activeCh8Val = localStorage.getItem('vienix_chamber_8') || '';
-          }
-
-          bookFiles.forEach(f => {
-            if (!f) return;
-            const num = typeof f.num === 'number' ? f.num : 8;
-            let fileContent = f.content || '';
-            if (activeExpFile && activeExpFile.fileId === f.id && activeCh8Val && activeCh8Val.trim().length > 0) {
-              fileContent = activeCh8Val;
-            }
-            if (fileContent && fileContent.trim().length > 0) {
-              localChambers.set(num, {
-                content: fileContent,
-                meta: null,
-                title: f.title || ('ملف ' + num),
-                wordCount: (fileContent.trim().match(/\S+/g) || []).length
-              });
-            }
+        if (window.VienixIDB && window.VienixIDB.memoryCache) {
+          Object.keys(window.VienixIDB.memoryCache).forEach(k => {
+            if (k && k.startsWith('vienix_folder_files_')) allFolderKeys.add(k);
           });
         }
+        allFolderKeys.add('vienix_folder_files_book');
+        allFolderKeys.add('vienix_folder_files_drafts');
+        allFolderKeys.add('vienix_folder_files_archive');
+
+        let nextSafeNum = 8;
+        allFolderKeys.forEach(fk => {
+          let raw = null;
+          if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
+            raw = window.VienixIDB.getSync(fk);
+          }
+          if (!raw) raw = localStorage.getItem(fk);
+          if (raw) {
+            try {
+              const list = typeof raw === 'string' ? JSON.parse(raw) : raw;
+              if (Array.isArray(list)) {
+                list.forEach(f => {
+                  if (f && typeof f.num === 'number' && f.num >= nextSafeNum) {
+                    nextSafeNum = f.num + 1;
+                  }
+                });
+              }
+            } catch (e) {}
+          }
+        });
+
+        allFolderKeys.forEach(fk => {
+          const folderKeyName = fk.replace('vienix_folder_files_', '');
+          let fileList = null;
+          if (window.VienixIDB && typeof window.VienixIDB.getSync === 'function') {
+            const raw = window.VienixIDB.getSync(fk);
+            if (raw) fileList = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          }
+          if (!fileList) {
+            const raw = localStorage.getItem(fk);
+            if (raw) {
+              try { fileList = JSON.parse(raw); } catch (e) {}
+            }
+          }
+
+          if (Array.isArray(fileList)) {
+            let listDirty = false;
+            fileList.forEach(f => {
+              if (!f) return;
+              if (typeof f.num !== 'number' || f.num < 8 || (localChambers.has(f.num) && localChambers.get(f.num).fileId !== f.id)) {
+                f.num = nextSafeNum++;
+                listDirty = true;
+              }
+              const num = f.num;
+              let fileContent = f.content || '';
+              if (activeExpFile && activeExpFile.fileId === f.id && activeCh8Val && activeCh8Val.trim().length > 0) {
+                fileContent = activeCh8Val;
+                f.content = activeCh8Val;
+                listDirty = true;
+              }
+              if (fileContent && fileContent.trim().length > 0) {
+                const metaObj = {
+                  customTitle: f.title || ('ملف ' + num),
+                  folder: folderKeyName,
+                  fileId: f.id
+                };
+                localChambers.set(num, {
+                  content: fileContent,
+                  meta: JSON.stringify(metaObj),
+                  title: f.title || ('ملف ' + num),
+                  wordCount: (fileContent.trim().match(/\S+/g) || []).length,
+                  folderKey: folderKeyName,
+                  fileId: f.id
+                });
+              }
+            });
+            if (listDirty) {
+              try {
+                localStorage.setItem(fk, JSON.stringify(fileList));
+                if (window.VienixIDB && typeof window.VienixIDB.set === 'function') {
+                  window.VienixIDB.set(fk, JSON.stringify(fileList));
+                }
+              } catch (e) {}
+            }
+          }
+        });
       } catch (e) {
         console.warn('[VienixDrive] Error reading folder files for snapshot:', e);
       }
@@ -1035,34 +1134,48 @@
         });
       }
 
-      // Check cloud folderFiles (book files: 8, 9, 10...)
+      // Check cloud folderFiles across ALL folders (book, drafts, archive, and all custom/nested folders)
       try {
-        let cloudBookFiles = null;
-        if (manifest.folderFiles && manifest.folderFiles['vienix_folder_files_book']) {
-          cloudBookFiles = manifest.folderFiles['vienix_folder_files_book'];
-        } else if (manifest.rawKeys && manifest.rawKeys['vienix_folder_files_book']) {
-          const raw = manifest.rawKeys['vienix_folder_files_book'];
-          cloudBookFiles = typeof raw === 'string' ? JSON.parse(raw) : raw;
-        }
-        if (Array.isArray(cloudBookFiles)) {
-          cloudBookFiles.forEach(f => {
-            if (!f) return;
-            const num = typeof f.num === 'number' ? f.num : 8;
-            const fileContent = f.content || '';
-            if (fileContent && fileContent.trim().length > 0) {
-              if (!cloudChambers.has(num)) {
-                cloudChambers.set(num, {
-                  content: fileContent,
-                  meta: null,
-                  title: f.title || ('ملف ' + num),
-                  wordCount: (fileContent.trim().match(/\S+/g) || []).length
-                });
-              } else if (f.title) {
-                cloudChambers.get(num).title = f.title;
-              }
-            }
+        const cloudFolderKeys = new Set();
+        if (manifest.folderFiles && typeof manifest.folderFiles === 'object') {
+          Object.keys(manifest.folderFiles).forEach(k => {
+            if (k.startsWith('vienix_folder_files_')) cloudFolderKeys.add(k);
           });
         }
+        if (manifest.rawKeys && typeof manifest.rawKeys === 'object') {
+          Object.keys(manifest.rawKeys).forEach(k => {
+            if (k.startsWith('vienix_folder_files_')) cloudFolderKeys.add(k);
+          });
+        }
+
+        cloudFolderKeys.forEach(k => {
+          let fileList = null;
+          if (manifest.folderFiles && manifest.folderFiles[k]) {
+            fileList = manifest.folderFiles[k];
+          } else if (manifest.rawKeys && manifest.rawKeys[k]) {
+            const raw = manifest.rawKeys[k];
+            fileList = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          }
+          if (Array.isArray(fileList)) {
+            fileList.forEach(f => {
+              if (!f) return;
+              const num = typeof f.num === 'number' ? f.num : 8;
+              const fileContent = f.content || '';
+              if (fileContent && fileContent.trim().length > 0) {
+                if (!cloudChambers.has(num)) {
+                  cloudChambers.set(num, {
+                    content: fileContent,
+                    meta: null,
+                    title: f.title || ('ملف ' + num),
+                    wordCount: (fileContent.trim().match(/\S+/g) || []).length
+                  });
+                } else if (f.title) {
+                  cloudChambers.get(num).title = f.title;
+                }
+              }
+            });
+          }
+        });
       } catch (e) {}
 
       // Fill missing titles for populated cloud chambers
@@ -1268,11 +1381,33 @@
               manifest.rawKeys['yaser_md_content'] = cleanText;
             }
             if (title) {
-              const metaObj = {
-                customTitle: title,
-                folder: 'book',
-                updatedAt: file.modifiedTime ? new Date(file.modifiedTime).getTime() : Date.now()
-              };
+              let assignedFolder = 'book';
+              if (manifest.folderFiles) {
+                for (const fk of Object.keys(manifest.folderFiles)) {
+                  const arr = manifest.folderFiles[fk];
+                  if (Array.isArray(arr) && arr.some(f => f && (f.num === chNum || f.title === title))) {
+                    assignedFolder = fk.replace('vienix_folder_files_', '');
+                    break;
+                  }
+                }
+              }
+              const existingMeta = manifest.rawKeys['vienix_chamber_meta_' + chNum];
+              let metaObj = null;
+              if (existingMeta) {
+                try {
+                  metaObj = typeof existingMeta === 'string' ? JSON.parse(existingMeta) : existingMeta;
+                } catch (e) {}
+              }
+              if (!metaObj) {
+                metaObj = {
+                  customTitle: title,
+                  folder: assignedFolder,
+                  updatedAt: file.modifiedTime ? new Date(file.modifiedTime).getTime() : Date.now()
+                };
+              } else {
+                metaObj.customTitle = title;
+                if (!metaObj.folder || metaObj.folder === 'book') metaObj.folder = assignedFolder;
+              }
               manifest.rawKeys['vienix_chamber_meta_' + chNum] = JSON.stringify(metaObj);
               manifest.rawKeys['yaser_chamber_meta_' + chNum] = JSON.stringify(metaObj);
             }
@@ -1280,6 +1415,17 @@
           } catch (err) {
             console.warn('[VienixDrive] Failed reading chamber file from Drive:', file.name, err);
           }
+        }
+
+        // Preserve custom folders and overrides into rawKeys for full restore
+        if (manifest.customFolders && !manifest.rawKeys['vienix_custom_folders']) {
+          manifest.rawKeys['vienix_custom_folders'] = JSON.stringify(manifest.customFolders);
+        }
+        if (manifest.folderNameOverrides && !manifest.rawKeys['vienix_folder_name_overrides']) {
+          manifest.rawKeys['vienix_folder_name_overrides'] = JSON.stringify(manifest.folderNameOverrides);
+        }
+        if (manifest.deletedDefaultFolders && !manifest.rawKeys['vienix_deleted_default_folders']) {
+          manifest.rawKeys['vienix_deleted_default_folders'] = JSON.stringify(manifest.deletedDefaultFolders);
         }
 
         // If a chamber has NO file in Drive inventory, mark it as empty so local data gets cleared!

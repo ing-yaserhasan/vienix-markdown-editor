@@ -570,23 +570,28 @@
         presentChambers.forEach((_, chNum) => {
           if (chNum > maxChambers) maxChambers = chNum;
         });
-        if (payload.folderFiles && payload.folderFiles['vienix_folder_files_book']) {
-          const bf = payload.folderFiles['vienix_folder_files_book'];
-          if (Array.isArray(bf)) {
-            bf.forEach(f => {
-              if (f && typeof f.num === 'number' && f.num > maxChambers) maxChambers = f.num;
-            });
+        const scanFileForMax = (f) => {
+          if (f && typeof f.num === 'number' && f.num > maxChambers) {
+            maxChambers = f.num;
           }
-        }
-        if (payload.rawKeys && payload.rawKeys['vienix_folder_files_book']) {
-          try {
-            const bf = JSON.parse(payload.rawKeys['vienix_folder_files_book']);
-            if (Array.isArray(bf)) {
-              bf.forEach(f => {
-                if (f && typeof f.num === 'number' && f.num > maxChambers) maxChambers = f.num;
-              });
+        };
+        if (payload.folderFiles && typeof payload.folderFiles === 'object') {
+          Object.keys(payload.folderFiles).forEach(k => {
+            if (k.startsWith('vienix_folder_files_')) {
+              const arr = payload.folderFiles[k];
+              if (Array.isArray(arr)) arr.forEach(scanFileForMax);
             }
-          } catch (e) {}
+          });
+        }
+        if (payload.rawKeys && typeof payload.rawKeys === 'object') {
+          Object.keys(payload.rawKeys).forEach(k => {
+            if (k.startsWith('vienix_folder_files_')) {
+              try {
+                const arr = JSON.parse(payload.rawKeys[k]);
+                if (Array.isArray(arr)) arr.forEach(scanFileForMax);
+              } catch (e) {}
+            }
+          });
         }
 
         for (let ch = 1; ch <= maxChambers; ch++) {
@@ -688,27 +693,42 @@
           });
         }
 
-        // Synchronize content of folder files (book files 8, 9, 10...) with presentChambers
+        // Synchronize content of folder files across ALL folders (book, drafts, archive, and custom/nested folders) with presentChambers
         try {
-          const rawBf = localStorage.getItem('vienix_folder_files_book');
-          if (rawBf) {
-            let bfList = JSON.parse(rawBf);
-            if (Array.isArray(bfList)) {
-              let updated = false;
-              bfList.forEach(f => {
-                if (f && typeof f.num === 'number' && presentChambers.has(f.num)) {
-                  const chC = presentChambers.get(f.num).content;
-                  if (chC !== undefined && chC !== null && f.content !== chC) {
-                    f.content = chC;
-                    updated = true;
+          const allFolderFileKeys = new Set();
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('vienix_folder_files_')) allFolderFileKeys.add(k);
+          }
+          if (payload.folderFiles && typeof payload.folderFiles === 'object') {
+            Object.keys(payload.folderFiles).forEach(k => {
+              if (k.startsWith('vienix_folder_files_')) allFolderFileKeys.add(k);
+            });
+          }
+
+          allFolderFileKeys.forEach(fk => {
+            const rawVal = localStorage.getItem(fk);
+            if (rawVal) {
+              try {
+                let fileList = JSON.parse(rawVal);
+                if (Array.isArray(fileList)) {
+                  let updated = false;
+                  fileList.forEach(f => {
+                    if (f && typeof f.num === 'number' && presentChambers.has(f.num)) {
+                      const chC = presentChambers.get(f.num).content;
+                      if (chC !== undefined && chC !== null && f.content !== chC) {
+                        f.content = chC;
+                        updated = true;
+                      }
+                    }
+                  });
+                  if (updated) {
+                    restoreSet(fk, JSON.stringify(fileList));
                   }
                 }
-              });
-              if (updated) {
-                restoreSet('vienix_folder_files_book', JSON.stringify(bfList));
-              }
+              } catch (e) {}
             }
-          }
+          });
         } catch (e) {}
 
         // 6. Restore folder name overrides
@@ -964,6 +984,103 @@
             mergeSet(k, payload.rawKeys[k]);
           });
         }
+
+        // 3b. Smart Merge Custom Folders (Union of local and cloud folders, preserving hierarchy)
+        try {
+          let localFolders = [];
+          const rawLocF = localStorage.getItem('vienix_custom_folders');
+          if (rawLocF) {
+            try { localFolders = JSON.parse(rawLocF); } catch (e) {}
+          }
+          let incomingFolders = [];
+          if (payload.customFolders) {
+            incomingFolders = Array.isArray(payload.customFolders) ? payload.customFolders : JSON.parse(payload.customFolders);
+          } else if (payload.rawKeys && payload.rawKeys['vienix_custom_folders']) {
+            try { incomingFolders = JSON.parse(payload.rawKeys['vienix_custom_folders']); } catch (e) {}
+          }
+
+          if (Array.isArray(incomingFolders) && incomingFolders.length > 0) {
+            const folderMap = new Map();
+            localFolders.forEach(f => { if (f && f.key) folderMap.set(f.key, f); });
+            incomingFolders.forEach(f => {
+              if (f && f.key) {
+                if (!folderMap.has(f.key)) {
+                  folderMap.set(f.key, f);
+                } else {
+                  // Merge folder properties (name, parent, desc)
+                  const existing = folderMap.get(f.key);
+                  folderMap.set(f.key, Object.assign({}, existing, f));
+                }
+              }
+            });
+            mergeSet('vienix_custom_folders', JSON.stringify(Array.from(folderMap.values())));
+          }
+        } catch (e) {}
+
+        // 3c. Smart Merge Folder Files across ALL folders
+        try {
+          const allFolderKeys = new Set();
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('vienix_folder_files_')) allFolderKeys.add(k);
+          }
+          if (payload.folderFiles && typeof payload.folderFiles === 'object') {
+            Object.keys(payload.folderFiles).forEach(k => {
+              if (k.startsWith('vienix_folder_files_')) allFolderKeys.add(k);
+            });
+          }
+          if (payload.rawKeys && typeof payload.rawKeys === 'object') {
+            Object.keys(payload.rawKeys).forEach(k => {
+              if (k.startsWith('vienix_folder_files_')) allFolderKeys.add(k);
+            });
+          }
+
+          allFolderKeys.forEach(fk => {
+            let localList = [];
+            const rawLoc = localStorage.getItem(fk);
+            if (rawLoc) {
+              try { localList = JSON.parse(rawLoc); } catch (e) {}
+            }
+            if (!Array.isArray(localList)) localList = [];
+
+            let cloudList = [];
+            if (payload.folderFiles && payload.folderFiles[fk]) {
+              cloudList = payload.folderFiles[fk];
+            } else if (payload.rawKeys && payload.rawKeys[fk]) {
+              try { cloudList = JSON.parse(payload.rawKeys[fk]); } catch (e) {}
+            }
+            if (!Array.isArray(cloudList)) cloudList = [];
+
+            const fileMap = new Map();
+            localList.forEach(f => { if (f && f.id) fileMap.set(f.id, f); });
+            cloudList.forEach(f => {
+              if (f && f.id) {
+                if (!fileMap.has(f.id)) {
+                  fileMap.set(f.id, f);
+                } else {
+                  const locF = fileMap.get(f.id);
+                  // If cloud chamber has updated content, take it
+                  if (typeof f.num === 'number' && cloudChambers.has(f.num)) {
+                    locF.content = cloudChambers.get(f.num).content;
+                  } else if (f.content) {
+                    locF.content = f.content;
+                  }
+                  if (f.title) locF.title = f.title;
+                  fileMap.set(f.id, locF);
+                }
+              }
+            });
+
+            // Ensure content matches cloudChambers
+            fileMap.forEach(f => {
+              if (f && typeof f.num === 'number' && cloudChambers.has(f.num)) {
+                f.content = cloudChambers.get(f.num).content;
+              }
+            });
+
+            mergeSet(fk, JSON.stringify(Array.from(fileMap.values())));
+          });
+        } catch (e) {}
 
         if (payload.settings) {
           const val = typeof payload.settings === 'string' ? payload.settings : JSON.stringify(payload.settings);
