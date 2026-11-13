@@ -156,8 +156,8 @@
           }
         });
 
-        // Trigger silent auto-reconnect if returning user with expired/missing token
-        if (this.isAutoConnecting || (!this.accessToken && (localStorage.getItem('vienix_drive_connected') === 'true' || this.userProfile))) {
+        // Trigger silent auto-reconnect ONLY if returning user who was actively connected
+        if (!this.accessToken && localStorage.getItem('vienix_drive_connected') === 'true') {
           this.silentAutoConnect();
         }
       } catch (err) {
@@ -177,6 +177,7 @@
     // ─────────────────────────────────────────────────────────────
     silentAutoConnect: async function () {
       if (this.accessToken && Date.now() < (this.tokenExpiresAt - 60000)) return;
+      if (localStorage.getItem('vienix_drive_connected') !== 'true') return;
       if (!tokenClient) return;
 
       console.log('[VienixDrive] Attempting silent background reconnect for existing user...');
@@ -226,11 +227,18 @@
         tokenRequestResolvers.push({ resolve, reject });
 
         const email = (this.userProfile && this.userProfile.email) || localStorage.getItem('vienix_drive_connected_email');
-        const reqConfig = {
-          prompt: interactive ? 'consent' : ''
-        };
-        if (email) {
-          reqConfig.hint = email;
+        const reqConfig = {};
+
+        if (interactive) {
+          // Interactive login / switch: ALWAYS force Google Account Chooser
+          // NEVER pass hint so Google doesn't lock to previous account!
+          reqConfig.prompt = 'select_account';
+        } else {
+          // Silent background refresh for existing active connection
+          reqConfig.prompt = '';
+          if (email) {
+            reqConfig.hint = email;
+          }
         }
 
         try {
@@ -354,7 +362,7 @@
       }
     },
 
-    disconnect: function () {
+    disconnect: function (silent = false) {
       if (this.accessToken && window.google && window.google.accounts) {
         try {
           window.google.accounts.oauth2.revoke(this.accessToken, () => {
@@ -369,6 +377,12 @@
       this.appFolderId = null;
       this.lastSyncError = null;
       this.isAutoConnecting = false;
+      tokenClient = null; // Reset GIS client instance for clean multi-account switching
+
+      if (autoSyncDebounceTimer) {
+        clearTimeout(autoSyncDebounceTimer);
+        autoSyncDebounceTimer = null;
+      }
 
       localStorage.removeItem('vienix_drive_token');
       localStorage.removeItem('vienix_drive_token_expires');
@@ -383,14 +397,19 @@
 
       this.updateUI();
 
-      if (window.VienixStorage && typeof window.VienixStorage.showCustomModal === 'function') {
+      if (!silent && window.VienixStorage && typeof window.VienixStorage.showCustomModal === 'function') {
         window.VienixStorage.showCustomModal({
           title: 'تم تسجيل الخروج وفصل Google Drive',
           icon: '👋',
-          content: '<p style="color:var(--text-secondary);">تم إلغاء الاتصال بالسحابة بنجاح. تبقى جميع بياناتك مخزنة محلياً على جهازك في IndexedDB.</p>',
+          content: '<p style="color:var(--text-secondary);">تم إلغاء الاتصال بالسحابة بنجاح. يمكنك الآن تسجيل الدخول بأي حساب Google آخر متى شئت، وتبقى جميع بياناتك مخزنة محلياً على جهازك بأمان.</p>',
           confirmText: 'حسناً'
         });
       }
+    },
+
+    switchAccount: async function () {
+      this.disconnect(true);
+      await this.connect();
     },
 
     fetchUserProfile: async function () {
@@ -1574,6 +1593,9 @@
               <button type="button" class="btn btn-primary btn-sync-now ${this.isSyncing ? 'loading' : ''}" onclick="VienixDrive.handleCloudBtnClick()" style="flex:1;">
                 ${this.isSyncing ? '🔄 جارٍ المزامنة...' : isConnected ? '🔄 مزامنة ذكية الآن' : '⚡ تنشيط ومزامنة الآن'}
               </button>
+              <button type="button" class="btn btn-ghost" onclick="VienixDrive.switchAccount()" title="تسجيل الدخول بحساب Google آخر">
+                تبديل الحساب
+              </button>
               <button type="button" class="btn btn-ghost btn-disconnect" onclick="VienixDrive.disconnect()">
                 فصل الحساب
               </button>
@@ -1636,19 +1658,6 @@
             </p>
           </div>
         ` : ''}
-
-        <!-- Advanced Client ID Configuration -->
-        <div class="settings-group" style="margin-top:20px; border-top:1px solid var(--border-color); padding-top:16px;">
-          <label class="settings-label" style="display:flex; align-items:center; justify-content:space-between;">
-            <span>معرّف تطبيق Google (Client ID)</span>
-            <span style="font-size:0.72rem; color:var(--text-muted); font-weight:normal;">للمطورين والمتقدمين</span>
-          </label>
-          <p class="settings-hint">يمكنك استخدام Client ID مخصص لك للتحكم الكامل بصلاحيات الوصول.</p>
-          <div style="display:flex; gap:8px;">
-            <input type="text" class="settings-input" id="s-google-client-id" value="${this.clientId}" placeholder="xxxx.apps.googleusercontent.com" style="direction:ltr; font-family:monospace; font-size:0.8rem; flex:1;" onchange="VienixDrive.setClientId(this.value)">
-            <button class="settings-mini-btn" onclick="VienixDrive.setClientId(document.getElementById('s-google-client-id').value)">حفظ</button>
-          </div>
-        </div>
       `;
     }
   };
