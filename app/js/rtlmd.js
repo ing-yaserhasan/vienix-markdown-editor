@@ -10151,6 +10151,26 @@ function exportDocument(format) {
       turndownService.use(turndownPluginGfm.gfm);
     }
 
+    // قاعدة الحفاظ على Bold داخل عناصر ملونة (STRONG يحتوي FONT/SPAN ملون)
+    // في هذه الحالة نُرجع <strong> HTML بدلاً من ** لأن marked لا يُصيِّر ** داخل HTML spans
+    turndownService.addRule('boldWithColor', {
+      filter: function (node) {
+        if (node.nodeName !== 'STRONG' && node.nodeName !== 'B') return false;
+        // فحص إذا كان يحتوي مباشرة على FONT أو SPAN ملون
+        const hasColorChild = Array.from(node.childNodes).some(child => {
+          if (child.nodeName === 'FONT' && (child.color || child.getAttribute('color'))) return true;
+          if (child.nodeName === 'SPAN' && child.style && (child.style.color || child.style.backgroundColor)) return true;
+          return false;
+        });
+        return hasColorChild;
+      },
+      replacement: function (content) {
+        // content هنا يحتوي بالفعل على <span style="...">...</span> من قاعدة preserveColorsAndHighlights
+        // نُرجع <strong> HTML مباشرة بدلاً من ** markdown
+        return `<strong>${content}</strong>`;
+      }
+    });
+
     // قاعدة حماية مخططات Mermaid واسترجاع الكود الأصلي
     turndownService.addRule('preserveMermaidDiagrams', {
       filter: function (node) {
@@ -10795,12 +10815,13 @@ function exportDocument(format) {
         left = Math.max(minLeft, Math.min(left, maxLeft));
       }
 
-      let top = rect.top - toolbarHeight - 8;
-      if (top < 12) {
-        // إذا كان قريباً جداً من الحافة العلوية، يظهر أسفل النص المحدد
-        top = rect.bottom + 8;
-      }
+      // يظهر الشريط أسفل النص المحدد دائماً
+      let top = rect.bottom + 8;
       if (top + toolbarHeight > window.innerHeight - 12) {
+        // إذا لم يتسع من الأسفل، نضعه فوق التحديد
+        top = rect.top - toolbarHeight - 8;
+      }
+      if (top < 12) {
         top = Math.max(12, window.innerHeight - toolbarHeight - 12);
       }
 
