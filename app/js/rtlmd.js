@@ -11389,6 +11389,67 @@ function exportDocument(format) {
     }
   };
 
+  // ── أزرار الحافظة (نسخ، قص، لصق، حذف) للشريط العائم ──
+  window.wysiwygClipboardAction = function (action) {
+    // استعادة التحديد المحفوظ إذا وُجد
+    if (savedWysiwygSelectionRange) {
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(savedWysiwygSelectionRange);
+    }
+
+    switch (action) {
+      case 'copy':
+        document.execCommand('copy');
+        break;
+      case 'cut':
+        document.execCommand('cut');
+        syncPreviewToMarkdown(true);
+        break;
+      case 'paste':
+        // محاولة اللصق من الحافظة بدون تنسيق
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          navigator.clipboard.readText().then(function (text) {
+            document.execCommand('insertText', false, text);
+            syncPreviewToMarkdown(true);
+          }).catch(function () {
+            document.execCommand('paste');
+            syncPreviewToMarkdown(true);
+          });
+        } else {
+          document.execCommand('paste');
+          syncPreviewToMarkdown(true);
+        }
+        break;
+      case 'delete':
+        document.execCommand('delete');
+        syncPreviewToMarkdown(true);
+        break;
+    }
+
+    // إخفاء الشريط بعد القص أو الحذف
+    if (action === 'cut' || action === 'delete') {
+      hideFloatingFormatToolbar();
+    }
+  };
+
+  // ── زر Done: إلغاء التحديد وإخفاء الشريط بدون إظهار الكيبورد ──
+  window.wysiwygDismissSelection = function () {
+    const sel = window.getSelection();
+    if (sel) sel.removeAllRanges();
+    hideFloatingFormatToolbar();
+
+    // على الموبايل: التأكد من عدم ظهور الكيبورد
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+      previewContent.setAttribute('inputmode', 'none');
+      previewContent.blur();
+      // إعادة التركيز بدون كيبورد
+      setTimeout(function () {
+        previewContent.focus({ preventScroll: true });
+      }, 60);
+    }
+  };
+
   window.applyWysiwygColor = function (colorHex) {
     if (savedWysiwygSelectionRange) {
       const sel = window.getSelection();

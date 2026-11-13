@@ -5583,6 +5583,34 @@ body.hide-pron-phrase-icons .pronunciation-trans-btn {
   margin: 0 3px;
 }
 
+/* زر Done (✓) — أخضر مميز */
+.wysiwyg-done-btn {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  border-radius: 5px;
+  width: 27px;
+  height: 27px;
+}
+.wysiwyg-done-btn:hover {
+  background: #059669 !important;
+}
+.wysiwyg-done-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* أزرار الحافظة (نسخ، قص، لصق، حذف) */
+.wysiwyg-clipboard-btn {
+  color: #94a3b8;
+}
+.wysiwyg-clipboard-btn:hover {
+  color: #ffffff;
+}
+.wysiwyg-clipboard-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
 /* Ø£ÙŠÙ‚ÙˆÙ†Ø© Ø²Ø± Ù„ÙˆÙ† Ø§Ù„Ø®Ø· (A Ù…Ø¹ Ù…Ø¤Ø´Ø± Ù„ÙˆÙ†ÙŠ Ø³ÙÙ„ÙŠ) */
 .wysiwyg-color-icon-a {
   display: inline-flex;
