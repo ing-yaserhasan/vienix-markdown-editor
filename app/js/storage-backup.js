@@ -54,6 +54,9 @@
           } else {
             val = localStorage.getItem(key) || '';
           }
+          if (typeof val !== 'string') {
+            try { val = typeof val === 'object' ? JSON.stringify(val) : String(val || ''); } catch (_) { val = String(val || ''); }
+          }
           const itemChars = key.length + val.length;
           totalChars += itemChars;
 
