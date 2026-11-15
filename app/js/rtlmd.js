@@ -9755,6 +9755,7 @@ function exportDocument(format) {
   }
 
   function escapeHtml(text) {
+    if (!text) return '';
     const map = {
       '&': '&amp;',
       '<': '&lt;',
@@ -9762,8 +9763,9 @@ function exportDocument(format) {
       '"': '&quot;',
       "'": '&#039;'
     };
-    return text.replace(/[&<>"']/g, (m) => map[m]);
+    return String(text).replace(/[&<>"']/g, (m) => map[m]);
   }
+  window.escapeHtml = escapeHtml;
 
   // تفعيل سحب صندوق الأدوات العائمة بحرية (بدون أي تأثير بصري)
   function setupDraggableFloatingActions() {
@@ -15745,6 +15747,18 @@ function exportDocument(format) {
 
   window._activePreviewTarget = null;
   let previewCardEl = null;
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    const map = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    };
+    return String(text).replace(/[&<>"']/g, (m) => map[m]);
+  }
 
   function ensurePreviewCard() {
     if (previewCardEl && document.body.contains(previewCardEl)) return previewCardEl;
