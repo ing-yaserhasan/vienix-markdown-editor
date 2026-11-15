@@ -77,7 +77,10 @@
     pronIconsOffsetY: -2,   // تموضع الأيقونتين العمودي بالنسبة للنص (الافتراضي: -2px)
     // API
     googleTtsKey: '',
-    groqKey: ''
+    groqKey: '',
+    // Quick Preview System
+    quickPreviewEnabled: true,
+    quickPreviewSize: 'compact'
   };
 
   var vienixSettings = {};
@@ -226,6 +229,18 @@
       case 'pronIconsOffsetY':
         if (typeof applyPronIconsOffsetY === 'function') {
           applyPronIconsOffsetY(value);
+        }
+        break;
+
+      case 'quickPreviewEnabled':
+        if (typeof updateQuickPreviewToggleBtnUI === 'function') {
+          updateQuickPreviewToggleBtnUI(value !== false);
+        }
+        break;
+
+      case 'quickPreviewSize':
+        if (typeof updateQuickPreviewSizeUI === 'function') {
+          updateQuickPreviewSizeUI(value || 'compact');
         }
         break;
     }
@@ -5301,6 +5316,13 @@ function exportDocument(format) {
       return;
     }
 
+    // إذا كانت ميزة المعاينة السريعة معطلة بالمفتاح → فتح الملف مباشرة كما كان في السابق تماماً
+    const isQpEnabled = window.vienixSettings ? (window.vienixSettings.quickPreviewEnabled !== false) : true;
+    if (!isQpEnabled) {
+      window.openFolderFileDirectly(folderKey, fileId);
+      return;
+    }
+
     // إذا كانت نافذة المعاينة معروضة بالفعل لهذا الملف المحدد → إغلاقها فوراً (Toggle off)
     if (window._activePreviewTarget && window._activePreviewTarget.type === 'folder_file' && window._activePreviewTarget.fileId === fileId) {
       if (typeof window.hideFilePreview === 'function') window.hideFilePreview();
@@ -6781,12 +6803,24 @@ function exportDocument(format) {
     });
 
     treeEl.innerHTML = treeHTML;
+    if (typeof updateQuickPreviewToggleBtnUI === 'function') {
+      const isQpOn = window.vienixSettings ? (window.vienixSettings.quickPreviewEnabled !== false) : true;
+      updateQuickPreviewToggleBtnUI(isQpOn);
+    }
   }
   window.renderChambersExplorerTree = renderChambersExplorerTree;
 
   window.handleTreeItemClick = function (e, chNum) {
     if (Date.now() - lastLongPressTriggerTime < 500) return;
     if (e && e.target && (e.target.closest('.obsidian-item-actions') || e.target.closest('.obsidian-inline-edit-box') || e.target.closest('.tree-action-btn'))) {
+      return;
+    }
+
+    // إذا كانت ميزة المعاينة السريعة معطلة بالمفتاح → فتح الملف مباشرة كما كان في السابق تماماً
+    const isQpEnabled = window.vienixSettings ? (window.vienixSettings.quickPreviewEnabled !== false) : true;
+    if (!isQpEnabled) {
+      window.switchChamber(chNum);
+      renderChambersExplorerTree();
       return;
     }
 
@@ -13129,6 +13163,12 @@ function exportDocument(format) {
       updateComfortColorButtonsUI(s.comfortReadingColor || '#F8F9FA');
     }
 
+    // Quick Preview settings
+    const qpEnabled = document.getElementById('s-quick-preview-enabled');
+    if (qpEnabled) qpEnabled.checked = s.quickPreviewEnabled !== false;
+    const qpSizeRadio = document.querySelector(`input[name="s-quick-preview-size"][value="${s.quickPreviewSize || 'compact'}"]`);
+    if (qpSizeRadio) qpSizeRadio.checked = true;
+
     // Theme
     const themeRadio = document.querySelector(`input[name="s-theme"][value="${s.theme}"]`);
     if (themeRadio) themeRadio.checked = true;
@@ -15760,8 +15800,18 @@ function exportDocument(format) {
     return String(text).replace(/[&<>"']/g, (m) => map[m]);
   }
 
+  function updateCardSizeClass(card) {
+    if (!card) return;
+    const size = (window.vienixSettings && window.vienixSettings.quickPreviewSize) || 'compact';
+    card.classList.remove('size-compact', 'size-medium', 'size-full');
+    card.classList.add('size-' + size);
+  }
+
   function ensurePreviewCard() {
-    if (previewCardEl && document.body.contains(previewCardEl)) return previewCardEl;
+    if (previewCardEl && document.body.contains(previewCardEl)) {
+      updateCardSizeClass(previewCardEl);
+      return previewCardEl;
+    }
 
     let card = document.getElementById('vienix-quick-preview-card');
     if (!card) {
@@ -15772,6 +15822,7 @@ function exportDocument(format) {
     } else if (card.parentElement !== document.body) {
       document.body.appendChild(card);
     }
+    updateCardSizeClass(card);
     previewCardEl = card;
 
     // النقر على النافذة نفسها → الدخول للملف وفتحه
@@ -15896,6 +15947,67 @@ function exportDocument(format) {
       window.hideFilePreview();
     }
   });
+
+  window.toggleQuickPreviewFeature = function () {
+    const isCurrentlyOn = window.vienixSettings ? (window.vienixSettings.quickPreviewEnabled !== false) : true;
+    const next = !isCurrentlyOn;
+    if (typeof window.applySetting === 'function') {
+      window.applySetting('quickPreviewEnabled', next);
+    } else if (window.vienixSettings) {
+      window.vienixSettings.quickPreviewEnabled = next;
+    }
+    updateQuickPreviewToggleBtnUI(next);
+    if (!next && typeof window.hideFilePreview === 'function') {
+      window.hideFilePreview();
+    }
+    if (typeof showToast === 'function') {
+      if (next) {
+        showToast('تم تفعيل المعاينة السريعة للملفات 👁️', 'success', 2000);
+      } else {
+        showToast('تم تعطيل المعاينة السريعة (النقر يفتح الملف مباشرة) ⚡', 'info', 2000);
+      }
+    }
+  };
+
+  function updateQuickPreviewToggleBtnUI(enabled) {
+    const btn = document.getElementById('btn-toggle-quick-preview');
+    if (!btn) return;
+    const isOn = enabled !== false;
+    btn.classList.toggle('is-active', isOn);
+    btn.classList.toggle('is-disabled', !isOn);
+    if (isOn) {
+      btn.title = 'المعاينة السريعة للملفات: مفعّلة (انقر للتعطيل)';
+      btn.innerHTML = `
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      `;
+    } else {
+      btn.title = 'المعاينة السريعة للملفات: معطّلة (انقر للتفعيل)';
+      btn.innerHTML = `
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+          <line x1="1" y1="1" x2="23" y2="23"/>
+        </svg>
+      `;
+    }
+
+    const chk = document.getElementById('s-quick-preview-enabled');
+    if (chk) chk.checked = isOn;
+  }
+  window.updateQuickPreviewToggleBtnUI = updateQuickPreviewToggleBtnUI;
+
+  function updateQuickPreviewSizeUI(size) {
+    const card = document.getElementById('vienix-quick-preview-card');
+    if (card) {
+      card.classList.remove('size-compact', 'size-medium', 'size-full');
+      card.classList.add('size-' + (size || 'compact'));
+    }
+    const radio = document.querySelector(`input[name="s-quick-preview-size"][value="${size || 'compact'}"]`);
+    if (radio) radio.checked = true;
+  }
+  window.updateQuickPreviewSizeUI = updateQuickPreviewSizeUI;
 
   // توافق رجعي (Legacy aliases)
   window.showQuickPreview = function (event, title, content, onOpenCallback) {

@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700&family=Cairo:wght@400;600;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/earlyaccess/droidarabicnaskh.css">
   <link rel="stylesheet" href="assets/fonts/tajawal.css">
-  <link rel="stylesheet" href="app/css/style.css?v=obsidian69">
+  <link rel="stylesheet" href="app/css/style.css?v=obsidian70">
   <link rel="stylesheet" href="app/css/classic.css?v=obsidian4">
 </head>
 <body>
@@ -1156,6 +1156,12 @@
         <span class="obsidian-app-title">المستكشف</span>
       </div>
       <div class="explorer-header-actions obsidian-actions">
+        <button type="button" class="obsidian-tool-btn is-active" id="btn-toggle-quick-preview" onclick="toggleQuickPreviewFeature()" title="المعاينة السريعة للملفات: مفعّلة (انقر للتعطيل)">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
         <button type="button" class="obsidian-tool-btn" id="btn-new-file-header" onclick="openNewFileModal()" title="إنشاء ملف جديد في المجلد">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
         </button>
@@ -1895,6 +1901,49 @@
               </div>
             </div>
 
+            <!-- خيارات المعاينة السريعة في مستكشف الملفات -->
+            <div class="settings-group">
+              <label class="settings-label" style="display: flex; align-items: center; gap: 6px;">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-color, #2563eb);">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <span>المعاينة السريعة في المستكشف (Quick Preview)</span>
+              </label>
+
+              <div class="settings-toggle-row" style="margin-bottom: 12px;">
+                <div class="settings-toggle-info">
+                  <span class="settings-label" style="margin: 0; font-size: 0.85rem;">تفعيل ميزة المعاينة السريعة</span>
+                  <span class="settings-toggle-desc">
+                    عرض بطاقة مصغرة لمعاينة محتوى الملف عند النقر عليه دون فتحه مباشرة في المحرر.
+                  </span>
+                </div>
+                <label class="settings-toggle" style="flex-shrink: 0;">
+                  <input type="checkbox" id="s-quick-preview-enabled" checked onchange="applySetting('quickPreviewEnabled', this.checked)">
+                  <span class="settings-toggle-slider"></span>
+                </label>
+              </div>
+
+              <div style="margin-top: 10px;">
+                <span class="settings-label" style="margin-bottom: 4px; font-size: 0.82rem;">حجم وموضع نافذة المعاينة على الموبايل:</span>
+                <span class="settings-toggle-desc" style="display: block; margin-bottom: 8px;">اختر الحجم الأنسب لك عند تصفح المستكشف على الهاتف:</span>
+                <div class="settings-radio-group">
+                  <label class="settings-radio-pill" title="صغير: أعلى اليسار ويترك قائمة الملفات على اليمين مكشوفة بالكامل">
+                    <input type="radio" name="s-quick-preview-size" value="compact" checked onchange="applySetting('quickPreviewSize', 'compact')">
+                    <span>صغير (يسار الشاشة)</span>
+                  </label>
+                  <label class="settings-radio-pill" title="متوسط: أعلى اليسار أوسع قليلاً يغطي جزءاً من الاسم ويبقى أول 4-5 أحرف">
+                    <input type="radio" name="s-quick-preview-size" value="medium" onchange="applySetting('quickPreviewSize', 'medium')">
+                    <span>متوسط (موسع)</span>
+                  </label>
+                  <label class="settings-radio-pill" title="كبير: نافذة واسعة تتوسط الشاشة">
+                    <input type="radio" name="s-quick-preview-size" value="full" onchange="applySetting('quickPreviewSize', 'full')">
+                    <span>كبير (في الوسط)</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
             <div class="settings-group">
               <label class="settings-label">وضع المظهر</label>
               <div class="settings-radio-group">
@@ -2585,7 +2634,7 @@
   <script src="app/js/vienix-idb.js?v=2.2"></script>
 
   <!-- Application Main Script -->
-  <script src="app/js/rtlmd.js?v=obsidian80"></script>
+  <script src="app/js/rtlmd.js?v=obsidian81"></script>
 
   <!-- Storage Health Monitor & Full Workspace Backup Module (Phase 0) -->
   <script src="app/js/storage-backup.js?v=2.3"></script>

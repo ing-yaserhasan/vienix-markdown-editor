@@ -11478,9 +11478,27 @@ body:not(.wysiwyg-active) .image-resizer-wrapper.is-emoji-wrapper img,
   text-align: right;
 }
 
+/* زر تفعيل/إيقاف المعاينة السريعة في رأس المستكشف */
+#btn-toggle-quick-preview {
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+#btn-toggle-quick-preview.is-active {
+  color: #10b981;
+}
+[data-theme="dark"] #btn-toggle-quick-preview.is-active {
+  color: #34d399;
+}
+#btn-toggle-quick-preview.is-disabled {
+  opacity: 0.38;
+  color: #94a3b8;
+}
+
 /* شاشات اللابتوب والكمبيوتر الكبيرة (كما في الصورة 2 دون أي تغيير) */
 @media (min-width: 769px) {
-  .vienix-quick-preview {
+  .vienix-quick-preview,
+  .vienix-quick-preview.size-compact,
+  .vienix-quick-preview.size-medium,
+  .vienix-quick-preview.size-full {
     top: 14vh;
     left: auto;
     right: 332px;
@@ -11494,16 +11512,21 @@ body:not(.wysiwyg-active) .image-resizer-wrapper.is-emoji-wrapper img,
     transform: scale(0.94);
   }
 
-  .vienix-quick-preview.visible {
+  .vienix-quick-preview.visible,
+  .vienix-quick-preview.size-compact.visible,
+  .vienix-quick-preview.size-medium.visible,
+  .vienix-quick-preview.size-full.visible {
     display: flex !important;
     opacity: 1;
     transform: scale(1);
   }
 }
 
-/* شاشات الموبايل والأجهزة اللوحية (الجهة اليسرى كما في الإطار الأخضر تماماً مع كشف قائمة الملفات على اليمين) */
+/* شاشات الموبايل والأجهزة اللوحية (3 أحجام قابلة للاختيار من الإعدادات) */
 @media (max-width: 768px) {
-  .vienix-quick-preview {
+  /* 1. الحجم الصغير (الافتراضي - يسار الشاشة كما في الصورة 2) */
+  .vienix-quick-preview,
+  .vienix-quick-preview.size-compact {
     top: 84px;
     left: 8px;
     right: auto;
@@ -11517,10 +11540,53 @@ body:not(.wysiwyg-active) .image-resizer-wrapper.is-emoji-wrapper img,
     transform: scale(0.95);
   }
 
-  .vienix-quick-preview.visible {
+  .vienix-quick-preview.visible,
+  .vienix-quick-preview.size-compact.visible {
     display: flex !important;
     opacity: 1;
     transform: scale(1);
+  }
+
+  /* 2. الحجم المتوسط (موسع - يسار الشاشة ويترك 4-5 أحرف من الاسم كما في الصورة 3) */
+  .vienix-quick-preview.size-medium {
+    top: 84px;
+    left: 8px;
+    right: auto;
+    width: min(66vw, 280px);
+    max-height: min(44vh, 320px);
+    border-radius: 12px;
+    box-shadow:
+      0 14px 40px rgba(0, 0, 0, 0.25),
+      0 4px 14px rgba(0, 0, 0, 0.12),
+      0 0 0 1px rgba(0, 0, 0, 0.06);
+    transform: scale(0.95);
+  }
+
+  .vienix-quick-preview.size-medium.visible {
+    display: flex !important;
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* 3. الحجم الكبير / الكامل (يتوسط الشاشة كما كان في السابق كما في الصورة 4) */
+  .vienix-quick-preview.size-full {
+    top: 16vh;
+    left: 50%;
+    right: auto;
+    width: min(88vw, 360px);
+    max-height: min(52vh, 360px);
+    border-radius: 14px;
+    box-shadow:
+      0 16px 48px rgba(0, 0, 0, 0.25),
+      0 4px 16px rgba(0, 0, 0, 0.12),
+      0 0 0 1px rgba(0, 0, 0, 0.05);
+    transform: translateX(-50%) scale(0.95);
+  }
+
+  .vienix-quick-preview.size-full.visible {
+    display: flex !important;
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
   }
 
   .vienix-quick-preview-header {
