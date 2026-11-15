@@ -3472,7 +3472,7 @@ function exportDocument(format) {
       const files = getFolderFiles(folderKey);
       const curIdx = files.findIndex(f => f.id === activeExplorerFile.fileId);
       if (curIdx > 0) {
-        window.handleFolderFileClick(folderKey, files[curIdx - 1].id);
+        window.openFolderFileDirectly(folderKey, files[curIdx - 1].id);
         return;
       } else {
         // عند الوصول لأول ملف في المجلد، نرجع للحجرة 7
@@ -3495,7 +3495,7 @@ function exportDocument(format) {
       // الانتقال من الحجرة 7 لأول ملف في المجلد الرئيسي إن وُجد
       const bookFiles = getFolderFiles('book');
       if (bookFiles && bookFiles.length > 0) {
-        window.handleFolderFileClick('book', bookFiles[0].id);
+        window.openFolderFileDirectly('book', bookFiles[0].id);
         return;
       } else {
         window.switchChamber(8);
@@ -3507,7 +3507,7 @@ function exportDocument(format) {
       const files = getFolderFiles(folderKey);
       const curIdx = files.findIndex(f => f.id === activeExplorerFile.fileId);
       if (curIdx >= 0 && curIdx < files.length - 1) {
-        window.handleFolderFileClick(folderKey, files[curIdx + 1].id);
+        window.openFolderFileDirectly(folderKey, files[curIdx + 1].id);
         return;
       }
     }
@@ -4089,7 +4089,7 @@ function exportDocument(format) {
     renderChambersExplorerTree();
 
     // نفتح الملف فوراً في الحجرة النشطة للكتابة فيه مباشرة
-    window.handleFolderFileClick(targetKey, newFile.id);
+    window.openFolderFileDirectly(targetKey, newFile.id);
     showToast(`تم إنشاء ملف "${newFile.title}" داخل مجلد "${folderName}" والبدء بالكتابة! 📄✨`, 'success', 2000);
   }
 
@@ -4557,7 +4557,7 @@ function exportDocument(format) {
     const menu = document.getElementById('chamber-context-menu');
     if (menu) menu.style.display = 'none';
     if (contextTargetFolderFile) {
-      window.handleFolderFileClick(contextTargetFolderFile.folderKey, contextTargetFolderFile.fileId);
+      window.openFolderFileDirectly(contextTargetFolderFile.folderKey, contextTargetFolderFile.fileId);
       return;
     }
     if (!contextTargetChamber) return;
@@ -5279,8 +5279,8 @@ function exportDocument(format) {
       // نضمن فتح المجلد ليظهر الملف الجديد في الشجرة فوراً
       collapsedFolders[targetFolderKey] = false;
 
-      // فتح وعرض الملف الجديد عبر handleFolderFileClick الموحدة برقم حجرته الحقيقي (nextNum)
-      window.handleFolderFileClick(targetFolderKey, fileRecord.id);
+      // فتح وعرض الملف الجديد عبر openFolderFileDirectly الموحدة برقم حجرته الحقيقي (nextNum)
+      window.openFolderFileDirectly(targetFolderKey, fileRecord.id);
 
       if (typeof renderChambersExplorerTree === 'function') {
         renderChambersExplorerTree();
@@ -5296,6 +5296,26 @@ function exportDocument(format) {
   // تفاعل النقر على ملف داخل مجلد: عرضه في الحجرة رقم 8 المخصصة لعرض ملفات المستكشف
   window.handleFolderFileClick = function (folderKey, fileId) {
     if (Date.now() - lastLongPressTriggerTime < 500) return;
+    const files = getFolderFiles(folderKey);
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+
+    // إذا كان الملف هو الملف النشط حالياً → فتح مباشر بدون معاينة
+    if (activeExplorerFile && activeExplorerFile.folderKey === folderKey && activeExplorerFile.fileId === fileId && activeChamber >= 8) {
+      openFolderFileDirectly(folderKey, fileId);
+      return;
+    }
+
+    // عرض المعاينة السريعة بدلاً من الفتح المباشر
+    const content = file.content || '';
+    const title = file.title || ('ملف ' + (file.num || ''));
+    showQuickPreview(null, title, content, function () {
+      openFolderFileDirectly(folderKey, fileId);
+    });
+  };
+
+  // الفتح المباشر للملف (يُستدعى عند النقر على نافذة المعاينة أو عند النقر على الملف النشط)
+  window.openFolderFileDirectly = function (folderKey, fileId) {
     const files = getFolderFiles(folderKey);
     const file = files.find(f => f.id === fileId);
     if (!file) return;
@@ -6750,8 +6770,19 @@ function exportDocument(format) {
     if (e.target.closest('.obsidian-item-actions') || e.target.closest('.obsidian-inline-edit-box') || e.target.closest('.tree-action-btn')) {
       return;
     }
-    window.switchChamber(chNum);
-    renderChambersExplorerTree();
+    // إذا كانت الحجرة نشطة بالفعل → فتح مباشر بدون معاينة
+    if (chNum === activeChamber) {
+      window.switchChamber(chNum);
+      renderChambersExplorerTree();
+      return;
+    }
+    // عرض المعاينة السريعة بدلاً من الفتح المباشر
+    const content = getChamberContent(chNum);
+    const title = getChamberTitle(chNum);
+    showQuickPreview(e, title, content, function () {
+      window.switchChamber(chNum);
+      renderChambersExplorerTree();
+    });
   };
 
   // ==========================================
@@ -15438,8 +15469,8 @@ function exportDocument(format) {
         window.switchChamber(item.chNum);
       }
     } else if (item.type === 'folder_file') {
-      if (typeof window.handleFolderFileClick === 'function') {
-        window.handleFolderFileClick(item.folderKey, item.fileId);
+      if (typeof window.openFolderFileDirectly === 'function') {
+        window.openFolderFileDirectly(item.folderKey, item.fileId);
       }
     } else if (item.type === 'folder') {
       if (typeof window.toggleChambersExplorer === 'function') {
@@ -15668,4 +15699,168 @@ function exportDocument(format) {
   } else {
     initDrag();
   }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // Quick Preview System — نظام المعاينة السريعة للملفات في المستكشف
+  // نقرة واحدة على اسم الملف → نافذة مصغرة لمعاينة المحتوى
+  // نقرة على النافذة → فتح الملف بالكامل
+  // نقرة خارج النافذة أو على ملف آخر → إغلاق المعاينة
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  let quickPreviewPopup = null;
+  let quickPreviewOverlay = null;
+  let quickPreviewOpenCallback = null;
+  let quickPreviewIsOpen = false;
+
+  function ensureQuickPreviewElements() {
+    if (!quickPreviewOverlay) {
+      quickPreviewOverlay = document.createElement('div');
+      quickPreviewOverlay.className = 'vienix-quick-preview-overlay';
+      quickPreviewOverlay.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dismissQuickPreview();
+      });
+      document.body.appendChild(quickPreviewOverlay);
+    }
+    if (!quickPreviewPopup) {
+      quickPreviewPopup = document.createElement('div');
+      quickPreviewPopup.className = 'vienix-quick-preview';
+      quickPreviewPopup.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        // النقر على النافذة → فتح الملف بالكامل
+        if (typeof quickPreviewOpenCallback === 'function') {
+          const cb = quickPreviewOpenCallback;
+          dismissQuickPreview();
+          cb();
+        }
+      });
+      // منع انتشار التمرير خارج النافذة
+      quickPreviewPopup.addEventListener('touchmove', function (e) {
+        e.stopPropagation();
+      }, { passive: true });
+      document.body.appendChild(quickPreviewPopup);
+    }
+  }
+
+  function showQuickPreview(event, title, content, onOpenCallback) {
+    // إغلاق أي معاينة مفتوحة أولاً
+    if (quickPreviewIsOpen) {
+      dismissQuickPreview(true);
+    }
+
+    ensureQuickPreviewElements();
+    quickPreviewOpenCallback = onOpenCallback;
+
+    // أيقونة الملف SVG
+    const fileIconSvg = '<svg class="preview-file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>';
+
+    // تصيير المحتوى
+    let bodyHTML = '';
+    const trimmedContent = (content || '').trim();
+
+    if (trimmedContent.length === 0) {
+      bodyHTML = '<div class="vienix-quick-preview-empty">' +
+                   '<span class="empty-icon">📄</span>' +
+                   '<span class="empty-text">هذا الملف فارغ</span>' +
+                 '</div>';
+    } else {
+      // تصيير الماركداون مع اقتطاع المحتوى الطويل لأداء أسرع
+      const maxPreviewChars = 2000;
+      let previewText = trimmedContent;
+      let isTruncated = false;
+      if (previewText.length > maxPreviewChars) {
+        previewText = previewText.substring(0, maxPreviewChars);
+        isTruncated = true;
+      }
+
+      if (typeof marked !== 'undefined') {
+        try {
+          bodyHTML = marked.parse(previewText);
+        } catch (e) {
+          bodyHTML = '<pre style="white-space:pre-wrap;direction:auto;">' + escapeHtml(previewText) + '</pre>';
+        }
+      } else {
+        bodyHTML = '<pre style="white-space:pre-wrap;direction:auto;">' + escapeHtml(previewText) + '</pre>';
+      }
+
+      if (isTruncated) {
+        bodyHTML += '<div style="text-align:center;padding:6px 0 2px;color:#94a3b8;font-size:0.72rem;font-style:italic;">… اضغط لعرض الملف كاملاً</div>';
+      }
+    }
+
+    quickPreviewPopup.innerHTML =
+      '<div class="vienix-quick-preview-header">' +
+        fileIconSvg +
+        '<span class="preview-file-title" dir="auto">' + escapeHtml(title || 'ملف') + '</span>' +
+        '<span class="preview-open-hint">اضغط للفتح ←</span>' +
+      '</div>' +
+      '<div class="vienix-quick-preview-body" dir="auto">' + bodyHTML + '</div>';
+
+    // تحديد موضع النافذة: وسط الشاشة عمودياً وأفقياً
+    const vpW = window.innerWidth;
+    const vpH = window.innerHeight;
+    const popupW = Math.min(vpW * 0.88, 380);
+    const popupH = Math.min(vpH * 0.55, 340);
+
+    quickPreviewPopup.style.width = popupW + 'px';
+    quickPreviewPopup.style.maxHeight = popupH + 'px';
+    quickPreviewPopup.style.left = Math.max(8, (vpW - popupW) / 2) + 'px';
+    quickPreviewPopup.style.top = Math.max(40, (vpH - popupH) / 2) + 'px';
+
+    // إظهار بتأثير حركي سلس
+    quickPreviewOverlay.style.display = 'block';
+    quickPreviewPopup.style.display = 'flex';
+
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        quickPreviewOverlay.classList.add('visible');
+        quickPreviewPopup.classList.add('visible');
+      });
+    });
+
+    quickPreviewIsOpen = true;
+
+    // إغلاق بمفتاح Escape
+    document.addEventListener('keydown', quickPreviewEscHandler);
+  }
+  window.showQuickPreview = showQuickPreview;
+
+  function quickPreviewEscHandler(e) {
+    if (e.key === 'Escape' && quickPreviewIsOpen) {
+      e.preventDefault();
+      e.stopPropagation();
+      dismissQuickPreview();
+    }
+  }
+
+  function dismissQuickPreview(instant) {
+    if (!quickPreviewIsOpen) return;
+    quickPreviewIsOpen = false;
+    quickPreviewOpenCallback = null;
+
+    document.removeEventListener('keydown', quickPreviewEscHandler);
+
+    if (quickPreviewOverlay) {
+      quickPreviewOverlay.classList.remove('visible');
+    }
+    if (quickPreviewPopup) {
+      quickPreviewPopup.classList.remove('visible');
+    }
+
+    if (instant) {
+      if (quickPreviewOverlay) quickPreviewOverlay.style.display = 'none';
+      if (quickPreviewPopup) { quickPreviewPopup.style.display = 'none'; quickPreviewPopup.innerHTML = ''; }
+    } else {
+      setTimeout(function () {
+        if (!quickPreviewIsOpen) {
+          if (quickPreviewOverlay) quickPreviewOverlay.style.display = 'none';
+          if (quickPreviewPopup) { quickPreviewPopup.style.display = 'none'; quickPreviewPopup.innerHTML = ''; }
+        }
+      }, 220);
+    }
+  }
+  window.dismissQuickPreview = dismissQuickPreview;
+
 })();
