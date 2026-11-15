@@ -4707,9 +4707,6 @@ function exportDocument(format) {
 
     if (isExplorerOpen) {
       renderChambersExplorerTree();
-      setTimeout(() => {
-        document.getElementById('explorer-search-input')?.focus();
-      }, 100);
     }
   };
 
