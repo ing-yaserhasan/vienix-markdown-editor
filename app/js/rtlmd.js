@@ -5293,25 +5293,43 @@ function exportDocument(format) {
     }
   };
 
-  // تفاعل النقر على ملف داخل مجلد: عرضه في الحجرة رقم 8 المخصصة لعرض ملفات المستكشف
-  window.handleFolderFileClick = function (folderKey, fileId) {
+  // تفاعل النقر على ملف داخل مجلد: عرض معاينة سريعة أو فتحه
+  window.handleFolderFileClick = function (folderKey, fileId, e) {
     if (Date.now() - lastLongPressTriggerTime < 500) return;
+    if (e && e.target && (e.target.closest('.obsidian-item-actions') || e.target.closest('.obsidian-inline-edit-box') || e.target.closest('.tree-action-btn'))) {
+      return;
+    }
+
+    // إذا كانت نافذة المعاينة معروضة بالفعل لهذا الملف المحدد → إغلاقها فوراً (Toggle off)
+    if (window._activePreviewTarget && window._activePreviewTarget.type === 'folder_file' && window._activePreviewTarget.fileId === fileId) {
+      if (typeof window.hideFilePreview === 'function') window.hideFilePreview();
+      return;
+    }
+
     const files = getFolderFiles(folderKey);
     const file = files.find(f => f.id === fileId);
     if (!file) return;
 
-    // إذا كان الملف هو الملف النشط حالياً → فتح مباشر بدون معاينة
-    if (activeExplorerFile && activeExplorerFile.folderKey === folderKey && activeExplorerFile.fileId === fileId && activeChamber >= 8) {
-      openFolderFileDirectly(folderKey, fileId);
-      return;
-    }
+    const formattedNum = file.num ? String(file.num).padStart(2, '0') : '';
+    const displayTitle = formattedNum ? `${formattedNum} • ${file.title}` : file.title;
 
-    // عرض المعاينة السريعة بدلاً من الفتح المباشر
-    const content = file.content || '';
-    const title = file.title || ('ملف ' + (file.num || ''));
-    showQuickPreview(null, title, content, function () {
-      openFolderFileDirectly(folderKey, fileId);
-    });
+    if (typeof window.showFilePreview === 'function') {
+      window.showFilePreview({
+        type: 'folder_file',
+        folderKey: folderKey,
+        fileId: fileId,
+        title: displayTitle,
+        content: file.content || '',
+        onOpen: function () {
+          window.openFolderFileDirectly(folderKey, fileId);
+          if (window.innerWidth <= 768 && typeof window.toggleChambersExplorer === 'function') {
+            window.toggleChambersExplorer(false);
+          }
+        }
+      });
+    } else {
+      window.openFolderFileDirectly(folderKey, fileId);
+    }
   };
 
   // الفتح المباشر للملف (يُستدعى عند النقر على نافذة المعاينة أو عند النقر على الملف النشط)
@@ -6633,7 +6651,7 @@ function exportDocument(format) {
              ondragleave="handleFileDragLeave(event)"
              ondrop="handleFileDrop(event, '${file.id}', '${parentFolderKey}')"
              ondragend="handleFileDragEnd(event)"
-             onclick="handleFolderFileClick('${parentFolderKey}', '${file.id}')"
+             onclick="handleFolderFileClick('${parentFolderKey}', '${file.id}', event)"
              oncontextmenu="handleFolderFileContextMenu(event, '${parentFolderKey}', '${file.id}')">
           <span class="obsidian-item-num" title="ملف رقم ${file.num}">${formattedNum}</span>
           <span class="obsidian-dot ${isFilled ? 'filled' : 'empty'}" title="${isFilled ? 'محتوى مكتوب' : 'فارغ'}"></span>
@@ -6767,22 +6785,39 @@ function exportDocument(format) {
 
   window.handleTreeItemClick = function (e, chNum) {
     if (Date.now() - lastLongPressTriggerTime < 500) return;
-    if (e.target.closest('.obsidian-item-actions') || e.target.closest('.obsidian-inline-edit-box') || e.target.closest('.tree-action-btn')) {
+    if (e && e.target && (e.target.closest('.obsidian-item-actions') || e.target.closest('.obsidian-inline-edit-box') || e.target.closest('.tree-action-btn'))) {
       return;
     }
-    // إذا كانت الحجرة نشطة بالفعل → فتح مباشر بدون معاينة
-    if (chNum === activeChamber) {
-      window.switchChamber(chNum);
-      renderChambersExplorerTree();
+
+    // إذا كانت نافذة المعاينة معروضة بالفعل لهذا الملف المحدد → إغلاقها فوراً (Toggle off)
+    if (window._activePreviewTarget && window._activePreviewTarget.type === 'chamber' && window._activePreviewTarget.id === chNum) {
+      if (typeof window.hideFilePreview === 'function') window.hideFilePreview();
       return;
     }
-    // عرض المعاينة السريعة بدلاً من الفتح المباشر
+
     const content = getChamberContent(chNum);
-    const title = getChamberTitle(chNum);
-    showQuickPreview(e, title, content, function () {
+    const rawTitle = getChamberTitle(chNum);
+    const formattedNum = String(chNum).padStart(2, '0');
+    const displayTitle = `${formattedNum} • ${rawTitle}`;
+
+    if (typeof window.showFilePreview === 'function') {
+      window.showFilePreview({
+        type: 'chamber',
+        id: chNum,
+        title: displayTitle,
+        content: content,
+        onOpen: function () {
+          window.switchChamber(chNum);
+          renderChambersExplorerTree();
+          if (window.innerWidth <= 768 && typeof window.toggleChambersExplorer === 'function') {
+            window.toggleChambersExplorer(false);
+          }
+        }
+      });
+    } else {
       window.switchChamber(chNum);
       renderChambersExplorerTree();
-    });
+    }
   };
 
   // ==========================================
@@ -15701,167 +15736,161 @@ function exportDocument(format) {
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
-  // Quick Preview System — نظام المعاينة السريعة للملفات في المستكشف
-  // نقرة واحدة على اسم الملف → نافذة مصغرة لمعاينة المحتوى
-  // نقرة على النافذة → فتح الملف بالكامل
-  // نقرة خارج النافذة أو على ملف آخر → إغلاق المعاينة
+  // Vienix Quick Preview System — نظام المعاينة السريعة للملفات في المستكشف
+  // نقرة واحدة على اسم الملف → نافذة مصغرة أنيقة لمعاينة المحتوى
+  // نقرة ثانية على نفس الملف أو في أي مكان آخر → إغلاق النافذة
+  // نقرة على نافذة المعاينة نفسها → الدخول للملف وفتحه في المحرر
   // ══════════════════════════════════════════════════════════════════════════════
 
-  let quickPreviewPopup = null;
-  let quickPreviewOverlay = null;
-  let quickPreviewOpenCallback = null;
-  let quickPreviewIsOpen = false;
+  window._activePreviewTarget = null;
+  let previewCardEl = null;
 
-  function ensureQuickPreviewElements() {
-    if (!quickPreviewOverlay) {
-      quickPreviewOverlay = document.createElement('div');
-      quickPreviewOverlay.className = 'vienix-quick-preview-overlay';
-      quickPreviewOverlay.addEventListener('click', function (e) {
-        e.preventDefault();
+  function ensurePreviewCard() {
+    if (previewCardEl && document.body.contains(previewCardEl)) return previewCardEl;
+
+    const drawer = document.getElementById('explorer-drawer') || document.body;
+    let card = document.getElementById('vienix-quick-preview-card');
+    if (!card) {
+      card = document.createElement('div');
+      card.id = 'vienix-quick-preview-card';
+      card.className = 'vienix-quick-preview';
+      drawer.appendChild(card);
+    }
+    previewCardEl = card;
+
+    // النقر على النافذة نفسها → الدخول للملف وفتحه
+    card.onclick = function (e) {
+      // إذا كان النقر على زر الإغلاق ✕
+      if (e.target.closest('.vienix-qp-close-btn')) {
         e.stopPropagation();
-        dismissQuickPreview();
-      });
-      document.body.appendChild(quickPreviewOverlay);
-    }
-    if (!quickPreviewPopup) {
-      quickPreviewPopup = document.createElement('div');
-      quickPreviewPopup.className = 'vienix-quick-preview';
-      quickPreviewPopup.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        // النقر على النافذة → فتح الملف بالكامل
-        if (typeof quickPreviewOpenCallback === 'function') {
-          const cb = quickPreviewOpenCallback;
-          dismissQuickPreview();
-          cb();
-        }
-      });
-      // منع انتشار التمرير خارج النافذة
-      quickPreviewPopup.addEventListener('touchmove', function (e) {
-        e.stopPropagation();
-      }, { passive: true });
-      document.body.appendChild(quickPreviewPopup);
-    }
-  }
-
-  function showQuickPreview(event, title, content, onOpenCallback) {
-    console.log('[QuickPreview] showQuickPreview called:', title, 'content length:', (content||'').length);
-    // إغلاق أي معاينة مفتوحة أولاً
-    if (quickPreviewIsOpen) {
-      dismissQuickPreview(true);
-    }
-
-    ensureQuickPreviewElements();
-    quickPreviewOpenCallback = onOpenCallback;
-
-    // أيقونة الملف SVG
-    const fileIconSvg = '<svg class="preview-file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>';
-
-    // تصيير المحتوى
-    let bodyHTML = '';
-    const trimmedContent = (content || '').trim();
-
-    if (trimmedContent.length === 0) {
-      bodyHTML = '<div class="vienix-quick-preview-empty">' +
-                   '<span class="empty-icon">📄</span>' +
-                   '<span class="empty-text">هذا الملف فارغ</span>' +
-                 '</div>';
-    } else {
-      // تصيير الماركداون مع اقتطاع المحتوى الطويل لأداء أسرع
-      const maxPreviewChars = 2000;
-      let previewText = trimmedContent;
-      let isTruncated = false;
-      if (previewText.length > maxPreviewChars) {
-        previewText = previewText.substring(0, maxPreviewChars);
-        isTruncated = true;
+        window.hideFilePreview();
+        return;
       }
-
-      if (typeof marked !== 'undefined') {
-        try {
-          bodyHTML = marked.parse(previewText);
-        } catch (e) {
-          bodyHTML = '<pre style="white-space:pre-wrap;direction:auto;">' + escapeHtml(previewText) + '</pre>';
-        }
-      } else {
-        bodyHTML = '<pre style="white-space:pre-wrap;direction:auto;">' + escapeHtml(previewText) + '</pre>';
-      }
-
-      if (isTruncated) {
-        bodyHTML += '<div style="text-align:center;padding:6px 0 2px;color:#94a3b8;font-size:0.72rem;font-style:italic;">… اضغط لعرض الملف كاملاً</div>';
-      }
-    }
-
-    quickPreviewPopup.innerHTML =
-      '<div class="vienix-quick-preview-header">' +
-        fileIconSvg +
-        '<span class="preview-file-title" dir="auto">' + escapeHtml(title || 'ملف') + '</span>' +
-        '<span class="preview-open-hint">اضغط للفتح ←</span>' +
-      '</div>' +
-      '<div class="vienix-quick-preview-body" dir="auto">' + bodyHTML + '</div>';
-
-    // تحديد موضع النافذة: وسط الشاشة عمودياً وأفقياً
-    const vpW = window.innerWidth;
-    const vpH = window.innerHeight;
-    const popupW = Math.min(vpW * 0.88, 380);
-    const popupH = Math.min(vpH * 0.55, 340);
-
-    quickPreviewPopup.style.width = popupW + 'px';
-    quickPreviewPopup.style.maxHeight = popupH + 'px';
-    quickPreviewPopup.style.left = Math.max(8, (vpW - popupW) / 2) + 'px';
-    quickPreviewPopup.style.top = Math.max(40, (vpH - popupH) / 2) + 'px';
-
-    // إظهار بتأثير حركي سلس
-    quickPreviewOverlay.style.display = 'block';
-    quickPreviewPopup.style.display = 'flex';
-
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () {
-        quickPreviewOverlay.classList.add('visible');
-        quickPreviewPopup.classList.add('visible');
-      });
-    });
-
-    quickPreviewIsOpen = true;
-
-    // إغلاق بمفتاح Escape
-    document.addEventListener('keydown', quickPreviewEscHandler);
-  }
-  window.showQuickPreview = showQuickPreview;
-
-  function quickPreviewEscHandler(e) {
-    if (e.key === 'Escape' && quickPreviewIsOpen) {
-      e.preventDefault();
       e.stopPropagation();
-      dismissQuickPreview();
-    }
+      if (window._activePreviewTarget && typeof window._activePreviewTarget.onOpen === 'function') {
+        const onOpen = window._activePreviewTarget.onOpen;
+        window.hideFilePreview();
+        onOpen();
+      }
+    };
+
+    return previewCardEl;
   }
 
-  function dismissQuickPreview(instant) {
-    if (!quickPreviewIsOpen) return;
-    quickPreviewIsOpen = false;
-    quickPreviewOpenCallback = null;
-
-    document.removeEventListener('keydown', quickPreviewEscHandler);
-
-    if (quickPreviewOverlay) {
-      quickPreviewOverlay.classList.remove('visible');
-    }
-    if (quickPreviewPopup) {
-      quickPreviewPopup.classList.remove('visible');
+  function renderPreviewBodyHTML(rawText) {
+    const text = (rawText || '').trim();
+    if (!text) {
+      return `
+        <div class="vienix-qp-empty">
+          <span class="vienix-qp-empty-icon">📄</span>
+          <span>الملف فارغ حالياً</span>
+          <span class="vienix-qp-empty-sub">انقر هنا لفتح الملف والبدء بالكتابة</span>
+        </div>
+      `;
     }
 
-    if (instant) {
-      if (quickPreviewOverlay) quickPreviewOverlay.style.display = 'none';
-      if (quickPreviewPopup) { quickPreviewPopup.style.display = 'none'; quickPreviewPopup.innerHTML = ''; }
+    // اقتصاص المحتوى للعرض السريع (أول 1500 حرف لتجنب أي بطء)
+    const isTruncated = text.length > 1500;
+    let snippet = isTruncated ? text.slice(0, 1500) : text;
+
+    // حماية ضد سلاسل base64 الضخمة
+    snippet = snippet.replace(/!\[([^\]]*)\]\(data:image\/[^)]+\)/g, '![$1]([صورة كبيرة])');
+
+    let html = '';
+    if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
+      try {
+        html = marked.parse(snippet);
+      } catch (_) {
+        html = escapeHtml(snippet).replace(/\n/g, '<br>');
+      }
     } else {
-      setTimeout(function () {
-        if (!quickPreviewIsOpen) {
-          if (quickPreviewOverlay) quickPreviewOverlay.style.display = 'none';
-          if (quickPreviewPopup) { quickPreviewPopup.style.display = 'none'; quickPreviewPopup.innerHTML = ''; }
-        }
-      }, 220);
+      html = escapeHtml(snippet).replace(/\n/g, '<br>');
     }
+
+    if (isTruncated) {
+      html += '<div class="vienix-qp-more">... انقر هنا لعرض الملف كاملاً في المحرر</div>';
+    }
+
+    return html;
   }
-  window.dismissQuickPreview = dismissQuickPreview;
+
+  window.showFilePreview = function (targetInfo) {
+    if (!targetInfo) return;
+    const card = ensurePreviewCard();
+    window._activePreviewTarget = targetInfo;
+
+    const fileIconSvg = `
+      <svg class="preview-file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <polyline points="10 9 9 9 8 9"/>
+      </svg>
+    `;
+
+    const bodyHtml = renderPreviewBodyHTML(targetInfo.content);
+
+    card.innerHTML = `
+      <div class="vienix-quick-preview-header">
+        ${fileIconSvg}
+        <span class="preview-file-title" dir="auto" title="${escapeHtml(targetInfo.title || '')}">${escapeHtml(targetInfo.title || 'ملف')}</span>
+        <span class="preview-open-hint">انقر للفتح ↗</span>
+        <button type="button" class="vienix-qp-close-btn" title="إغلاق المعاينة">✕</button>
+      </div>
+      <div class="vienix-quick-preview-body" dir="auto">
+        ${bodyHtml}
+      </div>
+    `;
+
+    card.style.display = 'flex';
+    requestAnimationFrame(() => {
+      if (window._activePreviewTarget) {
+        card.classList.add('visible');
+      }
+    });
+  };
+
+  window.hideFilePreview = function () {
+    window._activePreviewTarget = null;
+    if (previewCardEl) {
+      previewCardEl.classList.remove('visible');
+      setTimeout(() => {
+        if (!window._activePreviewTarget && previewCardEl) {
+          previewCardEl.style.display = 'none';
+          previewCardEl.innerHTML = '';
+        }
+      }, 180);
+    }
+  };
+
+  // إغلاق المعاينة عند النقر في أي مكان خارج نافذة المعاينة وخارج عناصر الملفات
+  document.addEventListener('pointerdown', function (e) {
+    if (!window._activePreviewTarget || !previewCardEl) return;
+    // إذا كان النقر داخل نافذة المعاينة
+    if (previewCardEl.contains(e.target)) return;
+    // إذا كان النقر على عنصر ملف، معالج الملف نفسه سيتولى الإغلاق أو التبديل
+    if (e.target.closest('.obsidian-tree-item')) return;
+    // في أي مكان آخر -> إغلاق المعاينة فوراً
+    window.hideFilePreview();
+  }, true);
+
+  // إغلاق المعاينة عند الضغط على Escape
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && window._activePreviewTarget) {
+      window.hideFilePreview();
+    }
+  });
+
+  // توافق رجعي (Legacy aliases)
+  window.showQuickPreview = function (event, title, content, onOpenCallback) {
+    window.showFilePreview({
+      type: 'generic',
+      title: title,
+      content: content,
+      onOpen: onOpenCallback
+    });
+  };
+  window.dismissQuickPreview = window.hideFilePreview;
 
 })();
