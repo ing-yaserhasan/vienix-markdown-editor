@@ -11501,19 +11501,19 @@ body:not(.wysiwyg-active) .image-resizer-wrapper.is-emoji-wrapper img,
   }
 }
 
-/* شاشات الموبايل والأجهزة اللوحية (الجهة اليسرى كما في الصورة 3 مع كشف قائمة الملفات على اليمين) */
+/* شاشات الموبايل والأجهزة اللوحية (الجهة اليسرى كما في الإطار الأخضر تماماً مع كشف قائمة الملفات على اليمين) */
 @media (max-width: 768px) {
   .vienix-quick-preview {
-    top: 86px;
+    top: 84px;
     left: 8px;
     right: auto;
-    width: min(50vw, 225px);
-    max-height: min(44vh, 320px);
-    border-radius: 12px;
+    width: min(50vw, 215px);
+    max-height: min(28vh, 205px);
+    border-radius: 10px;
     box-shadow:
-      0 12px 36px rgba(0, 0, 0, 0.22),
-      0 3px 12px rgba(0, 0, 0, 0.1),
-      0 0 0 1px rgba(0, 0, 0, 0.05);
+      0 12px 32px rgba(0, 0, 0, 0.22),
+      0 3px 10px rgba(0, 0, 0, 0.1),
+      0 0 0 1px rgba(0, 0, 0, 0.06);
     transform: scale(0.95);
   }
 
@@ -11524,34 +11524,34 @@ body:not(.wysiwyg-active) .image-resizer-wrapper.is-emoji-wrapper img,
   }
 
   .vienix-quick-preview-header {
-    padding: 6px 10px;
-    min-height: 36px;
-    gap: 6px;
+    padding: 5px 8px;
+    min-height: 32px;
+    gap: 5px;
   }
 
   .vienix-quick-preview-header .preview-file-icon {
-    width: 15px;
-    height: 15px;
+    width: 14px;
+    height: 14px;
   }
 
   .vienix-quick-preview-header .preview-file-title {
-    font-size: 0.76rem;
+    font-size: 0.73rem;
   }
 
   .vienix-quick-preview-header .preview-open-hint {
-    font-size: 0.62rem;
-    padding: 2px 6px;
+    font-size: 0.58rem;
+    padding: 1px 5px;
   }
 
   .vienix-quick-preview-header .vienix-qp-close-btn {
     padding: 2px 4px;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .vienix-quick-preview-body {
-    padding: 8px 10px;
-    font-size: 0.74rem;
-    line-height: 1.5;
+    padding: 6px 8px;
+    font-size: 0.71rem;
+    line-height: 1.45;
   }
 }
 
