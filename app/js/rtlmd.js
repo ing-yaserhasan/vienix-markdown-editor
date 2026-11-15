@@ -15745,6 +15745,7 @@ function exportDocument(format) {
   }
 
   function showQuickPreview(event, title, content, onOpenCallback) {
+    console.log('[QuickPreview] showQuickPreview called:', title, 'content length:', (content||'').length);
     // إغلاق أي معاينة مفتوحة أولاً
     if (quickPreviewIsOpen) {
       dismissQuickPreview(true);
