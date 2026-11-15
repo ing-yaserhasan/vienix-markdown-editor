@@ -11465,15 +11465,8 @@ body:not(.wysiwyg-active) .image-resizer-wrapper.is-emoji-wrapper img,
 .vienix-quick-preview {
   position: fixed;
   z-index: 100050 !important;
-  width: min(88vw, 360px);
-  max-height: min(52vh, 360px);
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 14px;
-  box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.18),
-    0 4px 16px rgba(0, 0, 0, 0.08),
-    0 0 0 1px rgba(0, 0, 0, 0.04);
   overflow: hidden;
   display: none;
   flex-direction: column;
@@ -11483,34 +11476,82 @@ body:not(.wysiwyg-active) .image-resizer-wrapper.is-emoji-wrapper img,
   cursor: pointer;
   direction: rtl;
   text-align: right;
-  top: 18vh;
-  left: 50%;
-  transform: translateX(-50%) scale(0.94);
 }
 
+/* شاشات اللابتوب والكمبيوتر الكبيرة (كما في الصورة 2 دون أي تغيير) */
 @media (min-width: 769px) {
   .vienix-quick-preview {
     top: 14vh;
     left: auto;
     right: 332px;
+    width: min(88vw, 360px);
+    max-height: min(52vh, 360px);
+    border-radius: 14px;
+    box-shadow:
+      0 16px 48px rgba(0, 0, 0, 0.18),
+      0 4px 16px rgba(0, 0, 0, 0.08),
+      0 0 0 1px rgba(0, 0, 0, 0.04);
     transform: scale(0.94);
   }
-}
 
-.vienix-quick-preview.visible {
-  display: flex !important;
-  opacity: 1;
-}
-
-@media (max-width: 768px) {
   .vienix-quick-preview.visible {
-    transform: translateX(-50%) scale(1);
+    display: flex !important;
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
-@media (min-width: 769px) {
+/* شاشات الموبايل والأجهزة اللوحية (الجهة اليسرى كما في الصورة 3 مع كشف قائمة الملفات على اليمين) */
+@media (max-width: 768px) {
+  .vienix-quick-preview {
+    top: 86px;
+    left: 8px;
+    right: auto;
+    width: min(50vw, 225px);
+    max-height: min(44vh, 320px);
+    border-radius: 12px;
+    box-shadow:
+      0 12px 36px rgba(0, 0, 0, 0.22),
+      0 3px 12px rgba(0, 0, 0, 0.1),
+      0 0 0 1px rgba(0, 0, 0, 0.05);
+    transform: scale(0.95);
+  }
+
   .vienix-quick-preview.visible {
+    display: flex !important;
+    opacity: 1;
     transform: scale(1);
+  }
+
+  .vienix-quick-preview-header {
+    padding: 6px 10px;
+    min-height: 36px;
+    gap: 6px;
+  }
+
+  .vienix-quick-preview-header .preview-file-icon {
+    width: 15px;
+    height: 15px;
+  }
+
+  .vienix-quick-preview-header .preview-file-title {
+    font-size: 0.76rem;
+  }
+
+  .vienix-quick-preview-header .preview-open-hint {
+    font-size: 0.62rem;
+    padding: 2px 6px;
+  }
+
+  .vienix-quick-preview-header .vienix-qp-close-btn {
+    padding: 2px 4px;
+    font-size: 13px;
+  }
+
+  .vienix-quick-preview-body {
+    padding: 8px 10px;
+    font-size: 0.74rem;
+    line-height: 1.5;
   }
 }
 
