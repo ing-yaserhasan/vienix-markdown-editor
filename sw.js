@@ -91,15 +91,47 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const request = event.request;
 
-  // Only handle GET requests; pass POST/PUT/etc. straight through
+  // 1. Only handle standard HTTP/HTTPS GET requests; pass everything else straight to network
   if (request.method !== 'GET') {
     return;
   }
 
   const url = new URL(request.url);
 
-  // Bypass API calls (Gemini AI, Google Drive OAuth, etc.)
-  if (BYPASS_DOMAINS.some(domain => url.hostname.includes(domain))) {
+  // 2. Ignore non-http(s) schemes (e.g. blob:, data:, chrome-extension:)
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    return;
+  }
+
+  // 3. COMPLETE ISOLATION: Never touch or cache Google Drive, Google APIs, OAuth, or Gemini AI
+  // This guarantees 100% zero interference with cloud uploads, downloads, syncing, or file operations
+  if (
+    url.hostname.endsWith('googleapis.com') ||
+    url.hostname.endsWith('google.com') ||
+    url.hostname.endsWith('googleusercontent.com')
+  ) {
+    return;
+  }
+
+  // 4. Handle Third-Party Domains: Only Google Fonts are cached for offline rendering; ignore all others
+  if (url.origin !== self.location.origin) {
+    if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+      event.respondWith(
+        caches.match(request).then((cachedResponse) => {
+          const fetchPromise = fetch(request).then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200) {
+              const responseClone = networkResponse.clone();
+              caches.open(RUNTIME_CACHE).then((cache) => {
+                cache.put(request, responseClone);
+              });
+            }
+            return networkResponse;
+          }).catch(() => null);
+
+          return cachedResponse || fetchPromise;
+        })
+      );
+    }
     return;
   }
 
@@ -126,27 +158,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // B. Google Fonts & CDNs: Stale-While-Revalidate with Runtime Cache
-  if (url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com')) {
-    event.respondWith(
-      caches.match(request).then((cachedResponse) => {
-        const fetchPromise = fetch(request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const responseClone = networkResponse.clone();
-            caches.open(RUNTIME_CACHE).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return networkResponse;
-        }).catch(() => null);
-
-        return cachedResponse || fetchPromise;
-      })
-    );
-    return;
-  }
-
-  // C. Static App Assets (CSS, JS, Fonts, Images): Cache First with Background Update
+  // B. Local App Static Assets (CSS, JS, Fonts, Images, Icons)
   event.respondWith(
     caches.match(request, { ignoreSearch: true }).then((cachedResponse) => {
       const fetchPromise = fetch(request)
