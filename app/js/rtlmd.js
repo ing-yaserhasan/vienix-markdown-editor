@@ -83,7 +83,7 @@
     quickPreviewSize: 'compact'
   };
 
-  var vienixSettings = {};
+  var vienixSettings = Object.assign({}, SETTINGS_DEFAULTS);
   window.vienixSettings = vienixSettings;
   window._activeUtterances = []; // Prevent Chromium Garbage Collection from dropping speech mid-sentence
 
@@ -106,6 +106,7 @@
     } catch (e) {
       vienixSettings = Object.assign({}, SETTINGS_DEFAULTS);
     }
+    window.vienixSettings = vienixSettings;
   }
 
   function saveSettings() {
@@ -118,6 +119,7 @@
 
   window.applySetting = function (key, value) {
     vienixSettings[key] = value;
+    window.vienixSettings = vienixSettings;
     saveSettings();
     applySettingsToUI(key, value);
   };
@@ -434,6 +436,12 @@
     }
     if (typeof updatePronunciationQuickButtons === 'function') {
       updatePronunciationQuickButtons();
+    }
+    if (typeof updateQuickPreviewToggleBtnUI === 'function') {
+      updateQuickPreviewToggleBtnUI(vienixSettings.quickPreviewEnabled !== false);
+    }
+    if (typeof updateQuickPreviewSizeUI === 'function') {
+      updateQuickPreviewSizeUI(vienixSettings.quickPreviewSize || 'compact');
     }
   }
 
@@ -5317,7 +5325,7 @@ function exportDocument(format) {
     }
 
     // إذا كانت ميزة المعاينة السريعة معطلة بالمفتاح → فتح الملف مباشرة كما كان في السابق تماماً
-    const isQpEnabled = window.vienixSettings ? (window.vienixSettings.quickPreviewEnabled !== false) : true;
+    const isQpEnabled = (typeof vienixSettings !== 'undefined' ? vienixSettings.quickPreviewEnabled : (window.vienixSettings && window.vienixSettings.quickPreviewEnabled)) !== false;
     if (!isQpEnabled) {
       window.openFolderFileDirectly(folderKey, fileId);
       return;
@@ -6804,7 +6812,7 @@ function exportDocument(format) {
 
     treeEl.innerHTML = treeHTML;
     if (typeof updateQuickPreviewToggleBtnUI === 'function') {
-      const isQpOn = window.vienixSettings ? (window.vienixSettings.quickPreviewEnabled !== false) : true;
+      const isQpOn = (typeof vienixSettings !== 'undefined' ? vienixSettings.quickPreviewEnabled : (window.vienixSettings && window.vienixSettings.quickPreviewEnabled)) !== false;
       updateQuickPreviewToggleBtnUI(isQpOn);
     }
   }
@@ -6817,7 +6825,7 @@ function exportDocument(format) {
     }
 
     // إذا كانت ميزة المعاينة السريعة معطلة بالمفتاح → فتح الملف مباشرة كما كان في السابق تماماً
-    const isQpEnabled = window.vienixSettings ? (window.vienixSettings.quickPreviewEnabled !== false) : true;
+    const isQpEnabled = (typeof vienixSettings !== 'undefined' ? vienixSettings.quickPreviewEnabled : (window.vienixSettings && window.vienixSettings.quickPreviewEnabled)) !== false;
     if (!isQpEnabled) {
       window.switchChamber(chNum);
       renderChambersExplorerTree();
@@ -15802,7 +15810,7 @@ function exportDocument(format) {
 
   function updateCardSizeClass(card) {
     if (!card) return;
-    const size = (window.vienixSettings && window.vienixSettings.quickPreviewSize) || 'compact';
+    const size = (typeof vienixSettings !== 'undefined' && vienixSettings.quickPreviewSize) || (window.vienixSettings && window.vienixSettings.quickPreviewSize) || 'compact';
     card.classList.remove('size-compact', 'size-medium', 'size-full');
     card.classList.add('size-' + size);
   }
@@ -15949,11 +15957,14 @@ function exportDocument(format) {
   });
 
   window.toggleQuickPreviewFeature = function (checked) {
-    const next = typeof checked === 'boolean' ? checked : !(window.vienixSettings && window.vienixSettings.quickPreviewEnabled !== false);
+    const isCurrentlyOn = (typeof vienixSettings !== 'undefined' ? vienixSettings.quickPreviewEnabled : (window.vienixSettings && window.vienixSettings.quickPreviewEnabled)) !== false;
+    const next = typeof checked === 'boolean' ? checked : !isCurrentlyOn;
     if (typeof window.applySetting === 'function') {
       window.applySetting('quickPreviewEnabled', next);
-    } else if (window.vienixSettings) {
-      window.vienixSettings.quickPreviewEnabled = next;
+    } else {
+      if (typeof vienixSettings !== 'undefined') vienixSettings.quickPreviewEnabled = next;
+      if (window.vienixSettings) window.vienixSettings.quickPreviewEnabled = next;
+      if (typeof saveSettings === 'function') saveSettings();
     }
     updateQuickPreviewToggleBtnUI(next);
     if (!next && typeof window.hideFilePreview === 'function') {
