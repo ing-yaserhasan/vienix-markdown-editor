@@ -15948,9 +15948,8 @@ function exportDocument(format) {
     }
   });
 
-  window.toggleQuickPreviewFeature = function () {
-    const isCurrentlyOn = window.vienixSettings ? (window.vienixSettings.quickPreviewEnabled !== false) : true;
-    const next = !isCurrentlyOn;
+  window.toggleQuickPreviewFeature = function (checked) {
+    const next = typeof checked === 'boolean' ? checked : !(window.vienixSettings && window.vienixSettings.quickPreviewEnabled !== false);
     if (typeof window.applySetting === 'function') {
       window.applySetting('quickPreviewEnabled', next);
     } else if (window.vienixSettings) {
@@ -15970,29 +15969,15 @@ function exportDocument(format) {
   };
 
   function updateQuickPreviewToggleBtnUI(enabled) {
-    const btn = document.getElementById('btn-toggle-quick-preview');
-    if (!btn) return;
     const isOn = enabled !== false;
-    btn.classList.toggle('is-active', isOn);
-    btn.classList.toggle('is-disabled', !isOn);
-    if (isOn) {
-      btn.title = 'المعاينة السريعة للملفات: مفعّلة (انقر للتعطيل)';
-      btn.innerHTML = `
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-          <circle cx="12" cy="12" r="3"/>
-        </svg>
-      `;
-    } else {
-      btn.title = 'المعاينة السريعة للملفات: معطّلة (انقر للتفعيل)';
-      btn.innerHTML = `
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-          <line x1="1" y1="1" x2="23" y2="23"/>
-        </svg>
-      `;
+    const input = document.getElementById('btn-toggle-quick-preview');
+    if (input) {
+      input.checked = isOn;
     }
-
+    const wrap = document.getElementById('wrap-toggle-quick-preview');
+    if (wrap) {
+      wrap.title = isOn ? 'المعاينة السريعة للملفات: مفعّلة (انقر للتعطيل)' : 'المعاينة السريعة للملفات: معطّلة (انقر للتفعيل)';
+    }
     const chk = document.getElementById('s-quick-preview-enabled');
     if (chk) chk.checked = isOn;
   }

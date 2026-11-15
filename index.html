@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700&family=Cairo:wght@400;600;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/earlyaccess/droidarabicnaskh.css">
   <link rel="stylesheet" href="assets/fonts/tajawal.css">
-  <link rel="stylesheet" href="app/css/style.css?v=obsidian70">
+  <link rel="stylesheet" href="app/css/style.css?v=obsidian72">
   <link rel="stylesheet" href="app/css/classic.css?v=obsidian4">
 </head>
 <body>
@@ -1156,12 +1156,10 @@
         <span class="obsidian-app-title">المستكشف</span>
       </div>
       <div class="explorer-header-actions obsidian-actions">
-        <button type="button" class="obsidian-tool-btn is-active" id="btn-toggle-quick-preview" onclick="toggleQuickPreviewFeature()" title="المعاينة السريعة للملفات: مفعّلة (انقر للتعطيل)">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-            <circle cx="12" cy="12" r="3"/>
-          </svg>
-        </button>
+        <label class="obsidian-toggle-switch" id="wrap-toggle-quick-preview" title="المعاينة السريعة للملفات: مفعّلة (انقر للتعطيل)">
+          <input type="checkbox" id="btn-toggle-quick-preview" checked onchange="toggleQuickPreviewFeature(this.checked)">
+          <span class="obsidian-toggle-slider"></span>
+        </label>
         <button type="button" class="obsidian-tool-btn" id="btn-new-file-header" onclick="openNewFileModal()" title="إنشاء ملف جديد في المجلد">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
         </button>
@@ -2634,7 +2632,7 @@
   <script src="app/js/vienix-idb.js?v=2.2"></script>
 
   <!-- Application Main Script -->
-  <script src="app/js/rtlmd.js?v=obsidian81"></script>
+  <script src="app/js/rtlmd.js?v=obsidian83"></script>
 
   <!-- Storage Health Monitor & Full Workspace Backup Module (Phase 0) -->
   <script src="app/js/storage-backup.js?v=2.3"></script>
