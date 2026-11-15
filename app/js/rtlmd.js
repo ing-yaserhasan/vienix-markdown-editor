@@ -4702,6 +4702,7 @@ function exportDocument(format) {
   document.addEventListener('mousedown', (e) => {
     if (!isExplorerOpen) return;
     if (e.target.closest('#explorer-drawer') || 
+        e.target.closest('#vienix-quick-preview-card') ||
         e.target.closest('#btn-open-explorer-header') || 
         e.target.closest('#btn-chambers-manager') ||
         e.target.closest('#chamber-context-menu') ||
@@ -15748,13 +15749,14 @@ function exportDocument(format) {
   function ensurePreviewCard() {
     if (previewCardEl && document.body.contains(previewCardEl)) return previewCardEl;
 
-    const drawer = document.getElementById('explorer-drawer') || document.body;
     let card = document.getElementById('vienix-quick-preview-card');
     if (!card) {
       card = document.createElement('div');
       card.id = 'vienix-quick-preview-card';
       card.className = 'vienix-quick-preview';
-      drawer.appendChild(card);
+      document.body.appendChild(card);
+    } else if (card.parentElement !== document.body) {
+      document.body.appendChild(card);
     }
     previewCardEl = card;
 
@@ -15844,11 +15846,10 @@ function exportDocument(format) {
     `;
 
     card.style.display = 'flex';
-    requestAnimationFrame(() => {
-      if (window._activePreviewTarget) {
-        card.classList.add('visible');
-      }
-    });
+    void card.offsetWidth;
+    if (window._activePreviewTarget) {
+      card.classList.add('visible');
+    }
   };
 
   window.hideFilePreview = function () {

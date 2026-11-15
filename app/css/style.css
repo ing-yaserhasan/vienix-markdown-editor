@@ -3656,12 +3656,14 @@ body.wysiwyg-active .image-resizer-wrapper.active .resizer-handle {
   min-height: 30px;
 }
 
-.obsidian-tree-item:hover {
-  background: rgba(0, 0, 0, 0.04);
-}
+@media (hover: hover) and (pointer: fine) {
+  .obsidian-tree-item:hover {
+    background: rgba(0, 0, 0, 0.04);
+  }
 
-[data-theme="dark"] .obsidian-tree-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  [data-theme="dark"] .obsidian-tree-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
 }
 
 /* Ø³Ø­Ø¨ ÙˆØ¥ÙÙ„Ø§Øª Ø§Ù„Ù…Ù„ÙØ§Øª Ù„ØªØºÙŠÙŠØ± ØªØ±ØªÙŠØ¨Ù‡Ø§ ÙˆÙ…Ø¬Ù„Ø¯Ù‡Ø§ Drag and Drop */
@@ -3857,13 +3859,21 @@ body.wysiwyg-active .image-resizer-wrapper.active .resizer-handle {
   align-items: center;
   gap: 2px;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.12s ease;
   flex-shrink: 0;
 }
 
-.obsidian-tree-item:hover .obsidian-item-actions,
+@media (hover: hover) and (pointer: fine) {
+  .obsidian-tree-item:hover .obsidian-item-actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 .obsidian-tree-item.active .obsidian-item-actions {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .obsidian-action-btn {
