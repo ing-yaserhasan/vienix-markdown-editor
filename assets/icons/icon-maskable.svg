@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Gradient for Full Bleed Maskable -->
+    <linearGradient id="bgGradientMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#090d16" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+
+    <!-- Ambient Glow Gradient -->
+    <radialGradient id="ambientGlowMask" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.3" />
+      <stop offset="50%" stop-color="#6366f1" stop-opacity="0.15" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Card Background Gradient -->
+    <linearGradient id="cardGradMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.95" />
+    </linearGradient>
+
+    <!-- Brand Cyan-to-Indigo Gradient -->
+    <linearGradient id="brandGradMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="35%" stop-color="#3b82f6" />
+      <stop offset="70%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+
+    <!-- Arrow Gradient -->
+    <linearGradient id="arrowGradMask" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#60a5fa" />
+    </linearGradient>
+
+    <linearGradient id="innerBorderGradMask" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.08" />
+    </linearGradient>
+
+    <!-- Soft Drop Shadow Filter -->
+    <filter id="dropShadowMask" x="-10%" y="-10%" width="125%" height="125%">
+      <feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#000000" flood-opacity="0.6" />
+    </filter>
+  </defs>
+
+  <!-- Full Bleed Background for Adaptive/Maskable Icons -->
+  <rect width="512" height="512" fill="url(#bgGradientMask)" />
+  <circle cx="256" cy="220" r="230" fill="url(#ambientGlowMask)" />
+
+  <!-- Inner Content (strictly inside safe zone diameter 410px) -->
+  <g transform="translate(0, 0)">
+    <!-- Inner Glass Card -->
+    <g filter="url(#dropShadowMask)">
+      <rect x="72" y="72" width="368" height="368" rx="44" fill="url(#cardGradMask)" stroke="url(#innerBorderGradMask)" stroke-width="2" />
+    </g>
+
+    <!-- Top Decorative Header / Vienix V Emblem -->
+    <g id="vienix-accent">
+      <path d="M 234 116 L 256 142 L 278 116" fill="none" stroke="url(#brandGradMask)" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round" />
+      <circle cx="256" cy="108" r="3.5" fill="#38bdf8" />
+    </g>
+
+    <!-- Markdown Core Emblem -->
+    <g id="markdown-symbol">
+      <!-- The "M" -->
+      <path d="M 132 324 
+               V 198 
+               C 132 191, 138 185, 146 185 
+               C 151 185, 156 188, 159 192 
+               L 199 244 
+               L 239 192 
+               C 242 188, 247 185, 252 185 
+               C 260 185, 266 191, 266 198 
+               V 324"
+            fill="none" 
+            stroke="url(#brandGradMask)" 
+            stroke-width="20" 
+            stroke-linecap="round" 
+            stroke-linejoin="round" />
+
+      <!-- Divider Bar -->
+      <line x1="298" y1="188" x2="298" y2="324" stroke="#334155" stroke-width="3" stroke-linecap="round" stroke-dasharray="4 8" />
+
+      <!-- The Down Arrow "↓" -->
+      <line x1="356" y1="188" x2="356" y2="306" stroke="url(#arrowGradMask)" stroke-width="20" stroke-linecap="round" />
+      <path d="M 322 278 L 356 322 L 390 278" 
+            fill="none" 
+            stroke="url(#arrowGradMask)" 
+            stroke-width="20" 
+            stroke-linecap="round" 
+            stroke-linejoin="round" />
+    </g>
+
+    <!-- Bottom Dots -->
+    <g id="bottom-detail" opacity="0.8">
+      <circle cx="238" cy="386" r="3" fill="#38bdf8" />
+      <circle cx="256" cy="386" r="4.5" fill="#6366f1" />
+      <circle cx="274" cy="386" r="3" fill="#8b5cf6" />
+    </g>
+  </g>
+</svg>

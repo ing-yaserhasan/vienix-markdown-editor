@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#090d16" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+
+    <!-- Ambient Glow Gradient -->
+    <radialGradient id="ambientGlow" cx="50%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.25" />
+      <stop offset="50%" stop-color="#6366f1" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Card Background Gradient -->
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.85" />
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.95" />
+    </linearGradient>
+
+    <!-- Brand Cyan-to-Indigo Gradient -->
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="35%" stop-color="#3b82f6" />
+      <stop offset="70%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+
+    <!-- Arrow Gradient -->
+    <linearGradient id="arrowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#60a5fa" />
+    </linearGradient>
+
+    <!-- Glowing Border Gradients -->
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.6" />
+      <stop offset="50%" stop-color="#6366f1" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.4" />
+    </linearGradient>
+
+    <linearGradient id="innerBorderGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.05" />
+    </linearGradient>
+
+    <!-- Soft Drop Shadow Filter -->
+    <filter id="dropShadow" x="-10%" y="-10%" width="125%" height="125%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.6" />
+    </filter>
+
+    <!-- Neon Glow Filter -->
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Base Squircle Background -->
+  <rect width="512" height="512" rx="115" fill="url(#bgGradient)" />
+  <rect width="508" height="508" x="2" y="2" rx="113" fill="none" stroke="url(#borderGrad)" stroke-width="3" />
+
+  <!-- Ambient Light Reflection -->
+  <circle cx="256" cy="180" r="190" fill="url(#ambientGlow)" />
+
+  <!-- Inner Glass Card -->
+  <g filter="url(#dropShadow)">
+    <rect x="64" y="64" width="384" height="384" rx="48" fill="url(#cardGrad)" stroke="url(#innerBorderGrad)" stroke-width="2" />
+  </g>
+
+  <!-- Top Decorative Header / Vienix V Emblem -->
+  <g id="vienix-accent">
+    <!-- Stylized Chevron / Pen-Nib "V" at the top center -->
+    <path d="M 232 108 L 256 136 L 280 108" fill="none" stroke="url(#brandGrad)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="256" cy="100" r="4" fill="#38bdf8" />
+  </g>
+
+  <!-- Markdown Core Emblem (M and Arrow ↓) -->
+  <g id="markdown-symbol">
+    <!-- The "M" of Markdown -->
+    <path d="M 124 330 
+             V 194 
+             C 124 186, 131 180, 139 180 
+             C 144 180, 149 183, 152 187 
+             L 196 244 
+             L 240 187 
+             C 243 183, 248 180, 253 180 
+             C 261 180, 268 186, 268 194 
+             V 330"
+          fill="none" 
+          stroke="url(#brandGrad)" 
+          stroke-width="22" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" />
+
+    <!-- Divider Bar -->
+    <line x1="304" y1="184" x2="304" y2="330" stroke="#334155" stroke-width="3" stroke-linecap="round" stroke-dasharray="4 8" />
+
+    <!-- The Down Arrow "↓" of Markdown -->
+    <!-- Arrow Shaft -->
+    <line x1="364" y1="182" x2="364" y2="310" stroke="url(#arrowGrad)" stroke-width="22" stroke-linecap="round" />
+    <!-- Arrow Head -->
+    <path d="M 326 280 L 364 328 L 402 280" 
+          fill="none" 
+          stroke="url(#arrowGrad)" 
+          stroke-width="22" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" />
+  </g>
+
+  <!-- Subtle Bottom Brand Tagline or Dots -->
+  <g id="bottom-detail" opacity="0.8">
+    <circle cx="236" cy="392" r="3.5" fill="#38bdf8" />
+    <circle cx="256" cy="392" r="5" fill="#6366f1" />
+    <circle cx="276" cy="392" r="3.5" fill="#8b5cf6" />
+  </g>
+</svg>
