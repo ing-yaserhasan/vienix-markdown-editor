@@ -64,10 +64,10 @@
         this.accessToken = savedToken;
         this.tokenExpiresAt = Number(savedExpiry);
       } else if (savedConnected || this.userProfile) {
-        // Connected previously, token expired/missing -> flag for silent auto-reconnect on startup
+        // Connected previously, token expired/missing -> keep profile, ready for user-initiated reconnect
         this.accessToken = null;
         this.tokenExpiresAt = 0;
-        this.isAutoConnecting = true;
+        this.isAutoConnecting = false;
       }
 
       const autoSyncSetting = localStorage.getItem('vienix_drive_auto_sync');
@@ -156,10 +156,10 @@
           }
         });
 
-        // Trigger silent auto-reconnect ONLY if returning user who was actively connected
-        if (!this.accessToken && localStorage.getItem('vienix_drive_connected') === 'true') {
-          this.silentAutoConnect();
-        }
+        // DO NOT trigger requestAccessToken() automatically on startup!
+        // On mobile/Android browsers, unprompted token requests force a Chrome Custom Tab with 'about:blank'
+        // Instead, the UI indicates ready-to-sync state, and the user taps the cloud button when ready.
+        this.updateUI();
       } catch (err) {
         console.warn('[VienixDrive] Failed to init GIS token client:', err);
       }
