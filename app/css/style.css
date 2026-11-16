@@ -2300,65 +2300,49 @@ body.wysiwyg-active .image-resizer-wrapper.active .resizer-handle {
 }
 
 /* =========================================================
-   Mobile & Tablet Grey Folder Shortcut (مجلد رمادي للموبايل والتابلت فقط)
+   Preview & Editor Sub-header Grey Folder Shortcut
+   (زر اختصار المستكشف الرمادي في ترويسة شاشة المعاينة وشاشة التحرير)
    ========================================================= */
-.mobile-tablet-folder-shortcut {
+.preview-explorer-btn,
+.editor-explorer-btn {
   display: none !important;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 7px;
+  min-height: 26px;
+  min-width: 32px;
+  border-radius: 7px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.16s ease;
+  line-height: 1;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 @media (max-width: 1024px) {
-  .mobile-tablet-folder-shortcut {
+  .preview-explorer-btn,
+  .editor-explorer-btn {
     display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-    padding: 5px 8px;
-    min-height: 32px;
-    min-width: 32px;
-    border-radius: var(--radius-md, 8px);
-    background: transparent;
-    border: 1px solid transparent;
-    cursor: pointer;
-    transition: all 0.18s ease;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .mobile-tablet-folder-shortcut:hover,
-  .mobile-tablet-folder-shortcut:active,
-  .mobile-tablet-folder-shortcut.active {
-    background: var(--bg-hover, rgba(0, 0, 0, 0.06));
-    border-color: var(--border-color, rgba(0, 0, 0, 0.12));
-  }
-
-  [data-theme="dark"] .mobile-tablet-folder-shortcut:hover,
-  [data-theme="dark"] .mobile-tablet-folder-shortcut:active,
-  [data-theme="dark"] .mobile-tablet-folder-shortcut.active {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.16);
-  }
-
-  .mobile-tablet-folder-shortcut .grey-folder-svg {
-    width: 20px;
-    height: 20px;
-    display: block;
-    transition: transform 0.15s ease;
-  }
-
-  .mobile-tablet-folder-shortcut:active .grey-folder-svg {
-    transform: scale(0.92);
   }
 }
 
-/* تنسيق زر المجلد الرمادي داخل شريط تبويبات الموبايل */
-.mobile-tab-btn.mobile-tab-explorer-btn {
-  flex: 0 0 auto;
-  min-width: 90px;
-  max-width: 130px;
-  gap: 5px;
+.preview-explorer-btn:hover,
+.editor-explorer-btn:hover,
+.preview-explorer-btn:active,
+.editor-explorer-btn:active,
+.preview-explorer-btn.active,
+.editor-explorer-btn.active {
+  background: var(--bg-hover);
+  border-color: var(--border-color);
 }
 
-.mobile-tab-btn.mobile-tab-explorer-btn .grey-folder-svg {
+.preview-explorer-btn .grey-folder-svg,
+.editor-explorer-btn .grey-folder-svg {
   width: 16px;
   height: 16px;
+  display: block;
 }
 
 /* =========================================================

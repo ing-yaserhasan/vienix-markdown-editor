@@ -4993,10 +4993,10 @@ function exportDocument(format) {
     drawer.classList.toggle('active', isExplorerOpen);
     overlay.classList.toggle('active', isExplorerOpen);
 
-    const mobileExplBtn = document.getElementById('btn-mobile-explorer-shortcut');
-    if (mobileExplBtn) mobileExplBtn.classList.toggle('active', isExplorerOpen);
-    const mobileTabExpl = document.getElementById('mobile-tab-explorer');
-    if (mobileTabExpl) mobileTabExpl.classList.toggle('active', isExplorerOpen);
+    const prevExplBtn = document.getElementById('btn-preview-header-explorer');
+    if (prevExplBtn) prevExplBtn.classList.toggle('active', isExplorerOpen);
+    const editExplBtn = document.getElementById('btn-editor-header-explorer');
+    if (editExplBtn) editExplBtn.classList.toggle('active', isExplorerOpen);
 
     if (isExplorerOpen) {
       renderChambersExplorerTree();
@@ -5017,8 +5017,8 @@ function exportDocument(format) {
     if (e.target.closest('#explorer-drawer') || 
         e.target.closest('#vienix-quick-preview-card') ||
         e.target.closest('#btn-toggle-explorer') ||
-        e.target.closest('#btn-mobile-explorer-shortcut') ||
-        e.target.closest('#mobile-tab-explorer') ||
+        e.target.closest('#btn-preview-header-explorer') ||
+        e.target.closest('#btn-editor-header-explorer') ||
         e.target.closest('#btn-open-explorer-header') || 
         e.target.closest('#btn-chambers-manager') ||
         e.target.closest('#chamber-context-menu') ||
