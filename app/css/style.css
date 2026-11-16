@@ -3845,6 +3845,33 @@ body.wysiwyg-active .image-resizer-wrapper.active .resizer-handle {
   outline-offset: -2px;
 }
 
+/* شارة السحب باللمس على الموبايل (Touch Drag Ghost) */
+.touch-drag-ghost {
+  position: fixed;
+  z-index: 999999;
+  pointer-events: none;
+  background: var(--bg-surface, #ffffff);
+  color: var(--text-color, #1e293b);
+  border: 1.5px solid var(--brand-primary, #2563eb);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28), 0 6px 12px rgba(0, 0, 0, 0.16);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.96;
+  transform: translate(-50%, -50%) scale(1.05);
+  transition: transform 0.06s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 /* Ø´Ø§Ø±Ø© Ø§Ù„Ø­Ø¬Ø±Ø© Ø§Ù„Ù…ØªØ²Ø§Ù…Ù†Ø© Ø­ÙŠØ§Ù‹ */
 .obsidian-link-badge {
   font-size: 0.68rem;

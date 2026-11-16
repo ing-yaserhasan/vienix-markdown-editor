@@ -3755,30 +3755,40 @@ function exportDocument(format) {
     setupTouchLongPress();
   }
 
-  // دعم النقر المطول على شاشات اللمس (Mobile/Tablet Long-Press System)
+  // دعم النقر المطول والسحب والإفلات الكامل على شاشات اللمس (Mobile/Tablet Long-Press & Touch Drag & Drop)
   function setupTouchLongPress() {
     let touchLongPressTimer = null;
     let touchStartX = 0;
     let touchStartY = 0;
+    let touchCurrentX = 0;
+    let touchCurrentY = 0;
+    let touchStartTime = 0;
     let touchTargetInfo = null;
+    let isTouchDragging = false;
+    let isTouchScrolling = false;
+    let touchGhostEl = null;
 
     document.addEventListener('touchstart', (e) => {
       if (!e.touches || e.touches.length !== 1) {
-        if (touchLongPressTimer) {
-          clearTimeout(touchLongPressTimer);
-          touchLongPressTimer = null;
-        }
-        touchTargetInfo = null;
+        cleanupTouch();
         return;
       }
 
       const target = e.target;
       if (!target || !target.closest) return;
 
-      // تجاهل النقر إذا كان على أزرار فرعية، حقول إدخال، أو داخل القوائم
-      if (target.closest('button, input, textarea, select, .obsidian-item-actions, .obsidian-inline-edit-box, .obsidian-action-btn, #chamber-context-menu, #folder-context-menu')) {
+      // تجاهل اللمس إذا كان على أزرار فرعية أو حقول إدخال أو داخل القوائم والنوافذ المنبثقة
+      if (target.closest('button, input, textarea, select, .obsidian-item-actions, .obsidian-inline-edit-box, .obsidian-action-btn, #chamber-context-menu, #folder-context-menu, .chamber-modal-overlay')) {
         return;
       }
+
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchCurrentX = touchStartX;
+      touchCurrentY = touchStartY;
+      touchStartTime = Date.now();
+      isTouchDragging = false;
+      isTouchScrolling = false;
 
       // 1. فحص رأس المجلد في الشجرة
       const folderHeader = target.closest('.obsidian-folder-header');
@@ -3786,10 +3796,9 @@ function exportDocument(format) {
         const folderKey = folderHeader.getAttribute('data-folder-key') ||
                           folderHeader.closest('.obsidian-folder')?.getAttribute('data-folder-key');
         if (folderKey) {
-          touchStartX = e.touches[0].clientX;
-          touchStartY = e.touches[0].clientY;
-          touchTargetInfo = { type: 'folder', folderKey };
-          startTimer();
+          const folderName = folderHeader.querySelector('.obsidian-folder-name')?.textContent || 'مجلد';
+          touchTargetInfo = { type: 'folder', folderKey, title: folderName, el: folderHeader };
+          startLongPressTimer();
           return;
         }
       }
@@ -3802,10 +3811,9 @@ function exportDocument(format) {
         const folderKey = folderFileItem.getAttribute('data-folder-key') ||
                           folderFileItem.closest('.obsidian-folder')?.getAttribute('data-folder-key');
         if (fileId && folderKey) {
-          touchStartX = e.touches[0].clientX;
-          touchStartY = e.touches[0].clientY;
-          touchTargetInfo = { type: 'folder-file', fileId, folderKey };
-          startTimer();
+          const fileTitle = folderFileItem.querySelector('.obsidian-item-title')?.textContent || 'ملف';
+          touchTargetInfo = { type: 'folder-file', fileId, folderKey, title: fileTitle, el: folderFileItem };
+          startLongPressTimer();
           return;
         }
       }
@@ -3816,36 +3824,32 @@ function exportDocument(format) {
         const chNum = parseInt(treeItem.getAttribute('data-chamber-num') ||
                                (treeItem.id ? treeItem.id.replace('tree-item-', '') : ''), 10);
         if (!isNaN(chNum) && chNum >= 1) {
-          touchStartX = e.touches[0].clientX;
-          touchStartY = e.touches[0].clientY;
-          touchTargetInfo = { type: 'chamber-tree', chNum };
-          startTimer();
+          const chTitle = treeItem.querySelector('.obsidian-item-title')?.textContent || ('حجرة ' + chNum);
+          touchTargetInfo = { type: 'chamber-tree', chNum, title: chTitle, el: treeItem };
+          startLongPressTimer();
           return;
         }
       }
 
-      // 4. فحص زر حجرة في شريط الحجرات العلوي
+      // 4. فحص زر حجرة في شريط الحجرات العلوي (قائمة سياقية فقط)
       const chamberBtn = target.closest('.chamber-btn');
       if (chamberBtn && chamberBtn.id !== 'chamber-dashed-slot') {
         const ch = parseInt(chamberBtn.getAttribute('data-chamber'), 10);
         if (!isNaN(ch) && ch >= 1) {
-          touchStartX = e.touches[0].clientX;
-          touchStartY = e.touches[0].clientY;
-          touchTargetInfo = { type: 'chamber-bar', chNum: ch };
-          startTimer();
+          touchTargetInfo = { type: 'chamber-bar', chNum: ch, el: chamberBtn };
+          startLongPressTimer();
           return;
         }
       }
     }, { passive: true });
 
-    function startTimer() {
+    function startLongPressTimer() {
       if (touchLongPressTimer) clearTimeout(touchLongPressTimer);
       touchLongPressTimer = setTimeout(() => {
-        if (!touchTargetInfo) return;
+        if (!touchTargetInfo || isTouchDragging || isTouchScrolling) return;
         lastLongPressTriggerTime = Date.now();
         lastContextMenuOpenTime = Date.now();
 
-        // اهتزاز لمسي هادئ (Haptic feedback)
         if (navigator.vibrate) {
           try { navigator.vibrate(45); } catch (_) {}
         }
@@ -3867,42 +3871,196 @@ function exportDocument(format) {
           openChamberContextMenu(simulatedEvent, touchTargetInfo.chNum);
         }
 
-        touchTargetInfo = null;
-        touchLongPressTimer = null;
+        cleanupTouch();
       }, 450);
     }
 
+    function cleanupTouch() {
+      if (touchLongPressTimer) {
+        clearTimeout(touchLongPressTimer);
+        touchLongPressTimer = null;
+      }
+      if (touchGhostEl) {
+        touchGhostEl.remove();
+        touchGhostEl = null;
+      }
+      clearAllDragClasses();
+      if (touchTargetInfo && touchTargetInfo.el) {
+        touchTargetInfo.el.classList.remove('is-dragging', 'is-folder-dragging');
+      }
+      draggedFile = null;
+      draggedChamberNum = null;
+      draggedFolderKey = null;
+      isTouchDragging = false;
+      isTouchScrolling = false;
+      touchTargetInfo = null;
+    }
+
     document.addEventListener('touchmove', (e) => {
-      if (touchLongPressTimer && e.touches && e.touches.length === 1) {
-        const dx = Math.abs(e.touches[0].clientX - touchStartX);
-        const dy = Math.abs(e.touches[0].clientY - touchStartY);
-        if (dx > 10 || dy > 10) {
+      if (!touchTargetInfo || !e.touches || e.touches.length !== 1) return;
+
+      touchCurrentX = e.touches[0].clientX;
+      touchCurrentY = e.touches[0].clientY;
+      const dx = Math.abs(touchCurrentX - touchStartX);
+      const dy = Math.abs(touchCurrentY - touchStartY);
+      const dist = Math.hypot(dx, dy);
+
+      // إذا تحرك الإصبع بسرعة قبل 180ms، فهذا تمرير عادي (Scroll)
+      if (!isTouchDragging && dist > 10 && (Date.now() - touchStartTime < 180)) {
+        isTouchScrolling = true;
+        if (touchLongPressTimer) {
           clearTimeout(touchLongPressTimer);
           touchLongPressTimer = null;
-          touchTargetInfo = null;
+        }
+        touchTargetInfo = null;
+        return;
+      }
+
+      // إذا تحرك الإصبع بعد وقفة خفيفة (>= 180ms) ولم نكن في حالة تمرير، تفعيل السحب اللمسي
+      if (!isTouchDragging && !isTouchScrolling && dist > 8 && (Date.now() - touchStartTime >= 180) && touchTargetInfo.type !== 'chamber-bar') {
+        if (touchLongPressTimer) {
+          clearTimeout(touchLongPressTimer);
+          touchLongPressTimer = null;
+        }
+        isTouchDragging = true;
+        if (navigator.vibrate) {
+          try { navigator.vibrate(30); } catch (_) {}
+        }
+
+        // إنشاء شارة السحب الطافية
+        touchGhostEl = document.createElement('div');
+        touchGhostEl.className = 'touch-drag-ghost';
+        const icon = touchTargetInfo.type === 'folder' ? '📁' : '📄';
+        touchGhostEl.innerHTML = `<span>${icon}</span><span style="overflow:hidden; text-overflow:ellipsis;">${escapeHtml(touchTargetInfo.title || 'عنصر')}</span>`;
+        document.body.appendChild(touchGhostEl);
+
+        if (touchTargetInfo.type === 'folder') {
+          touchTargetInfo.el.classList.add('is-folder-dragging');
+          draggedFolderKey = touchTargetInfo.folderKey;
+        } else if (touchTargetInfo.type === 'folder-file') {
+          touchTargetInfo.el.classList.add('is-dragging');
+          draggedFile = { folderKey: touchTargetInfo.folderKey, fileId: touchTargetInfo.fileId };
+        } else if (touchTargetInfo.type === 'chamber-tree') {
+          touchTargetInfo.el.classList.add('is-dragging');
+          draggedChamberNum = touchTargetInfo.chNum;
         }
       }
-    }, { passive: true });
 
-    document.addEventListener('touchend', () => {
+      // أثناء السحب باللمس: منع التمرير وتحديث المؤشرات البصرية تحت الإصبع
+      if (isTouchDragging) {
+        if (e.cancelable) e.preventDefault();
+        if (touchGhostEl) {
+          touchGhostEl.style.left = touchCurrentX + 'px';
+          touchGhostEl.style.top = touchCurrentY + 'px';
+        }
+
+        // كشف العنصر المستهدف تحت موضع الإصبع
+        if (touchGhostEl) touchGhostEl.style.display = 'none';
+        const targetUnder = document.elementFromPoint(touchCurrentX, touchCurrentY);
+        if (touchGhostEl) touchGhostEl.style.display = 'flex';
+
+        clearAllDragClasses();
+
+        if (targetUnder) {
+          const folderHeader = targetUnder.closest('.obsidian-folder-header');
+          const fileItem = targetUnder.closest('.obsidian-tree-item.is-folder-file');
+          const chamberItem = targetUnder.closest('.obsidian-tree-item:not(.is-folder-file)');
+          const treeRoot = targetUnder.closest('#explorer-tree');
+
+          if (folderHeader) {
+            folderHeader.classList.add('folder-drag-over');
+          } else if (fileItem && (!touchTargetInfo || touchTargetInfo.fileId !== fileItem.getAttribute('data-file-id'))) {
+            const rect = fileItem.getBoundingClientRect();
+            const isTop = (touchCurrentY - rect.top) < (rect.height / 2);
+            fileItem.classList.toggle('drag-over-top', isTop);
+            fileItem.classList.toggle('drag-over-bottom', !isTop);
+          } else if (chamberItem && (!touchTargetInfo || touchTargetInfo.chNum !== parseInt(chamberItem.getAttribute('data-chamber-num'), 10))) {
+            const rect = chamberItem.getBoundingClientRect();
+            const isTop = (touchCurrentY - rect.top) < (rect.height / 2);
+            chamberItem.classList.toggle('drag-over-top', isTop);
+            chamberItem.classList.toggle('drag-over-bottom', !isTop);
+          } else if (treeRoot && draggedFolderKey) {
+            treeRoot.classList.add('root-drag-over');
+          }
+        }
+      }
+    }, { passive: false });
+
+    document.addEventListener('touchend', (e) => {
       if (touchLongPressTimer) {
         clearTimeout(touchLongPressTimer);
         touchLongPressTimer = null;
       }
-      touchTargetInfo = null;
-    }, { passive: true });
+
+      if (isTouchDragging) {
+        if (e.cancelable) e.preventDefault();
+        if (touchGhostEl) {
+          touchGhostEl.remove();
+          touchGhostEl = null;
+        }
+
+        const dropX = touchCurrentX;
+        const dropY = touchCurrentY;
+        const dropEl = document.elementFromPoint(dropX, dropY);
+        clearAllDragClasses();
+
+        if (dropEl && touchTargetInfo) {
+          const folderHeader = dropEl.closest('.obsidian-folder-header');
+          const fileItem = dropEl.closest('.obsidian-tree-item.is-folder-file');
+          const chamberItem = dropEl.closest('.obsidian-tree-item:not(.is-folder-file)');
+          const treeRoot = dropEl.closest('#explorer-tree');
+
+          // تنفيذ الإفلات حسب نوع العنصر المسحوب والهدف
+          if (touchTargetInfo.type === 'folder') {
+            if (folderHeader) {
+              const targetFolderKey = folderHeader.getAttribute('data-folder-key');
+              window.handleFolderDrop({ preventDefault: ()=>{}, stopPropagation: ()=>{} }, targetFolderKey);
+            } else if (treeRoot) {
+              window.handleRootTreeDrop({ preventDefault: ()=>{}, stopPropagation: ()=>{} });
+            }
+          } else if (touchTargetInfo.type === 'folder-file') {
+            if (fileItem) {
+              const targetFileId = fileItem.getAttribute('data-file-id');
+              const targetFolderKey = fileItem.getAttribute('data-folder-key');
+              window.handleFileDrop({ preventDefault: ()=>{}, stopPropagation: ()=>{}, clientY: dropY }, targetFileId, targetFolderKey);
+            } else if (folderHeader) {
+              const targetFolderKey = folderHeader.getAttribute('data-folder-key');
+              window.handleFolderDrop({ preventDefault: ()=>{}, stopPropagation: ()=>{} }, targetFolderKey);
+            } else if (chamberItem) {
+              const targetChNum = parseInt(chamberItem.getAttribute('data-chamber-num'), 10);
+              const targetFolderKey = chamberItem.closest('.obsidian-folder')?.getAttribute('data-folder-key') || 'book';
+              window.handleItemDrop({ preventDefault: ()=>{}, stopPropagation: ()=>{}, clientY: dropY }, targetChNum, targetFolderKey);
+            }
+          } else if (touchTargetInfo.type === 'chamber-tree') {
+            if (chamberItem) {
+              const targetChNum = parseInt(chamberItem.getAttribute('data-chamber-num'), 10);
+              const targetFolderKey = chamberItem.closest('.obsidian-folder')?.getAttribute('data-folder-key') || 'book';
+              window.handleItemDrop({ preventDefault: ()=>{}, stopPropagation: ()=>{}, clientY: dropY }, targetChNum, targetFolderKey);
+            } else if (folderHeader) {
+              const targetFolderKey = folderHeader.getAttribute('data-folder-key');
+              window.handleFolderDrop({ preventDefault: ()=>{}, stopPropagation: ()=>{} }, targetFolderKey);
+            } else if (fileItem) {
+              const targetFileId = fileItem.getAttribute('data-file-id');
+              const targetFolderKey = fileItem.getAttribute('data-folder-key');
+              window.handleFileDrop({ preventDefault: ()=>{}, stopPropagation: ()=>{}, clientY: dropY }, targetFileId, targetFolderKey);
+            }
+          }
+        }
+      }
+
+      cleanupTouch();
+    }, { passive: false });
 
     document.addEventListener('touchcancel', () => {
-      if (touchLongPressTimer) {
-        clearTimeout(touchLongPressTimer);
-        touchLongPressTimer = null;
-      }
-      touchTargetInfo = null;
+      cleanupTouch();
     }, { passive: true });
 
-    // منع النقرة الوهمية (Synthetic click) الناتجة عن رفع الإصبع بعد النقر المطول
+    // منع النقرة الوهمية الناتجة عن رفع الإصبع بعد النقر المطول، مع استثناء خيارات القوائم والنوافذ
     document.addEventListener('click', (e) => {
       if (Date.now() - lastLongPressTriggerTime < 500) {
+        if (e.target && e.target.closest && e.target.closest('#chamber-context-menu, #folder-context-menu, .chamber-modal-dialog, .folder-pick-btn, .chamber-menu-item')) {
+          return;
+        }
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
@@ -4003,6 +4161,8 @@ function exportDocument(format) {
     const migrateToFolderBtn = document.getElementById('folder-context-migrate-to-folder-btn');
     const migrateToRootBtn = document.getElementById('folder-context-migrate-to-root-btn');
 
+    const moveFolderBtn = document.getElementById('folder-context-move-folder-btn');
+    if (moveFolderBtn) moveFolderBtn.style.display = isCustom ? 'flex' : 'none';
     if (deleteBtn) deleteBtn.style.display = 'flex';
     if (deleteDivider) deleteDivider.style.display = 'block';
     if (clearContentBtn) clearContentBtn.style.display = 'flex';
@@ -4135,6 +4295,145 @@ function exportDocument(format) {
     if (menu) menu.style.display = 'none';
     if (!contextTargetFolderKey) return;
     window.openNewFileModal(contextTargetFolderKey);
+  };
+
+  // نقل المجلد نفسه بالكامل ليكون داخل مجلد آخر أو في المستوى الرئيسي
+  window.contextMoveWholeFolder = function () {
+    const menu = document.getElementById('folder-context-menu');
+    if (menu) menu.style.display = 'none';
+    if (!contextTargetFolderKey) return;
+    window.openMoveWholeFolderModal(contextTargetFolderKey);
+  };
+
+  window.openMoveWholeFolderModal = function (folderKey, e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const menu = document.getElementById('folder-context-menu');
+    if (menu) menu.style.display = 'none';
+
+    const targetKey = folderKey || contextTargetFolderKey;
+    if (!targetKey) return;
+
+    let customFolders = [];
+    try {
+      customFolders = JSON.parse(localStorage.getItem('vienix_custom_folders') || '[]');
+    } catch (err) {}
+
+    const isCustom = customFolders.some(f => f.key === targetKey);
+    if (!isCustom) {
+      showToast('المجلدات الأساسية للنظام (فصول الكتاب، المسودات، الأرشيف) ثابتة ولا يمكن نقلها.', 'info', 2200);
+      return;
+    }
+
+    const allFolders = getAppFolders();
+    const curFolder = allFolders.find(f => f.key === targetKey);
+    const curName = curFolder ? curFolder.name : targetKey;
+
+    moveFolderTarget = { type: 'folder', folderKey: targetKey, folderName: curName };
+    moveFolderTargetChamber = null;
+
+    const modal = document.getElementById('move-folder-modal');
+    const titleEl = document.getElementById('move-folder-modal-title');
+    const desc = document.getElementById('move-folder-chamber-desc');
+    const newFolderInput = document.getElementById('move-new-folder-name-input');
+    if (!modal) return;
+
+    if (titleEl) titleEl.textContent = `نقل مجلد "${curName}" بالكامل`;
+    if (desc) {
+      desc.innerHTML = `اختر المجلد الذي ترغب بنقل مجلد <strong>"${escapeHtml(curName)}"</strong> بكافة ملفاته ومجلداته الفرعية إليه:`;
+    }
+
+    renderMoveWholeFolderOptions(targetKey);
+
+    if (newFolderInput) newFolderInput.value = '';
+    modal.style.display = 'flex';
+    setTimeout(() => { if (newFolderInput) newFolderInput.focus(); }, 100);
+  };
+
+  function renderMoveWholeFolderOptions(currentFolderKey) {
+    const container = document.getElementById('move-folder-options-container');
+    if (!container) return;
+    const allFolders = getAppFolders();
+    const targetFolder = allFolders.find(f => f.key === currentFolderKey);
+    const currentParent = targetFolder ? targetFolder.parent : null;
+
+    let html = '';
+
+    // خيار النقل للمستوى الرئيسي (جذر المستكشف)
+    const isAlreadyRoot = !currentParent;
+    html += `
+      <button type="button" class="folder-pick-btn ${isAlreadyRoot ? 'is-current' : ''}" onclick="${isAlreadyRoot ? '' : `confirmMoveWholeFolder(null)`}" title="${isAlreadyRoot ? 'المجلد حالياً في المستوى الرئيسي' : 'تحويل لمجلد رئيسي مستقل في الجذر'}">
+        <span class="folder-pick-icon">🌐</span>
+        <div class="folder-pick-info" style="flex:1;">
+          <strong>المستوى الرئيسي (جذر المستكشف)</strong>
+          <small>جعل المجلد مستقلاً بذاته في الجذر خارج أي مجلدات أخرى</small>
+        </div>
+        ${isAlreadyRoot ? '<span class="folder-pick-current-badge">الموقع الحالي</span>' : '<span style="font-size:0.75rem; color:#2563eb; font-weight:600;">نقل للجذر ↵</span>'}
+      </button>
+    `;
+
+    // قائمة المجلدات المتاحة التي يمكن النقل إليها (باستثناء المجلد نفسه وأي مجلدات فرعية منه لمنع الحلقات)
+    const validTargets = allFolders.filter(f => f.key !== currentFolderKey && !isDescendantFolder(currentFolderKey, f.key));
+
+    html += validTargets.map(f => {
+      const isCurrentParent = (f.key === currentParent);
+      const parentFolder = f.parent ? allFolders.find(p => p.key === f.parent) : null;
+      const prefix = parentFolder ? `<span style="color:#d97706; font-size:0.75rem;">${escapeHtml(parentFolder.name)} / </span>` : '';
+      const currentBadge = isCurrentParent ? `<span class="folder-pick-current-badge">المجلد الحاوي الحالي</span>` : '';
+      return `
+        <button type="button" class="folder-pick-btn ${isCurrentParent ? 'is-current' : ''}" onclick="${isCurrentParent ? '' : `confirmMoveWholeFolder('${f.key}')`}" title="${isCurrentParent ? 'المجلد الحاوي الحالي' : 'نقل إلى داخل ' + escapeHtml(f.name)}">
+          <span class="folder-pick-icon">${f.key === 'archive' ? '🗄️' : (f.key === 'book' ? '📖' : '📁')}</span>
+          <div class="folder-pick-info" style="flex:1;">
+            <strong>${f.parent ? '&nbsp;&nbsp;└── ' : ''}${prefix}${escapeHtml(f.name)}</strong>
+            <small>${escapeHtml(f.desc || '')}</small>
+          </div>
+          ${currentBadge ? currentBadge : '<span style="font-size:0.75rem; color:#2563eb; font-weight:600;">نقل هنا ↵</span>'}
+        </button>
+      `;
+    }).join('');
+
+    container.innerHTML = html;
+  }
+
+  window.confirmMoveWholeFolder = function (targetParentKey) {
+    if (!moveFolderTarget || moveFolderTarget.type !== 'folder') return;
+    const { folderKey, folderName } = moveFolderTarget;
+    const modal = document.getElementById('move-folder-modal');
+
+    let customFolders = [];
+    try {
+      customFolders = JSON.parse(localStorage.getItem('vienix_custom_folders') || '[]');
+    } catch (e) {}
+
+    const target = customFolders.find(f => f.key === folderKey);
+    if (!target) {
+      showToast('تعذر العثور على المجلد لنقله.', 'warning', 1800);
+      if (modal) modal.style.display = 'none';
+      moveFolderTarget = null;
+      return;
+    }
+
+    if (targetParentKey && (targetParentKey === folderKey || isDescendantFolder(folderKey, targetParentKey))) {
+      showToast('لا يمكن نقل المجلد إلى داخل نفسه أو إلى مجلد فرعي منه!', 'warning', 2000);
+      return;
+    }
+
+    target.parent = targetParentKey || null;
+    try {
+      localStorage.setItem('vienix_custom_folders', JSON.stringify(customFolders));
+    } catch (e) {}
+
+    if (targetParentKey) {
+      collapsedFolders[targetParentKey] = false;
+    }
+    renderChambersExplorerTree();
+
+    const allFolders = getAppFolders();
+    const dest = allFolders.find(f => f.key === targetParentKey);
+    const destText = dest ? `داخل مجلد "${dest.name}"` : 'إلى المستوى الرئيسي المستقل';
+    showToast(`تم نقل مجلد "${folderName}" بالكامل ${destText}! 📁✨`, 'success', 2200);
+
+    if (modal) modal.style.display = 'none';
+    moveFolderTarget = null;
   };
 
   window.contextMoveFolderToRoot = function () {
@@ -4284,7 +4583,9 @@ function exportDocument(format) {
     }
 
     if (totalCount === 0) {
-      showToast(`لا توجد ملفات أو نصوص داخل مجلد "${srcFolderName}" لنقلها!`, 'info', 2200);
+      if (confirm(`مجلد "${srcFolderName}" لا يحتوي على أي ملفات بداخله حالياً.\n\nهل ترغب بنقل المجلد نفسه "${srcFolderName}" بالكامل إلى داخل مجلد آخر؟`)) {
+        window.openMoveWholeFolderModal(pendingMigrateSrcFolderKey);
+      }
       return;
     }
 
@@ -6441,6 +6742,12 @@ function exportDocument(format) {
   window.confirmMoveFolder = function (targetFolder) {
     if (!moveFolderTarget && !moveFolderTargetChamber) return;
     const modal = document.getElementById('move-folder-modal');
+
+    // 0. إذا كان العنصر المنقول مجلداً بالكامل
+    if (moveFolderTarget && moveFolderTarget.type === 'folder') {
+      window.confirmMoveWholeFolder(targetFolder);
+      return;
+    }
 
     // 1. إذا كان العنصر المنقول ملفاً داخل مجلد
     if (moveFolderTarget && moveFolderTarget.type === 'file') {
