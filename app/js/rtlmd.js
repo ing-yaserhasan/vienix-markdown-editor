@@ -1520,19 +1520,15 @@
     safeSaveToStorage('yaser_chamber_meta_' + chNum, jsonStr);
   }
 
-  // ترحيل تلقائي: نقل الحجرتين 6 و 7 افتراضياً إلى المجلد الرئيسي
-  (function migrateChambers67ToMainFolder() {
+  // ترحيل وضمان دائم: تثبيت الحجرات 1 إلى 7 في المجلد الرئيسي دائماً لأنها حاويات عرض ثابتة
+  (function ensureAllChambers1To7StayInMainFolder() {
     try {
-      const migrated = localStorage.getItem('vienix_chambers_6_7_to_book_v1');
-      if (!migrated) {
-        [6, 7].forEach(num => {
-          const m = getChamberMeta(num);
-          if (m && (!m.folder || m.folder === 'drafts')) {
-            m.folder = 'book';
-            saveChamberMeta(num, m);
-          }
-        });
-        localStorage.setItem('vienix_chambers_6_7_to_book_v1', 'true');
+      for (let num = 1; num <= 7; num++) {
+        const m = getChamberMeta(num);
+        if (m && m.folder && m.folder !== 'book') {
+          m.folder = 'book';
+          saveChamberMeta(num, m);
+        }
       }
     } catch (e) {}
   })();
@@ -1564,17 +1560,11 @@
     showToast(`تم حفظ مسمى الحجرة ${chNum} بنجاح! ✏️`, 'success', 1200);
   };
 
-  // نقل الحجرة بين المجلدات (book, drafts, archive)
+  // نقل الحجرة بين المجلدات: ينقل محتوى الحجرة كملف ويفصل الحجرة وتبقى كحاوية عرض في المجلد الرئيسي
   window.moveChamberToFolder = function (chNum, targetFolder) {
-    chNum = parseInt(chNum, 10);
-    const meta = getChamberMeta(chNum);
-    meta.folder = targetFolder;
-    saveChamberMeta(chNum, meta);
-    if (typeof renderChambersExplorerTree === 'function') {
-      renderChambersExplorerTree();
+    if (typeof window.moveFileFromChamberToFolder === 'function') {
+      window.moveFileFromChamberToFolder(chNum, targetFolder);
     }
-    const folderNames = { book: 'فصول الكتاب', drafts: 'المسودات', archive: 'الأرشيف' };
-    showToast(`تم نقل الحجرة ${chNum} إلى ${folderNames[targetFolder] || targetFolder} 📂`, 'info', 1200);
   };
 
   // إدارة الملف المعروض حالياً في حجرة رقم 8 المخصصة
@@ -6388,15 +6378,15 @@ function exportDocument(format) {
 
     if (!draggedChamberNum || draggedChamberNum === targetChNum) return;
 
-    // 1. نقل إلى المجلد في حال كان مختلفاً
-    const meta = getChamberMeta(draggedChamberNum);
-    const prevFolder = meta.folder || 'book';
-    if (prevFolder !== targetFolderKey) {
-      meta.folder = targetFolderKey;
-      saveChamberMeta(draggedChamberNum, meta);
+    // 1. إذا تم إفلات الحجرة فوق عنصر في مجلد آخر غير المجلد الرئيسي (نقل محتوى الحجرة كملف)
+    if (targetFolderKey && targetFolderKey !== 'book') {
+      const chToMove = draggedChamberNum;
+      draggedChamberNum = null;
+      window.moveFileFromChamberToFolder(chToMove, targetFolderKey);
+      return;
     }
 
-    // 2. إعادة ترتيب الحجرات بالترتيب الجديد
+    // 2. إعادة ترتيب الحجرات بالترتيب الجديد داخل المجلد الرئيسي فقط
     const order = getChambersOrder().filter(n => n !== draggedChamberNum);
     const targetIndex = order.indexOf(targetChNum);
     const targetEl = document.getElementById('tree-item-' + targetChNum);
@@ -6459,17 +6449,13 @@ function exportDocument(format) {
     e.stopPropagation();
     clearAllDragClasses();
 
-    // 1. إذا كان المسحوب هو حجرة تم إفلاتها فوق ملف
+    // 1. إذا كان المسحوب هو ملف من حجرة وتم إفلاته فوق ملف داخل مجلد
     if (draggedChamberNum) {
-      const meta = getChamberMeta(draggedChamberNum);
-      const prevFolder = meta.folder || 'book';
-      if (prevFolder !== targetFolderKey) {
-        meta.folder = targetFolderKey;
-        saveChamberMeta(draggedChamberNum, meta);
-        renderChambersExplorerTree();
-        showToast(`تم نقل الحجرة #${draggedChamberNum} إلى المجلد! 📁`, 'success', 1400);
-      }
+      const chNum = draggedChamberNum;
       draggedChamberNum = null;
+      if (targetFolderKey && targetFolderKey !== 'book') {
+        window.moveFileFromChamberToFolder(chNum, targetFolderKey);
+      }
       return;
     }
 
@@ -6626,17 +6612,15 @@ function exportDocument(format) {
       return;
     }
 
-    // 3. معالجة سحب وإفلات حجرة داخل مجلد
-    if (!draggedChamberNum) return;
-    const meta = getChamberMeta(draggedChamberNum);
-    const prevFolder = meta.folder || 'book';
-    if (prevFolder !== targetFolderKey) {
-      meta.folder = targetFolderKey;
-      saveChamberMeta(draggedChamberNum, meta);
-      renderChambersExplorerTree();
-      showToast(`تم نقل الحجرة #${draggedChamberNum} إلى المجلد! 📁`, 'success', 1400);
+    // 3. معالجة سحب وإفلات ملف من داخل حجرة إلى مجلد
+    if (draggedChamberNum) {
+      const chNum = draggedChamberNum;
+      draggedChamberNum = null;
+      if (targetFolderKey && targetFolderKey !== 'book') {
+        window.moveFileFromChamberToFolder(chNum, targetFolderKey);
+      }
+      return;
     }
-    draggedChamberNum = null;
   };
 
   window.handleRootTreeDragOver = function (e) {
@@ -6707,6 +6691,69 @@ function exportDocument(format) {
       `;
     }).join('');
   }
+
+  // نقل ملف الحجرة إلى مجلد آخر (مع بقاء الحجرات 1 إلى 7 ثابتة كحاويات عرض في المجلد الرئيسي)
+  window.moveFileFromChamberToFolder = function (chNum, targetFolderKey) {
+    chNum = parseInt(chNum, 10);
+    if (!chNum || chNum < 1 || chNum > 7) return;
+
+    if (targetFolderKey === 'book') {
+      showToast('الملف موجود بالفعل داخل الحجرات في المجلد الرئيسي!', 'info', 1500);
+      return;
+    }
+
+    const content = getChamberContent(chNum) || '';
+    const meta = getChamberMeta(chNum) || {};
+    const title = (meta.customTitle && meta.customTitle.trim()) || getChamberTitle(chNum) || `ملف ${chNum}`;
+
+    if (!content.trim() && !(meta.customTitle && meta.customTitle.trim())) {
+      showToast('الحجرة فارغة ولا تحتوي على ملف لنقله!', 'info', 1600);
+      return;
+    }
+
+    // 1. إضافة الملف إلى المجلد المستهدف
+    const targetFiles = getFolderFiles(targetFolderKey);
+    const newFileId = 'file_' + targetFolderKey + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
+    const newFile = {
+      id: newFileId,
+      num: targetFiles.length + 1,
+      title: title,
+      content: content,
+      words: meta.words || 0,
+      chars: meta.chars || 0,
+      updatedAt: meta.updatedAt || Date.now(),
+      linkedChamber: null
+    };
+    targetFiles.push(newFile);
+    resequenceFolderFiles(targetFolderKey, targetFiles);
+    saveFolderFiles(targetFolderKey, targetFiles);
+
+    // 2. تفريغ الحجرة في المجلد الرئيسي (تظل الحجرة في مكانها كحاوية عرض فارغة)
+    detachChamberFromLinkedFiles(chNum);
+    setChamberContent(chNum, '');
+    meta.customTitle = '';
+    meta.words = 0;
+    meta.chars = 0;
+    meta.folder = 'book'; // تظل الحجرة ثابتة في المجلد الرئيسي دائماً
+    saveChamberMeta(chNum, meta);
+
+    // 3. إذا كانت هذه الحجرة هي المعروضة حالياً في المحرر، نفرغ المحرر
+    if (activeChamber === chNum) {
+      editor.value = '';
+      if (classicEditor) classicEditor.value = '';
+      initHistoryWithContent('');
+      if (isClassicMode) renderClassicMarkdown(); else renderMarkdown();
+      updateStats();
+    }
+
+    collapsedFolders[targetFolderKey] = false;
+    renderChambersExplorerTree();
+    updateChambersUI();
+
+    const allFolders = getAppFolders();
+    const dest = allFolders.find(f => f.key === targetFolderKey);
+    showToast(`تم نقل ملف "${title}" إلى مجلد "${dest ? dest.name : targetFolderKey}" بنجاح وتفريغ الحجرة! 📂`, 'success', 1800);
+  };
 
   // نافذة نقل الحجرة إلى مجلد آخر (Move Chamber Modal)
   window.openMoveFolderModal = function (chNum, e) {
@@ -6802,21 +6849,21 @@ function exportDocument(format) {
     }
 
     // 2. إذا كان العنصر المنقول حجرة
+    // 2. إذا كان العنصر المنقول حجرة (نقل محتواها كملف وتفريغها)
     const targetChamber = (moveFolderTarget && moveFolderTarget.chamberNum) || moveFolderTargetChamber;
     if (targetChamber) {
-      const meta = getChamberMeta(targetChamber);
-      const curFolder = meta.folder || 'book';
-      if (curFolder === targetFolder) {
-        showToast('الحجرة موجودة بالفعل داخل هذا المجلد!', 'info', 1500);
+      if (targetFolder === 'book') {
+        showToast('الملف موجود بالفعل داخل الحجرات في المجلد الرئيسي!', 'info', 1500);
         if (modal) modal.style.display = 'none';
         moveFolderTarget = null;
         moveFolderTargetChamber = null;
         return;
       }
-      window.moveChamberToFolder(targetChamber, targetFolder);
+      window.moveFileFromChamberToFolder(targetChamber, targetFolder);
       if (modal) modal.style.display = 'none';
       moveFolderTarget = null;
       moveFolderTargetChamber = null;
+      return;
     }
   };
 
@@ -6915,13 +6962,14 @@ function exportDocument(format) {
         }
       }
 
-      let assignedFolder = meta.folder || 'book';
-      if (!folderBuckets[assignedFolder]) assignedFolder = 'book';
-      if (assignedFolder === 'drafts' && !isFilled && !(meta.customTitle && meta.customTitle.trim())) {
-        assignedFolder = 'book';
+      // الحجرات 1 إلى 7 هي حاويات عرض ثابتة داخل المجلد الرئيسي فقط ولا تغادره أبداً
+      if (meta.folder && meta.folder !== 'book') {
+        meta.folder = 'book';
+        saveChamberMeta(i, meta);
       }
+      let assignedFolder = 'book';
 
-      folderBuckets[assignedFolder].push({
+      folderBuckets['book'].push({
         num: i,
         title,
         isCustom: !!(meta.customTitle && meta.customTitle.trim()),
@@ -6931,7 +6979,7 @@ function exportDocument(format) {
         words,
         chars,
         updatedAt,
-        folder: assignedFolder
+        folder: 'book'
       });
     }
 
