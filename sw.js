@@ -1,11 +1,11 @@
 /**
  * Vienix Markdown Editor - Service Worker
- * Version: 1.0.6
+ * Version: 1.0.7
  * Provides offline capabilities, instant caching, and PWA support.
  */
 
-const CACHE_NAME = 'vienix-pwa-v1.0.6';
-const RUNTIME_CACHE = 'vienix-runtime-v1.0.6';
+const CACHE_NAME = 'vienix-pwa-v1.0.7';
+const RUNTIME_CACHE = 'vienix-runtime-v1.0.7';
 
 // Core assets required for 100% offline functionality
 const PRECACHE_ASSETS = [

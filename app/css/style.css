@@ -2301,21 +2301,20 @@ body.wysiwyg-active .image-resizer-wrapper.active .resizer-handle {
 
 /* =========================================================
    Preview & Editor Sub-header Grey Folder Shortcut
-   (زر اختصار المستكشف الرمادي في ترويسة شاشة المعاينة وشاشة التحرير)
+   (زر اختصار المستكشف الرمادي بدون خلفية وبدون إطار)
    ========================================================= */
 .preview-explorer-btn,
 .editor-explorer-btn {
   display: none !important;
   align-items: center;
   justify-content: center;
-  padding: 3px 7px;
-  min-height: 26px;
-  min-width: 32px;
-  border-radius: 7px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
+  padding: 0 4px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
   cursor: pointer;
-  transition: all 0.16s ease;
+  transition: transform 0.15s ease, opacity 0.15s ease;
   line-height: 1;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -2329,19 +2328,23 @@ body.wysiwyg-active .image-resizer-wrapper.active .resizer-handle {
 }
 
 .preview-explorer-btn:hover,
-.editor-explorer-btn:hover,
+.editor-explorer-btn:hover {
+  opacity: 0.75;
+  background: transparent !important;
+  border: none !important;
+}
+
 .preview-explorer-btn:active,
-.editor-explorer-btn:active,
-.preview-explorer-btn.active,
-.editor-explorer-btn.active {
-  background: var(--bg-hover);
-  border-color: var(--border-color);
+.editor-explorer-btn:active {
+  transform: scale(0.9);
+  background: transparent !important;
+  border: none !important;
 }
 
 .preview-explorer-btn .grey-folder-svg,
 .editor-explorer-btn .grey-folder-svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   display: block;
 }
 
