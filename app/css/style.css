@@ -2308,16 +2308,22 @@ body.wysiwyg-active .image-resizer-wrapper.active .resizer-handle {
   display: none !important;
   align-items: center;
   justify-content: center;
-  padding: 0 4px;
+  padding: 0 4px !important;
+  margin: 0 2px !important;
   background: transparent !important;
+  background-color: transparent !important;
   border: none !important;
   box-shadow: none !important;
   outline: none !important;
   cursor: pointer;
+  height: 24px !important;
+  min-height: unset !important;
+  width: auto !important;
+  line-height: 1 !important;
   transition: transform 0.15s ease, opacity 0.15s ease;
-  line-height: 1;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  vertical-align: middle;
 }
 
 @media (max-width: 1024px) {
@@ -2331,14 +2337,18 @@ body.wysiwyg-active .image-resizer-wrapper.active .resizer-handle {
 .editor-explorer-btn:hover {
   opacity: 0.75;
   background: transparent !important;
+  background-color: transparent !important;
   border: none !important;
+  box-shadow: none !important;
 }
 
 .preview-explorer-btn:active,
 .editor-explorer-btn:active {
   transform: scale(0.9);
   background: transparent !important;
+  background-color: transparent !important;
   border: none !important;
+  box-shadow: none !important;
 }
 
 .preview-explorer-btn .grey-folder-svg,
@@ -7754,27 +7764,7 @@ body.ghost-pron-icons .itb-outer-wrapper:not(.is-card-open) {
   margin: 0 !important;
 }
 
-.preview-explorer-btn {
-  height: 26px !important;
-  padding: 2px 8px !important;
-  font-size: 0.74rem !important;
-  border-radius: 6px !important;
-  background: var(--bg-surface) !important;
-  border: 1px solid var(--border-color) !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 5px !important;
-  cursor: pointer;
-}
-
-.preview-explorer-btn .win-folder-label {
-  display: inline-block !important;
-  font-size: 0.74rem !important;
-  font-weight: 700 !important;
-  line-height: 1 !important;
-}
-
-@media (min-width: 769px) {
+@media (min-width: 1025px) {
   .preview-header-actions {
     display: none !important;
   }
