@@ -3726,6 +3726,8 @@ function exportDocument(format) {
   let contextTargetFolderFile = null;
   let lastContextMenuOpenTime = 0;
   let lastLongPressTriggerTime = 0;
+  let lastExplorerFileClickTime = 0;
+  let lastExplorerFileClickKey = null;
 
   function setupChamberContextMenu() {
     const cMenu = document.getElementById('chamber-context-menu');
@@ -5667,10 +5669,29 @@ function exportDocument(format) {
       return;
     }
 
-    // إذا كانت ميزة المعاينة السريعة معطلة بالمفتاح → فتح الملف مباشرة كما كان في السابق تماماً
+    // إذا كانت ميزة المعاينة السريعة معطلة بالمفتاح:
+    // نقرة واحدة: فتح الملف في المحرر والمستكشف مفتوح كما هو
+    // نقرتان متتاليتان: إغلاق المستكشف وفتح الملف في وضع العرض (Live Preview)
     const isQpEnabled = (typeof vienixSettings !== 'undefined' ? vienixSettings.quickPreviewEnabled : (window.vienixSettings && window.vienixSettings.quickPreviewEnabled)) !== false;
     if (!isQpEnabled) {
+      const now = Date.now();
+      const clickKey = 'file_' + folderKey + '_' + fileId;
+      const isDblClick = (lastExplorerFileClickKey === clickKey) && (now - lastExplorerFileClickTime < 450);
+      lastExplorerFileClickTime = now;
+      lastExplorerFileClickKey = clickKey;
+
       window.openFolderFileDirectly(folderKey, fileId);
+
+      if (isDblClick) {
+        lastExplorerFileClickTime = 0;
+        lastExplorerFileClickKey = null;
+        if (typeof window.toggleChambersExplorer === 'function') {
+          window.toggleChambersExplorer(false);
+        }
+        if (typeof window.setViewMode === 'function') {
+          window.setViewMode('preview');
+        }
+      }
       return;
     }
 
@@ -7253,11 +7274,30 @@ function exportDocument(format) {
       return;
     }
 
-    // إذا كانت ميزة المعاينة السريعة معطلة بالمفتاح → فتح الملف مباشرة كما كان في السابق تماماً
+    // إذا كانت ميزة المعاينة السريعة معطلة بالمفتاح:
+    // نقرة واحدة: فتح الملف في المحرر والمستكشف مفتوح كما هو
+    // نقرتان متتاليتان: إغلاق المستكشف وفتح الملف في وضع العرض (Live Preview)
     const isQpEnabled = (typeof vienixSettings !== 'undefined' ? vienixSettings.quickPreviewEnabled : (window.vienixSettings && window.vienixSettings.quickPreviewEnabled)) !== false;
     if (!isQpEnabled) {
+      const now = Date.now();
+      const clickKey = 'chamber_' + chNum;
+      const isDblClick = (lastExplorerFileClickKey === clickKey) && (now - lastExplorerFileClickTime < 450);
+      lastExplorerFileClickTime = now;
+      lastExplorerFileClickKey = clickKey;
+
       window.switchChamber(chNum);
       renderChambersExplorerTree();
+
+      if (isDblClick) {
+        lastExplorerFileClickTime = 0;
+        lastExplorerFileClickKey = null;
+        if (typeof window.toggleChambersExplorer === 'function') {
+          window.toggleChambersExplorer(false);
+        }
+        if (typeof window.setViewMode === 'function') {
+          window.setViewMode('preview');
+        }
+      }
       return;
     }
 
