@@ -2300,6 +2300,68 @@ body.wysiwyg-active .image-resizer-wrapper.active .resizer-handle {
 }
 
 /* =========================================================
+   Mobile & Tablet Grey Folder Shortcut (مجلد رمادي للموبايل والتابلت فقط)
+   ========================================================= */
+.mobile-tablet-folder-shortcut {
+  display: none !important;
+}
+
+@media (max-width: 1024px) {
+  .mobile-tablet-folder-shortcut {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 8px;
+    min-height: 32px;
+    min-width: 32px;
+    border-radius: var(--radius-md, 8px);
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-tablet-folder-shortcut:hover,
+  .mobile-tablet-folder-shortcut:active,
+  .mobile-tablet-folder-shortcut.active {
+    background: var(--bg-hover, rgba(0, 0, 0, 0.06));
+    border-color: var(--border-color, rgba(0, 0, 0, 0.12));
+  }
+
+  [data-theme="dark"] .mobile-tablet-folder-shortcut:hover,
+  [data-theme="dark"] .mobile-tablet-folder-shortcut:active,
+  [data-theme="dark"] .mobile-tablet-folder-shortcut.active {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.16);
+  }
+
+  .mobile-tablet-folder-shortcut .grey-folder-svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+    transition: transform 0.15s ease;
+  }
+
+  .mobile-tablet-folder-shortcut:active .grey-folder-svg {
+    transform: scale(0.92);
+  }
+}
+
+/* تنسيق زر المجلد الرمادي داخل شريط تبويبات الموبايل */
+.mobile-tab-btn.mobile-tab-explorer-btn {
+  flex: 0 0 auto;
+  min-width: 90px;
+  max-width: 130px;
+  gap: 5px;
+}
+
+.mobile-tab-btn.mobile-tab-explorer-btn .grey-folder-svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* =========================================================
    Responsive Design & Mobile Optimization
    ========================================================= */
 
