@@ -15117,7 +15117,7 @@ function exportDocument(format) {
     const SKIP_TECH_REGEX = /(?:https?:\/\/|ftp:\/\/|www\.)[^\s<]+|(?:[a-zA-Z0-9-]+\.)+(?:com|org|net|edu|gov|io|ai|de|at|ch|uk|fr|co|app|dev|me|info|tv|xyz|site|online)(?:\/[^\s<]*)?|\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b|\b[a-zA-Z0-9_\-]+\.(?:html?|css|js|jsx|ts|tsx|json|png|jpe?g|gif|svg|webp|ico|pdf|docx?|xlsx?|zip|tar|gz|mp3|mp4|wav)\b|(?:\/)?@[a-zA-Z0-9._\-]+|#[a-zA-Z0-9_\-]+|\b\w*_\w+\b/gi;
 
     // تعبير مطابقة العبارات الطبيعية اللاتينية/الأجنبية والأرقام (على مستوى نفس السطر فقط دون ابتلاع الفواصل السطرية)
-    const PHRASE_REGEX = /([\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}\p{Script=Hangul}\p{N}]+(?:[^\S\r\n',’\-]+[\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}\p{Script=Hangul}\p{N}]+)*)/gu;
+    const PHRASE_REGEX = /([\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}\p{Script=Hangul}\p{N}]+(?:(?:[^\S\r\n]|[,;:*_"'()\[\]\-\u2014\u2013\u00B7])+[\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}\p{Script=Hangul}\p{N}]+)*)/gu;
     // التحقق من احتواء الكلمة على حرف صوتي (Vowel) لضمان أنها كلمة لغوية حقيقية وليست شفرة تقنية (مثل ZS أو Db أو v2)
     const VOWEL_CHECK = /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}\p{Script=Hangul}]|[aeiouyäöüßéèêëàâùûîïôœæáíóúñ]/i;
 
@@ -15186,7 +15186,7 @@ function exportDocument(format) {
           }
 
           // دمج علامات الترقيم التابعة لنهاية العبارة مباشرة (مثل ؟:-.,! وغيرها)
-          const afterMatch = tok.content.slice(pEnd).match(/^([^\S\r\n]*[.?!\:;،؟…\-—–,]+(?:[^\S\r\n]+[.?!\:;،؟…\-—–,]+)*)/);
+          const afterMatch = tok.content.slice(pEnd).match(/^([^\S\r\n]*[.?!؟…]+(?:[^\S\r\n]+[.?!؟…]+)*)/);
           const trailingPunct = afterMatch ? afterMatch[1] : '';
 
           parts.push({ type: 'phrase', content: phrase, trailingPunct: trailingPunct });
