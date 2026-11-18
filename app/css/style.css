@@ -3973,6 +3973,54 @@ body.wysiwyg-active .image-resizer-wrapper.active .resizer-handle {
   background: #60a5fa;
 }
 
+/* تمييز الملف المعاين بالمعاينة السريعة (نفس تنسيق active) */
+.obsidian-tree-item.is-previewing {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+[data-theme="dark"] .obsidian-tree-item.is-previewing {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.obsidian-tree-item.is-previewing::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 2px;
+  background: #2563eb;
+}
+
+[data-theme="dark"] .obsidian-tree-item.is-previewing::before {
+  background: #60a5fa;
+}
+
+.obsidian-tree-item.is-previewing .obsidian-item-num {
+  color: #2563eb;
+  opacity: 1;
+}
+
+[data-theme="dark"] .obsidian-tree-item.is-previewing .obsidian-item-num {
+  color: #93c5fd;
+  opacity: 1;
+}
+
+.obsidian-tree-item.is-previewing .obsidian-item-title {
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+[data-theme="dark"] .obsidian-tree-item.is-previewing .obsidian-item-title {
+  color: #93c5fd;
+}
+
+.obsidian-tree-item.is-previewing .obsidian-item-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .obsidian-item-num {
   font-size: 0.73rem;
   font-weight: 600;

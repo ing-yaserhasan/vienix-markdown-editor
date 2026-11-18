@@ -5214,6 +5214,25 @@ function exportDocument(format) {
     } catch (e) {}
   }
 
+  // حساب العدد الكلي للملفات في مجلد معين بما فيه الحجرات والمجلدات الفرعية (نسخة مشتركة النطاق)
+  function getFolderTotalCount(folderKey) {
+    const allFolders = getAppFolders();
+    let count = getFolderFiles(folderKey).length;
+    for (let i = 1; i <= 7; i++) {
+      const meta = getChamberMeta(i);
+      const assigned = meta.folder || 'book';
+      if (assigned === folderKey) {
+        const content = getChamberContent(i) || '';
+        if (content.trim().length > 0) count++;
+      }
+    }
+    const subFolders = allFolders.filter(f => f.parent === folderKey);
+    subFolders.forEach(sub => {
+      count += getFolderTotalCount(sub.key);
+    });
+    return count;
+  }
+
   // الحصول على الرقم التسلسلي التصاعدي التالي لملفات المجلد
   // رقم الملف مخصص لإظهار عدد وترتيب الملفات ومرن وقابل للتغيير
   function getNextFolderFileNum(folderKey) {
@@ -16363,6 +16382,19 @@ function exportDocument(format) {
     const card = ensurePreviewCard();
     window._activePreviewTarget = targetInfo;
 
+    // تحديث التحديد البصري للملف المعاين في شجرة المستكشف
+    document.querySelectorAll('.obsidian-tree-item.is-previewing').forEach(el => el.classList.remove('is-previewing'));
+    let previewTargetEl = null;
+    if (targetInfo.type === 'chamber') {
+      previewTargetEl = document.getElementById('tree-item-' + targetInfo.id);
+    } else if (targetInfo.type === 'folder_file') {
+      previewTargetEl = document.getElementById('tree-file-' + targetInfo.fileId);
+    }
+    if (previewTargetEl) {
+      previewTargetEl.classList.add('is-previewing');
+      previewTargetEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
     const fileIconSvg = `
       <svg class="preview-file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -16396,6 +16428,8 @@ function exportDocument(format) {
 
   window.hideFilePreview = function () {
     window._activePreviewTarget = null;
+    // إزالة تحديد المعاينة البصري
+    document.querySelectorAll('.obsidian-tree-item.is-previewing').forEach(el => el.classList.remove('is-previewing'));
     if (previewCardEl) {
       previewCardEl.classList.remove('visible');
       setTimeout(() => {
