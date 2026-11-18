@@ -15458,6 +15458,329 @@ function exportDocument(format) {
         textNode.parentNode.replaceChild(fragment, textNode);
       }
     });
+
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // POST-PROCESSING: دمج العبارات المتجاورة المفصولة بعناصر تنسيق (bold/italic)
+    // عندما يكون النص مثل: Ich hänge das Bild **an** die Wand.
+    // في الـ DOM يصبح 3 عقد نصية منفصلة، فتنتج 3 عبارات بدل واحدة.
+    // هذه الخطوة تدمجها في عبارة واحدة.
+    // ══════════════════════════════════════════════════════════════════════════
+    (function mergeAdjacentPhrases() {
+      if (!previewContent) return;
+      const INLINE_TAGS = new Set(['STRONG','EM','B','I','U','MARK','SPAN','SUB','SUP','S','DEL','INS','SMALL','BIG','ABBR','CITE','DFN','KBD','SAMP','VAR','Q','TIME','WBR','BDI','BDO','RUBY','RT','RP']);
+      
+      // جمع كل عبارات النطق الموجودة
+      const allPhrases = Array.from(previewContent.querySelectorAll('.pronunciation-phrase'));
+      if (allPhrases.length < 2) return;
+      
+      // دالة مساعدة: هل هذا العنصر/العقدة "جسر" بين عبارتين (عنصر inline أو مسافة بيضاء)
+      function isBridgeNode(node) {
+        if (!node) return false;
+        // عقدة نصية فارغة أو مسافة فقط
+        if (node.nodeType === 3) return node.textContent.trim() === '';
+        if (node.nodeType !== 1) return false;
+        // عنصر inline يحتوي phrase بداخله
+        if (INLINE_TAGS.has(node.tagName) && node.querySelector && node.querySelector('.pronunciation-phrase')) return true;
+        return false;
+      }
+      
+      // دالة مساعدة: البحث عن العبارة التالية المجاورة (قد تكون أخت مباشرة أو داخل عنصر inline مجاور)
+      function findNextAdjacentPhrase(phraseEl) {
+        let current = phraseEl;
+        // اصعد فوق عناصر inline التي تغلّف العبارة (مثل <strong><span class="pronunciation-phrase">...</span></strong>)
+        while (current.parentElement && INLINE_TAGS.has(current.parentElement.tagName) && current.parentElement.children.length === 1) {
+          current = current.parentElement;
+        }
+        
+        // امشِ على الأشقاء التاليين
+        let next = current.nextSibling;
+        while (next) {
+          // تخطّي المسافات البيضاء
+          if (next.nodeType === 3 && next.textContent.trim() === '') {
+            next = next.nextSibling;
+            continue;
+          }
+          // إذا وصلنا لعبارة مباشرة
+          if (next.nodeType === 1 && next.classList && next.classList.contains('pronunciation-phrase')) {
+            return { phrase: next, wrapper: null };
+          }
+          // إذا وصلنا لعنصر inline يحتوي عبارة بداخله
+          if (next.nodeType === 1 && INLINE_TAGS.has(next.tagName)) {
+            const innerPhrase = next.querySelector('.pronunciation-phrase');
+            if (innerPhrase) return { phrase: innerPhrase, wrapper: next };
+            // عنصر inline بدون عبارة (مثل نص عادي داخل strong) - نتوقف
+            break;
+          }
+          // أي شيء آخر (عقدة نصية بمحتوى، عنصر block) - نتوقف
+          break;
+        }
+        return null;
+      }
+      
+      // دالة لاستخراج النص الخام من العبارة (بدون الأزرار والترجمة)
+      function extractPhraseText(phraseEl) {
+        let text = '';
+        phraseEl.querySelectorAll('.pronunciation-word').forEach(w => {
+          text += (text ? ' ' : '') + w.getAttribute('data-word');
+        });
+        return text || phraseEl.getAttribute('data-phrase') || '';
+      }
+      
+      // مجموعة العبارات التي تم دمجها (لتجنب معالجتها مرتين)
+      const merged = new Set();
+      
+      allPhrases.forEach(firstPhrase => {
+        if (merged.has(firstPhrase)) return;
+        
+        // هل العبارة الأولى تنتهي بعلامة نهاية جملة؟
+        const firstData = firstPhrase.getAttribute('data-phrase') || '';
+        if (/[.?!؟…]\s*$/.test(firstData)) return; // الجملة انتهت، لا دمج
+        
+        // جمع سلسلة العبارات المتصلة
+        const chain = [{ phrase: firstPhrase, wrapper: null }];
+        let last = firstPhrase;
+        
+        while (true) {
+          const nextInfo = findNextAdjacentPhrase(last);
+          if (!nextInfo) break;
+          
+          // تحقق أن العبارة السابقة لا تنتهي بعلامة نهاية جملة
+          const lastData = last.getAttribute('data-phrase') || '';
+          if (/[.?!؟…]\s*$/.test(lastData)) break;
+          
+          chain.push(nextInfo);
+          merged.add(nextInfo.phrase);
+          last = nextInfo.phrase;
+        }
+        
+        if (chain.length < 2) return; // لا يوجد ما يُدمج
+        
+        // ═══ تنفيذ الدمج ═══
+        const primaryPhrase = firstPhrase;
+        const primaryLang = primaryPhrase.getAttribute('data-lang');
+        
+        // جمع النص الكامل للعبارة المدمجة
+        const allTexts = chain.map(c => extractPhraseText(c.phrase));
+        const mergedText = allTexts.join(' ');
+        
+        // جمع trailingPunct من العبارة الأخيرة
+        const lastPhrase = chain[chain.length - 1].phrase;
+        const lastPhraseData = lastPhrase.getAttribute('data-phrase') || '';
+        const trailingMatch = lastPhraseData.match(/([.?!؟…]+)\s*$/);
+        const fullMergedText = trailingMatch ? mergedText : mergedText;
+        
+        // إزالة أزرار النطق والترجمة من العبارة الأولى (سنعيد إنشاءها)
+        const oldSpeaker = primaryPhrase.querySelector('.pronunciation-speaker-btn');
+        const oldTransBtn = primaryPhrase.querySelector('.pronunciation-trans-btn');
+        const oldOuterWrapper = primaryPhrase.querySelector('.itb-outer-wrapper');
+        if (oldSpeaker) oldSpeaker.remove();
+        if (oldTransBtn) oldTransBtn.remove();
+        if (oldOuterWrapper) oldOuterWrapper.remove();
+        
+        // نقل محتوى العبارات التالية إلى العبارة الأولى مع الحفاظ على المسافات
+        for (let i = 1; i < chain.length; i++) {
+          const info = chain[i];
+          const srcPhrase = info.phrase;
+          
+          // إزالة أزرار النطق والترجمة من العبارة المصدرية
+          const sp = srcPhrase.querySelector('.pronunciation-speaker-btn');
+          const tb = srcPhrase.querySelector('.pronunciation-trans-btn');
+          const ow = srcPhrase.querySelector('.itb-outer-wrapper');
+          if (sp) sp.remove();
+          if (tb) tb.remove();
+          if (ow) ow.remove();
+          
+          // ═══ جمع العقد الوسيطة (مسافات، عناصر نصية) بين العبارة السابقة والحالية ═══
+          // نجد العنصر الفعلي في الـ DOM (قد يكون العبارة أو غلافها inline)
+          let prevDomNode = chain[i - 1].phrase;
+          while (prevDomNode.parentElement && INLINE_TAGS.has(prevDomNode.parentElement.tagName) && prevDomNode.parentElement.children.length === 1) {
+            prevDomNode = prevDomNode.parentElement;
+          }
+          let currDomNode = info.wrapper || srcPhrase;
+          
+          // نجمع كل العقد بين prevDomNode و currDomNode (مسافات وعقد نصية بينهما)
+          const betweenNodes = [];
+          let scanNode = prevDomNode.nextSibling;
+          while (scanNode && scanNode !== currDomNode) {
+            betweenNodes.push(scanNode);
+            scanNode = scanNode.nextSibling;
+          }
+          // ننقل العقد الوسيطة إلى العبارة الأولى (لحفظ المسافات)
+          betweenNodes.forEach(bn => primaryPhrase.appendChild(bn));
+          
+          // إذا لم توجد مسافة بينهما، نضيف مسافة يدوياً
+          if (betweenNodes.length === 0 || !betweenNodes.some(bn => bn.nodeType === 3 && /\s/.test(bn.textContent))) {
+            primaryPhrase.appendChild(document.createTextNode(' '));
+          }
+          
+          // إذا كانت العبارة داخل عنصر inline (مثل <strong>)
+          if (info.wrapper) {
+            // نقل الغلاف كاملاً مع محتواه (بدون الأزرار)
+            // ونزيل من srcPhrase الـ class لأنها لم تعد عبارة مستقلة
+            srcPhrase.classList.remove('pronunciation-phrase');
+            srcPhrase.removeAttribute('data-phrase');
+            srcPhrase.removeAttribute('data-lang');
+            // ننقل الـ wrapper (مثل <strong>) بداخل primaryPhrase
+            primaryPhrase.appendChild(info.wrapper);
+          } else {
+            // عبارة مباشرة بدون غلاف - ننقل أطفالها
+            while (srcPhrase.firstChild) {
+              primaryPhrase.appendChild(srcPhrase.firstChild);
+            }
+            srcPhrase.remove();
+          }
+          
+          // جمع العقد بعد آخر عبارة مدمجة (مثل النقطة أو مسافة بعدها)
+          if (i === chain.length - 1) {
+            let tailDomNode = info.wrapper || srcPhrase;
+            if (!info.wrapper && !srcPhrase.parentNode) {
+              // srcPhrase was removed, skip tail collection
+            } else {
+              let tailNode = tailDomNode.nextSibling;
+              const tailNodes = [];
+              while (tailNode) {
+                // نتوقف عند أي عنصر block أو عبارة نطق أخرى
+                if (tailNode.nodeType === 1 && (tailNode.classList.contains('pronunciation-phrase') || !INLINE_TAGS.has(tailNode.tagName))) break;
+                // نص فقط إذا كان علامة ترقيم أو مسافة
+                if (tailNode.nodeType === 3 && /^[\s.?!؟…,;:]+$/.test(tailNode.textContent)) {
+                  tailNodes.push(tailNode);
+                } else {
+                  break;
+                }
+                tailNode = tailNode.nextSibling;
+              }
+              tailNodes.forEach(tn => primaryPhrase.appendChild(tn));
+            }
+          }
+        }
+        
+        // تحديث بيانات العبارة المدمجة
+        primaryPhrase.setAttribute('data-phrase', fullMergedText);
+        
+        // إعادة إنشاء زر النطق
+        const mode = vienixSettings.interactionMode || 'mixed';
+        if (mode === 'icon' || mode === 'mixed') {
+          const speakerBtn = document.createElement('button');
+          speakerBtn.type = 'button';
+          speakerBtn.className = 'pronunciation-speaker-btn';
+          speakerBtn.title = '🔊 استمع للعبارة: ' + fullMergedText;
+          speakerBtn.setAttribute('aria-label', 'Listen to ' + fullMergedText);
+          speakerBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>';
+          
+          // Long-press + click handlers
+          let longPressTimer = null, touchStartX = 0, touchStartY = 0, hasTriggeredLongPress = false;
+          speakerBtn.addEventListener('touchstart', function(e) {
+            hasTriggeredLongPress = false;
+            if (e.touches && e.touches.length === 1) {
+              touchStartX = e.touches[0].clientX;
+              touchStartY = e.touches[0].clientY;
+              longPressTimer = setTimeout(() => {
+                hasTriggeredLongPress = true;
+                if (navigator.vibrate) try { navigator.vibrate(40); } catch(_) {}
+                openPronunciationContextMenu({ clientX: touchStartX, clientY: touchStartY }, fullMergedText, primaryLang, speakerBtn);
+              }, 450);
+            }
+          }, { passive: true });
+          speakerBtn.addEventListener('touchmove', function(e) {
+            if (longPressTimer && e.touches && e.touches.length === 1) {
+              if (Math.abs(e.touches[0].clientX - touchStartX) > 10 || Math.abs(e.touches[0].clientY - touchStartY) > 10) {
+                clearTimeout(longPressTimer); longPressTimer = null;
+              }
+            }
+          }, { passive: true });
+          speakerBtn.addEventListener('touchend', function() { if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; } });
+          speakerBtn.addEventListener('touchcancel', function() { if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; } });
+          
+          speakerBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            if (hasTriggeredLongPress) { hasTriggeredLongPress = false; return; }
+            const effectiveLang = primaryPhrase.getAttribute('data-override-lang') || primaryPhrase.getAttribute('data-lang') || primaryLang;
+            speakPronunciation(fullMergedText, this, effectiveLang);
+          });
+          
+          speakerBtn.addEventListener('contextmenu', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            const effectiveLang = primaryPhrase.getAttribute('data-override-lang') || primaryPhrase.getAttribute('data-lang') || primaryLang;
+            openPronunciationContextMenu(e, fullMergedText, effectiveLang, this);
+          });
+          
+          primaryPhrase.appendChild(speakerBtn);
+        }
+        
+        // إعادة إنشاء كارت الترجمة وزرها
+        const transBox = document.createElement('div');
+        transBox.className = 'inline-translation-box';
+        transBox.setAttribute('dir', 'rtl');
+        transBox.innerHTML = '<div class="itb-loading"><span class="wtb-spinner"></span><span>جارٍ استحضار ترجمة العبارة...</span></div><p class="itb-text" style="display:none;"></p>';
+        transBox._phrase = fullMergedText;
+        transBox._lang = primaryLang;
+        transBox._wrapper = primaryPhrase;
+        
+        if (vienixSettings.translationEnabled !== false) {
+          const transBtn = document.createElement('button');
+          transBtn.type = 'button';
+          transBtn.className = 'pronunciation-trans-btn';
+          transBtn.title = '🌐 ترجمة: ' + fullMergedText;
+          transBtn.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>';
+          transBtn._associatedBox = transBox;
+          transBtn._associatedPhrase = fullMergedText;
+          transBtn._associatedLang = primaryLang;
+          transBox._associatedBtn = transBtn;
+          transBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            const effectiveLang = primaryPhrase.getAttribute('data-override-lang') || primaryLang;
+            toggleInlinePhraseTranslation(transBtn, transBox, fullMergedText, effectiveLang, false);
+          });
+          primaryPhrase.appendChild(transBtn);
+        }
+        
+        // الغلاف الخارجي
+        const outerWrapper = document.createElement('div');
+        outerWrapper.className = 'itb-outer-wrapper';
+        transBox._outerWrapper = outerWrapper;
+        const sideActions = document.createElement('div');
+        sideActions.className = 'itb-side-actions';
+        
+        // زر النسخ
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.className = 'itb-action-btn itb-copy-action-btn';
+        copyBtn.title = 'نسخ الترجمة';
+        copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#6366f1" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="13" height="13" rx="3.5" ry="3.5"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4.5C2 3.4 2.9 2.5 4 2.5h9.5c1.1 0 2 .9 2 2v1"></path></svg><span class="itb-copy-toast">تم النسخ ✓</span>';
+        copyBtn.addEventListener('click', function(e) {
+          e.stopPropagation(); e.preventDefault();
+          const transEl = transBox.querySelector('.itb-text');
+          const transText = (transEl && transEl.innerText) ? transEl.innerText.trim() : '';
+          const textToCopy = transText || fullMergedText;
+          navigator.clipboard.writeText(textToCopy).then(() => {
+            copyBtn.classList.add('copied');
+            if (typeof showToast === 'function') showToast('تم نسخ الترجمة بنجاح ✓', 'success', 1600);
+            setTimeout(() => copyBtn.classList.remove('copied'), 1800);
+          }).catch(() => {});
+        });
+        
+        // زر AI
+        const askAiBtn = document.createElement('button');
+        askAiBtn.type = 'button';
+        askAiBtn.className = 'itb-action-btn itb-ask-ai-btn';
+        askAiBtn.title = 'اسأل AI عن هذا النص';
+        askAiBtn.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20.5 11.5C20.5 16 16.5 19.5 11.5 19.5C10.2 19.5 9 19.2 7.9 18.7L3.5 20L4.8 16.1C3.7 14.8 3 13.2 3 11.5C3 7 6.8 3.5 11.5 3.5C16.5 3.5 20.5 7 20.5 11.5Z" stroke="#9333ea" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M11.5 7 Q11.5 11.5 15.5 11.5 Q11.5 11.5 11.5 16 Q11.5 11.5 7.5 11.5 Q11.5 11.5 11.5 7 Z" fill="#00d2ff"/></svg>';
+        askAiBtn.addEventListener('click', function(e) {
+          e.stopPropagation(); e.preventDefault();
+          if (typeof window.openAiChatWithPhrase === 'function') window.openAiChatWithPhrase(fullMergedText, this);
+        });
+        
+        sideActions.appendChild(copyBtn);
+        sideActions.appendChild(askAiBtn);
+        outerWrapper.appendChild(transBox);
+        outerWrapper.appendChild(sideActions);
+        primaryPhrase.appendChild(outerWrapper);
+      });
+    })();
   }
 
 
