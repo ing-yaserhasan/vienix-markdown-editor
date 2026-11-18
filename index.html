@@ -3882,6 +3882,19 @@
         var startIdx = getAiKeyIndex() % totalKeys;
         var lastErr = null;
 
+        // بناء parts: نص فقط أو نص + صور (multimodal OCR)
+        var requestParts = [{ text: prompt }];
+        if (opts.imageParts && opts.imageParts.length > 0) {
+          opts.imageParts.forEach(function (imgPart) {
+            requestParts.push({
+              inline_data: {
+                mime_type: imgPart.mimeType || 'image/jpeg',
+                data: imgPart.base64
+              }
+            });
+          });
+        }
+
         function tryKey(keyAttempt) {
           if (keyAttempt >= totalKeys) {
             return tryNextKeySet();
@@ -3900,7 +3913,7 @@
               headers: { 'Content-Type': 'application/json' },
               signal: opts.signal,
               body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
+                contents: [{ parts: requestParts }],
                 generationConfig: {
                   temperature: opts.temperature || 0.65,
                   maxOutputTokens: opts.maxTokens || 3000
@@ -3979,7 +3992,13 @@
 
         _aiAbortCtrl = new AbortController();
 
-        callGeminiAPI(fullPrompt, { signal: _aiAbortCtrl.signal }).then(function (reply) {
+        // إرسال الصور مع الطلب إن وجدت (multimodal OCR)
+        var apiOpts = { signal: _aiAbortCtrl.signal };
+        if (_aiFileContextAbsorbed && _aiFileContextImages && _aiFileContextImages.length > 0) {
+          apiOpts.imageParts = _aiFileContextImages;
+        }
+
+        callGeminiAPI(fullPrompt, apiOpts).then(function (reply) {
           var aiMsg = { role: 'model', content: reply, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
           _aiMessages.push(aiMsg);
           saveAiChatHistory(_aiMessages);
@@ -4304,6 +4323,40 @@
       // ───── Layer 7: Context-Aware AI (File Content Control) ─────
       var _aiFileContextAbsorbed = false;
       var _aiFileContextContent = '';
+      var _aiFileContextImages = [];
+
+      // استخراج صور vienix-img:// و data:image من نص الماركداون وتحويلها لـ base64 لإرسالها للـ AI
+      function extractImagesFromMarkdown(markdownText) {
+        var images = [];
+        if (!markdownText || typeof markdownText !== 'string') return images;
+        var seen = {};
+        // صور vienix-img://
+        var vienixRegex = /!\[[^\]]*\]\(vienix-(?:img|image):\/\/([a-zA-Z0-9_-]+)\)/gi;
+        var match;
+        while ((match = vienixRegex.exec(markdownText)) !== null) {
+          var imgId = match[1];
+          if (seen[imgId]) continue;
+          seen[imgId] = true;
+          if (window.VienixImages && typeof window.VienixImages.getImage === 'function') {
+            var dataUrl = window.VienixImages.getImage(imgId);
+            if (dataUrl && dataUrl.startsWith('data:image/')) {
+              var mimeMatch = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,/);
+              var mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+              var base64Data = dataUrl.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '');
+              images.push({ id: imgId, mimeType: mimeType, base64: base64Data });
+            }
+          }
+        }
+        // صور data:image مباشرة
+        var dataRegex = /!\[[^\]]*\]\((data:image\/([a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=]+))\)/gi;
+        while ((match = dataRegex.exec(markdownText)) !== null) {
+          var key = match[3].substring(0, 32);
+          if (seen[key]) continue;
+          seen[key] = true;
+          images.push({ id: 'inline', mimeType: 'image/' + match[2], base64: match[3] });
+        }
+        return images;
+      }
 
       window.openAiChatWithContext = function () {
         // Read editor content
@@ -4337,6 +4390,9 @@
         // Save content for context
         _aiFileContextContent = content;
 
+        // استخراج الصور من المحتوى وحفظها لإرسالها مع السياق (OCR multimodal)
+        _aiFileContextImages = extractImagesFromMarkdown(content);
+
         // Clear chat body
         var body = document.getElementById('ai-chat-body');
         var empty = document.getElementById('ai-chat-empty');
@@ -4365,9 +4421,11 @@
             if (progress >= 100) {
               clearInterval(scanInterval);
               setTimeout(function () {
+                var imgCount = _aiFileContextImages ? _aiFileContextImages.length : 0;
+                var imgNotice = imgCount > 0 ? ' تم التعرف على ' + imgCount + ' صورة وقراءة محتواها (OCR). 🖼️' : '';
                 scanDiv.innerHTML = '<div class="ai-scan-success">' +
                   '<span class="ai-scan-success-icon">✅</span>' +
-                  '<p>تم فحص واستيعاب كافة تفاصيل المحتوى بنجاح! أنا الآن جاهز للإجابة عن أي استفسار بخصوصه أو تنفيذ أي أمر عليه.</p>' +
+                  '<p>تم فحص واستيعاب كافة تفاصيل المحتوى بنجاح!' + imgNotice + ' أنا الآن جاهز للإجابة عن أي استفسار بخصوصه أو تنفيذ أي أمر عليه.</p>' +
                   '</div>';
                 scanDiv.className = 'ai-scan-container ai-scan-done';
                 _aiFileContextAbsorbed = true;
@@ -4411,12 +4469,15 @@
         // Build prompt — include file context if absorbed, or word/sentence context if active
         var fullPrompt = AI_SYSTEM_PROMPT;
         if (_aiFileContextAbsorbed && _aiFileContextContent) {
+          var imgHint = (_aiFileContextImages && _aiFileContextImages.length > 0)
+            ? '\n- الملف يحتوي على ' + _aiFileContextImages.length + ' صورة مرفقة. تم إرسالها لك كصور فعلية (multimodal). يمكنك قراءة ووصف محتواها ونصوصها (OCR) والإجابة عن أسئلة حولها.\n'
+            : '';
           fullPrompt += '\n\nقاعدة إضافية مهمة جداً:\n' +
             'المستخدم أعطاك محتوى ملف Markdown للعمل عليه. إذا طلب منك تعديله (ترجمة، تلخيص، تصحيح، إعادة كتابة، تنسيق، إلخ):\n' +
             '- أعِد المحتوى المعدّل كاملاً بصيغة Markdown جاهزة للاستبدال مباشرة.\n' +
             '- لا تضع المحتوى داخل كتلة كود (``` ```) إلا إذا كان المستخدم يريد كود برمجي.\n' +
             '- احفظ نفس التنسيق والهيكل ما لم يطلب غير ذلك.\n' +
-            '- إذا كان السؤال استفساراً (ليس أمر تعديل)، أجب عليه بشكل طبيعي.\n\n' +
+            '- إذا كان السؤال استفساراً (ليس أمر تعديل)، أجب عليه بشكل طبيعي.\n' + imgHint + '\n' +
             '--- محتوى الملف الحالي ---\n' + _aiFileContextContent + '\n--- نهاية المحتوى ---\n';
         } else if (window._currentAiWordContext && window._currentAiWordContext.word) {
           fullPrompt += '\n\n--- سياق الكلمة الحالية من النص ---\n' +
@@ -4434,7 +4495,13 @@
 
         _aiAbortCtrl = new AbortController();
 
-        callGeminiAPI(fullPrompt, { signal: _aiAbortCtrl.signal }).then(function (reply) {
+        // إرسال الصور مع الطلب إن وجدت (multimodal OCR)
+        var apiOpts = { signal: _aiAbortCtrl.signal };
+        if (_aiFileContextAbsorbed && _aiFileContextImages && _aiFileContextImages.length > 0) {
+          apiOpts.imageParts = _aiFileContextImages;
+        }
+
+        callGeminiAPI(fullPrompt, apiOpts).then(function (reply) {
           var aiMsg = { role: 'model', content: reply, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
           _aiMessages.push(aiMsg);
 
