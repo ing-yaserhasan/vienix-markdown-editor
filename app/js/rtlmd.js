@@ -11112,6 +11112,47 @@ function exportDocument(format) {
       .join('\n');
   }
 
+  // إصلاح المسافات البادئة الزائدة خارج كتل الأكواد
+  // Turndown أحياناً يضيف مسافات بادئة (4+ spaces) بسبب عناصر div المدمجة
+  // مما يجعل marked يعاملها كـ code blocks (بلوكات سوداء)
+  function fixIndentationOutsideCodeBlocks(md) {
+    if (!md || typeof md !== 'string') return md;
+    const lines = md.split('\n');
+    let inCodeBlock = false;
+    const result = [];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      // تتبع كتل الأكواد (```)
+      if (/^(`{3,}|~{3,})/.test(line.trim())) {
+        inCodeBlock = !inCodeBlock;
+        result.push(line);
+        continue;
+      }
+      if (inCodeBlock) {
+        result.push(line);
+        continue;
+      }
+      // خارج كتل الأكواد: إزالة المسافات البادئة الزائدة (4+ spaces)
+      // ولكن الحفاظ على المسافات في عناصر القوائم (تبدأ بـ - أو * أو رقم.)
+      if (/^( {4,}|\t+)/.test(line)) {
+        const trimmed = line.trimStart();
+        // إذا كان السطر يبدأ بعلامة قائمة بعد التقليم، أبقِ مسافتين فقط (قائمة فرعية)
+        if (/^[-*+]\s|^\d+\.\s/.test(trimmed)) {
+          // حساب مستوى التداخل (كل 4 مسافات = مستوى)
+          const indent = line.length - line.trimStart().length;
+          const level = Math.floor(indent / 4);
+          result.push('  '.repeat(level) + trimmed);
+        } else {
+          // ليس عنصر قائمة → إزالة المسافات البادئة كلياً
+          result.push(trimmed);
+        }
+      } else {
+        result.push(line);
+      }
+    }
+    return result.join('\n');
+  }
+
   // مزامنة محتوى المعاينة المباشر إلى نصوص الماركداون
   function syncPreviewToMarkdown(immediate = false) {
     if (!turndownService) initTurndown();
@@ -11169,8 +11210,38 @@ function exportDocument(format) {
           parent.removeChild(span);
         });
 
+        // 5. إزالة خصائص dir و style.direction من جميع العناصر لمنع Turndown من إضافة مسافات بادئة زائدة
+        clone.querySelectorAll('[dir]').forEach(el => {
+          el.removeAttribute('dir');
+        });
+        clone.querySelectorAll('[style]').forEach(el => {
+          if (el.style.direction) el.style.removeProperty('direction');
+          if (el.style.unicodeBidi) el.style.removeProperty('unicode-bidi');
+          if (el.style.textAlign) el.style.removeProperty('text-align');
+          // إذا أصبح الستايل فارغاً بالكامل أزل الخاصية
+          if (el.getAttribute('style') && el.getAttribute('style').trim() === '') {
+            el.removeAttribute('style');
+          }
+        });
+
+        // 6. تفكيك أي عناصر div عادية أضافها المتصفح أثناء التحرير (عند ضغط Enter)
+        // ولكن الحفاظ على العناصر الخاصة (mermaid, image-resizer, arrow-resizer, etc.)
+        clone.querySelectorAll('div').forEach(div => {
+          // لا تلمس العناصر الخاصة
+          if (div.classList.length > 0 || div.hasAttribute('data-diagram') || div.hasAttribute('data-arrow-id')) return;
+          if (div.closest('.mermaid-wrapper, .mermaid, .image-resizer-wrapper, .arrow-resizer-wrapper')) return;
+          // تحويل div العادي إلى p
+          const p = document.createElement('p');
+          p.innerHTML = div.innerHTML;
+          div.parentNode.replaceChild(p, div);
+        });
+
         // تحويل شجرة HTML إلى نصوص ماركداون دقيقة
         let md = turndownService.turndown(clone.innerHTML);
+
+        // تنظيف المسافات البادئة الزائدة التي تُحوَّل لأكواد (4+ مسافات في بداية السطر)
+        // مع الحفاظ على المسافات داخل كتل الأكواد الحقيقية (بين ```)
+        md = fixIndentationOutsideCodeBlocks(md);
 
         // تنظيف أي شوائب قديمة للترجمة أو فواصل زائدة أو بقايا مسربة من أشرطة الأدوات
         md = cleanToolbarResidue(md)
