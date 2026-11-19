@@ -992,12 +992,13 @@
     // النمط الافتراضي الذكي (Auto):
     container.dir = 'auto';
 
-    const blocks = container.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, blockquote, table, div:not(.mermaid):not(.mermaid-wrapper)');
+    const blocks = container.querySelectorAll('p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, table');
     blocks.forEach(el => {
       if (el.classList.contains('md-blank-line')) return;
       if (el.closest('pre, code, .mermaid, .mermaid-wrapper')) return;
 
       // تحليل ذكي: فحص أول حرف قوي في النص لتحديد الاتجاه بدقة
+      // هذا يمنع انعكاس علامات الترقيم (? ! .) في الجمل اللاتينية
       const rawText = el.textContent || '';
       const firstStrongMatch = rawText.match(/[\p{Script=Arabic}\p{Script=Hebrew}\p{Script=Syriac}\p{Script=Thaana}\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}]/u);
       if (firstStrongMatch) {
@@ -11727,6 +11728,19 @@ function exportDocument(format) {
       iconsCheckbox.checked = isIconsOn;
     }
 
+    // إخفاء أو إظهار الأيقونتين في النص
+    document.body.classList.toggle('hide-pron-phrase-icons', isPronOn && !isIconsOn);
+
+    if (pronCheckbox && pronCheckbox.checked !== isPronOn) {
+      pronCheckbox.checked = isPronOn;
+    }
+    if (typeof togglePronunciationSubSettings === 'function') {
+      togglePronunciationSubSettings(isPronOn);
+    }
+  };
+
+  // ── زر التبديل السريع لظهور أيقونتي النطق والترجمة (Icons Quick Toggle) ──
+  window.togglePronunciationIconsQuick = function () {
     const isPronOn = typeof vienixSettings !== 'undefined' && vienixSettings.pronunciationEnabled === true;
     if (!isPronOn) return; // يظهر ويعمل فقط في حال كان زر النطق الصوتي شغال
 
