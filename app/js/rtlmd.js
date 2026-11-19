@@ -14506,6 +14506,39 @@ function exportDocument(format) {
       arrow.style.left = `${Math.max(14, Math.min(bubbleRect.width - 14, arrowLeft))}px`;
     }
 
+    // ═══ ضمان ظهور الفقاعة بالكامل دون تغطية الكلمة ═══
+    const viewH = window.innerHeight;
+    if (top + bubbleRect.height > viewH - margin) {
+      // الفقاعة تخرج من أسفل الشاشة - نمرر المحتوى لإفساح مجال
+      const scrollEl = wordElement.closest('#preview-content, .preview-content') || document.getElementById('preview-content');
+      if (scrollEl) {
+        const overflow = (top + bubbleRect.height) - viewH + 24;
+        scrollEl.scrollTop += overflow;
+        // إعادة حساب موضع الكلمة بعد التمرير
+        const newRect = wordElement.getBoundingClientRect();
+        // إعادة محاولة الوضع فوق الكلمة أولاً
+        let newTop = newRect.top - bubbleRect.height - 10;
+        if (newTop >= margin) {
+          top = newTop;
+          bubble.classList.remove('arrow-top');
+          bubble.classList.add('arrow-bottom');
+        } else {
+          top = newRect.bottom + 10;
+        }
+        left = newRect.left + (newRect.width / 2) - (bubbleRect.width / 2);
+        if (left < margin) left = margin;
+        if (left + bubbleRect.width > window.innerWidth - margin) {
+          left = window.innerWidth - margin - bubbleRect.width;
+        }
+        bubble.style.top = `${top}px`;
+        bubble.style.left = `${left}px`;
+        if (arrow) {
+          const newArrowLeft = newRect.left + (newRect.width / 2) - left;
+          arrow.style.left = `${Math.max(14, Math.min(bubbleRect.width - 14, newArrowLeft))}px`;
+        }
+      }
+    }
+
     // Fetch Translation (Word + Contextual Phrase)
     const abortController = new AbortController();
     activeTransAbortController = abortController;

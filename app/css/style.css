@@ -7219,6 +7219,9 @@ body.hide-pron-phrase-icons .pronunciation-trans-btn {
 body.ghost-pron-icons .pronunciation-phrase {
   margin: 0 !important;
   position: relative;
+  direction: inherit !important;
+  unicode-bidi: normal !important;
+  text-align: inherit !important;
 }
 
 /* 2. الأيقونتان: خارج التدفق تماماً — لا تؤثران على ترتيب النص أبداً */
