@@ -992,11 +992,20 @@
     // النمط الافتراضي الذكي (Auto):
     container.dir = 'auto';
 
-    const blocks = container.querySelectorAll('p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, table');
+    const blocks = container.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, blockquote, table, div:not(.mermaid):not(.mermaid-wrapper)');
     blocks.forEach(el => {
       if (el.classList.contains('md-blank-line')) return;
       if (el.closest('pre, code, .mermaid, .mermaid-wrapper')) return;
-      el.setAttribute('dir', 'auto');
+
+      // تحليل ذكي: فحص أول حرف قوي في النص لتحديد الاتجاه بدقة
+      const rawText = el.textContent || '';
+      const firstStrongMatch = rawText.match(/[\p{Script=Arabic}\p{Script=Hebrew}\p{Script=Syriac}\p{Script=Thaana}\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}]/u);
+      if (firstStrongMatch) {
+        const isRTL = /[\p{Script=Arabic}\p{Script=Hebrew}\p{Script=Syriac}\p{Script=Thaana}]/u.test(firstStrongMatch[0]);
+        el.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
+      } else {
+        el.setAttribute('dir', 'auto');
+      }
     });
   }
 
@@ -11718,19 +11727,6 @@ function exportDocument(format) {
       iconsCheckbox.checked = isIconsOn;
     }
 
-    // إخفاء أو إظهار الأيقونتين في النص
-    document.body.classList.toggle('hide-pron-phrase-icons', isPronOn && !isIconsOn);
-
-    if (pronCheckbox && pronCheckbox.checked !== isPronOn) {
-      pronCheckbox.checked = isPronOn;
-    }
-    if (typeof togglePronunciationSubSettings === 'function') {
-      togglePronunciationSubSettings(isPronOn);
-    }
-  };
-
-  // ── زر التبديل السريع لظهور أيقونتي النطق والترجمة (Icons Quick Toggle) ──
-  window.togglePronunciationIconsQuick = function () {
     const isPronOn = typeof vienixSettings !== 'undefined' && vienixSettings.pronunciationEnabled === true;
     if (!isPronOn) return; // يظهر ويعمل فقط في حال كان زر النطق الصوتي شغال
 
@@ -11803,6 +11799,111 @@ function exportDocument(format) {
       previewContent.addEventListener('blur', () => {
         if (!isWysiwygActive) return;
         syncPreviewToMarkdown(true);
+      });
+
+      // ══════════════════════════════════════════════════════════════════════
+      // معالجة Enter في القوائم: استمرار ترقيم القائمة تلقائياً
+      // ══════════════════════════════════════════════════════════════════════
+      previewContent.addEventListener('keydown', (e) => {
+        if (!isWysiwygActive) return;
+
+        // ═══ ENTER: استمرار القائمة ═══
+        if (e.key === 'Enter' && !e.shiftKey) {
+          const sel = window.getSelection();
+          if (!sel || sel.rangeCount === 0) return;
+          const anchorNode = sel.anchorNode;
+          const li = anchorNode ? (anchorNode.nodeType === 1 ? anchorNode.closest('li') : anchorNode.parentElement ? anchorNode.parentElement.closest('li') : null) : null;
+          if (!li) return;
+          const ol = li.closest('ol');
+          if (!ol) return; // فقط القوائم المرقمة
+
+          const liText = li.textContent.trim();
+          if (liText === '') {
+            // العنصر فارغ → الخروج من القائمة (تحويل إلى فقرة عادية)
+            e.preventDefault();
+            const p = document.createElement('p');
+            p.innerHTML = '<br>';
+            ol.parentNode.insertBefore(p, ol.nextSibling);
+            li.remove();
+            // إذا أصبحت القائمة فارغة، احذفها
+            if (ol.querySelectorAll('li').length === 0) {
+              ol.remove();
+            }
+            // ضع المؤشر في الفقرة الجديدة
+            const range = document.createRange();
+            range.setStart(p, 0);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            syncPreviewToMarkdown(true);
+            return;
+          }
+
+          // العنصر يحتوي نص → إنشاء عنصر جديد بالرقم التالي
+          // (المتصفح يتعامل مع هذا تلقائياً في <ol> عادةً)
+          // لا نتدخل، نترك المتصفح يعمل
+          return;
+        }
+
+        // ═══ BACKSPACE: الخروج من القائمة عند عنصر فارغ ═══
+        if (e.key === 'Backspace') {
+          const sel = window.getSelection();
+          if (!sel || sel.rangeCount === 0) return;
+          const range = sel.getRangeAt(0);
+
+          // تحقق أن المؤشر في بداية العنصر
+          const anchorNode = sel.anchorNode;
+          const li = anchorNode ? (anchorNode.nodeType === 1 ? anchorNode.closest('li') : anchorNode.parentElement ? anchorNode.parentElement.closest('li') : null) : null;
+          if (!li) return;
+          const list = li.closest('ol, ul');
+          if (!list) return;
+
+          const liText = li.textContent.trim();
+
+          // إذا العنصر فارغ أو المؤشر في بداية العنصر
+          const isAtStart = (range.collapsed && sel.anchorOffset === 0 && (anchorNode === li || anchorNode === li.firstChild || (anchorNode.nodeType === 3 && anchorNode === li.childNodes[0])));
+          
+          if (liText === '' || isAtStart) {
+            if (liText === '') {
+              // العنصر فارغ تماماً → تحويل إلى فقرة عادية (الخطوة الوسيطة)
+              e.preventDefault();
+              const p = document.createElement('p');
+              p.innerHTML = '<br>';
+              
+              // إذا كان أول عنصر في القائمة، ضع الفقرة قبل القائمة
+              // وإلا ضعها بعد القائمة (أو قسّم القائمة)
+              if (li === list.firstElementChild) {
+                list.parentNode.insertBefore(p, list);
+              } else if (li === list.lastElementChild) {
+                list.parentNode.insertBefore(p, list.nextSibling);
+              } else {
+                // عنصر في الوسط - قسّم القائمة
+                const newList = document.createElement(list.tagName);
+                let moveNext = false;
+                Array.from(list.children).forEach(child => {
+                  if (child === li) { moveNext = true; return; }
+                  if (moveNext) newList.appendChild(child);
+                });
+                list.parentNode.insertBefore(p, list.nextSibling);
+                if (newList.children.length > 0) {
+                  p.parentNode.insertBefore(newList, p.nextSibling);
+                }
+              }
+              li.remove();
+              if (list.querySelectorAll('li').length === 0) {
+                list.remove();
+              }
+              // ضع المؤشر في الفقرة الجديدة
+              const newRange = document.createRange();
+              newRange.setStart(p, 0);
+              newRange.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(newRange);
+              syncPreviewToMarkdown(true);
+              return;
+            }
+          }
+        }
       });
     }
   }
