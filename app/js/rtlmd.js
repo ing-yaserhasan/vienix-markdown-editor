@@ -996,17 +996,7 @@
     blocks.forEach(el => {
       if (el.classList.contains('md-blank-line')) return;
       if (el.closest('pre, code, .mermaid, .mermaid-wrapper')) return;
-
-      // تحليل ذكي: فحص أول حرف قوي في النص لتحديد الاتجاه بدقة
-      // هذا يمنع انعكاس علامات الترقيم (? ! .) في الجمل اللاتينية
-      const rawText = el.textContent || '';
-      const firstStrongMatch = rawText.match(/[\p{Script=Arabic}\p{Script=Hebrew}\p{Script=Syriac}\p{Script=Thaana}\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Greek}]/u);
-      if (firstStrongMatch) {
-        const isRTL = /[\p{Script=Arabic}\p{Script=Hebrew}\p{Script=Syriac}\p{Script=Thaana}]/u.test(firstStrongMatch[0]);
-        el.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
-      } else {
-        el.setAttribute('dir', 'auto');
-      }
+      el.setAttribute('dir', 'auto');
     });
   }
 

@@ -1129,6 +1129,20 @@ body.is-resizing-workspace .workspace-resizer {
   margin-bottom: 1.1em;
 }
 
+/* إصلاح اتجاه علامات الترقيم في الوضع التلقائي (Auto) */
+/* unicode-bidi: plaintext يجعل المتصفح يحدد اتجاه كل فقرة بناءً على محتواها الفعلي */
+.markdown-body[dir="auto"] > p,
+.markdown-body[dir="auto"] > h1,
+.markdown-body[dir="auto"] > h2,
+.markdown-body[dir="auto"] > h3,
+.markdown-body[dir="auto"] > h4,
+.markdown-body[dir="auto"] > h5,
+.markdown-body[dir="auto"] > h6,
+.markdown-body[dir="auto"] > blockquote,
+.markdown-body[dir="auto"] li {
+  unicode-bidi: plaintext;
+}
+
 /* Ø§Ù„Ù…Ø­Ø§ÙØ¸Ø© Ø¹Ù„Ù‰ Ø§Ù„Ø£Ø³Ø·Ø± ÙˆØ§Ù„ÙÙˆØ§ØµÙ„ Ø§Ù„ÙØ§Ø±ØºØ© ÙÙŠ Ø§Ù„Ù…Ø¹Ø§ÙŠÙ†Ø© Ø§Ù„Ù…Ø¨Ø§Ø´Ø±Ø© ÙˆØ§Ù„ØªØµØ¯ÙŠØ± */
 .markdown-body p.md-blank-line,
 #classic-output p.md-blank-line,
