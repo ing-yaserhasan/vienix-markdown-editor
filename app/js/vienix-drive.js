@@ -728,6 +728,23 @@
             delete manifest.rawKeys['vienix_chamber_meta_' + ch];
             delete manifest.rawKeys['yaser_chamber_meta_' + ch];
           }
+
+          // ضمان شمل جميع الصور والمرفقات المشار إليها داخل هذا القسم في ملف المانيفست المرفوع للسحابة
+          if (chVal && window.VienixImages) {
+            const imgMatches = chVal.match(/vienix-(?:img|image):\/\/([a-zA-Z0-9_-]+)/g);
+            if (imgMatches) {
+              imgMatches.forEach(m => {
+                const id = m.replace(/^vienix-(?:img|image):\/\//i, '').trim();
+                const key = 'vienix_image_' + id;
+                if (!manifest.rawKeys[key]) {
+                  const imgData = window.VienixImages.getImage(id);
+                  if (imgData) {
+                    manifest.rawKeys[key] = imgData;
+                  }
+                }
+              });
+            }
+          }
         });
 
         // Strip orphan chamber keys not in current workspace

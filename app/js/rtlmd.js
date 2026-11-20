@@ -2523,23 +2523,34 @@ function exportDocument(format) {
       classicEditor.addEventListener('keydown', handleEditorTabKey);
     }
 
-    // معالجة لصق الصور من الحافظة (Ctrl+V) كصور مدمجة ومحسنة في الماركداون
+    // معالجة لصق الصور من الحافظة (Ctrl+V أو عبر لوحة مفاتيح الموبايل) كصور مدمجة ومحسنة في الماركداون
     async function handleImagePaste(e) {
       if (!e.clipboardData || !e.clipboardData.items) return;
       const items = e.clipboardData.items;
+      const imageFiles = [];
 
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         if (item.type && item.type.startsWith('image/')) {
-          e.preventDefault();
           const file = item.getAsFile();
           if (file) {
-            const optimizedUrl = await optimizeImageFile(file);
-            if (optimizedUrl) {
-              insertImageIntoEditor(optimizedUrl, 'صورة ملصقة');
-            }
-            return;
+            imageFiles.push(file);
           }
+        }
+      }
+
+      if (imageFiles.length > 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        const imageItems = [];
+        for (const file of imageFiles) {
+          const optimizedUrl = await optimizeImageFile(file);
+          if (optimizedUrl) {
+            imageItems.push({ dataUrl: optimizedUrl, altText: 'صورة ملصقة' });
+          }
+        }
+        if (imageItems.length > 0) {
+          insertMultipleImagesIntoEditor(imageItems);
         }
       }
     }
@@ -2547,6 +2558,9 @@ function exportDocument(format) {
     editor.addEventListener('paste', handleImagePaste);
     if (classicEditor) {
       classicEditor.addEventListener('paste', handleImagePaste);
+    }
+    if (previewContent) {
+      previewContent.addEventListener('paste', handleImagePaste);
     }
 
     // منع السكرول التلقائي عند لصق النصوص بـ Ctrl+V
@@ -2576,18 +2590,21 @@ function exportDocument(format) {
     // دعم سحب وإفلات الصور (Drag and Drop) مع الضغط الفوري
     async function handleImageDrop(e) {
       if (!e.dataTransfer || !e.dataTransfer.files || e.dataTransfer.files.length === 0) return;
-      const files = e.dataTransfer.files;
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (file.type && file.type.startsWith('image/')) {
-          e.preventDefault();
-          e.stopPropagation();
+      const files = Array.from(e.dataTransfer.files);
+      const imageFiles = files.filter(f => f && f.type && f.type.startsWith('image/'));
+      if (imageFiles.length > 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        const imageItems = [];
+        for (const file of imageFiles) {
           const altName = file.name ? file.name.replace(/\.[^/.]+$/, '') : 'صورة مسحوبة';
           const optimizedUrl = await optimizeImageFile(file);
           if (optimizedUrl) {
-            insertImageIntoEditor(optimizedUrl, altName);
+            imageItems.push({ dataUrl: optimizedUrl, altText: altName });
           }
-          return;
+        }
+        if (imageItems.length > 0) {
+          insertMultipleImagesIntoEditor(imageItems);
         }
       }
     }
@@ -2606,16 +2623,23 @@ function exportDocument(format) {
       classicEditor.addEventListener('drop', handleImageDrop);
     }
 
-    // استماع لاختيار صورة عند الرفع من الجهاز مع الضغط الفوري ومنع التجميد
+    // استماع لاختيار صورة عند الرفع من الجهاز مع الضغط الفوري ومنع التجميد ودعم الاختيار المتعدد
     const uploadInput = document.getElementById('image-upload-input');
     if (uploadInput) {
       uploadInput.addEventListener('change', async (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (file && file.type.startsWith('image/')) {
-          const altName = file.name ? file.name.replace(/\.[^/.]+$/, '') : 'صورة مرفوعة';
-          const optimizedUrl = await optimizeImageFile(file);
-          if (optimizedUrl) {
-            insertImageIntoEditor(optimizedUrl, altName);
+        const files = Array.from(e.target.files || []);
+        const imageFiles = files.filter(f => f && f.type && f.type.startsWith('image/'));
+        if (imageFiles.length > 0) {
+          const imageItems = [];
+          for (const file of imageFiles) {
+            const altName = file.name ? file.name.replace(/\.[^/.]+$/, '') : 'صورة مرفوعة';
+            const optimizedUrl = await optimizeImageFile(file);
+            if (optimizedUrl) {
+              imageItems.push({ dataUrl: optimizedUrl, altText: altName });
+            }
+          }
+          if (imageItems.length > 0) {
+            insertMultipleImagesIntoEditor(imageItems);
           }
         }
         uploadInput.value = '';
@@ -8915,24 +8939,35 @@ function exportDocument(format) {
 
   // 4. لصق المحتوى من الحافظة (نصوص أو صور مدمجة دون أي إشعارات)
   window.pasteWorkspaceContent = async function () {
+    const isWysiwygFocused = isWysiwygActive && previewContent && (document.activeElement === previewContent || previewContent.contains(document.activeElement));
     const activeEl = isClassicMode ? (classicEditor || editor) : editor;
-    if (!activeEl) return;
+    if (!activeEl && !isWysiwygFocused) return;
 
     try {
-      // 1. التحقق أولاً مما إذا كانت الحافظة تحتوي على صورة منسوخة
+      // 1. التحقق أولاً مما إذا كانت الحافظة تحتوي على صورة أو صور منسوخة
       if (navigator.clipboard && navigator.clipboard.read) {
         try {
           const clipboardItems = await navigator.clipboard.read();
+          const imageBlobs = [];
           for (const item of clipboardItems) {
             for (const type of item.types) {
               if (type.startsWith('image/')) {
                 const blob = await item.getType(type);
-                const optimizedUrl = await optimizeImageFile(blob);
-                if (optimizedUrl) {
-                  window.insertImageIntoEditor(optimizedUrl, 'صورة ملصقة');
-                }
-                return;
+                if (blob) imageBlobs.push(blob);
               }
+            }
+          }
+          if (imageBlobs.length > 0) {
+            const imageItems = [];
+            for (const blob of imageBlobs) {
+              const optimizedUrl = await optimizeImageFile(blob);
+              if (optimizedUrl) {
+                imageItems.push({ dataUrl: optimizedUrl, altText: 'صورة ملصقة' });
+              }
+            }
+            if (imageItems.length > 0) {
+              window.insertMultipleImagesIntoEditor(imageItems);
+              return;
             }
           }
         } catch (clipImgErr) {
@@ -9404,8 +9439,65 @@ function exportDocument(format) {
     window.insertFormat('[', '](https://example.com)', 'عنوان الرابط');
   };
 
-  // إدراج صورة مدمجة ونظيفة عبر منظومة VienixImages في موضع المؤشر بالمحرر
-  window.insertImageIntoEditor = function (dataUrl, altText = 'صورة') {
+  // إدراج صور متعددة دفعة واحدة بالتسلسل واحدة تلو الأخرى عبر منظومة VienixImages
+  window.insertMultipleImagesIntoEditor = function (imageItems) {
+    if (!Array.isArray(imageItems) || imageItems.length === 0) return;
+
+    // 1. إذا كان وضع المعاينة المباشرة (WYSIWYG) هو النشط والمؤشر بداخله:
+    if (isWysiwygActive && previewContent && (document.activeElement === previewContent || previewContent.contains(document.activeElement))) {
+      recordHistorySnapshot(true);
+      const sel = window.getSelection();
+      let insertRange = null;
+      if (sel && sel.rangeCount > 0) {
+        insertRange = sel.getRangeAt(0);
+      }
+
+      const fragment = document.createDocumentFragment();
+      for (const item of imageItems) {
+        let imgTarget = item.dataUrl;
+        let imgId = null;
+        if (item.dataUrl && item.dataUrl.startsWith('data:image/') && window.VienixImages) {
+          imgId = window.VienixImages.saveImage(item.dataUrl);
+          if (imgId) imgTarget = `vienix-img://${imgId}`;
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'image-resizer-wrapper';
+        wrapper.setAttribute('data-align', 'center');
+
+        const img = document.createElement('img');
+        img.src = item.dataUrl;
+        img.alt = item.altText || 'صورة';
+        if (imgId) {
+          img.setAttribute('data-attachment-id', imgId);
+          img.setAttribute('data-attachment-url', `vienix-img://${imgId}`);
+        }
+
+        wrapper.appendChild(img);
+        fragment.appendChild(wrapper);
+
+        const spacer = document.createElement('p');
+        spacer.innerHTML = '<br>';
+        fragment.appendChild(spacer);
+      }
+
+      if (insertRange) {
+        insertRange.collapse(false);
+        insertRange.insertNode(fragment);
+      } else {
+        previewContent.appendChild(fragment);
+      }
+
+      if (typeof setupImageResizers === 'function') {
+        setupImageResizers(previewContent);
+      }
+      syncPreviewToMarkdown(true);
+      recordHistorySnapshot();
+      updateHistoryButtonStates();
+      return;
+    }
+
+    // 2. وضع المحرر القياسي أو الكلاسيكي (Textarea):
     const activeEl = isClassicMode ? (classicEditor || editor) : editor;
     if (!activeEl) return;
 
@@ -9414,17 +9506,21 @@ function exportDocument(format) {
     const end = typeof activeEl.selectionEnd === 'number' ? activeEl.selectionEnd : activeEl.value.length;
     const val = activeEl.value;
 
-    let imgTarget = dataUrl;
-    if (dataUrl && dataUrl.startsWith('data:image/') && window.VienixImages) {
-      const imgId = window.VienixImages.saveImage(dataUrl);
-      if (imgId) {
-        imgTarget = `vienix-img://${imgId}`;
+    const mdBlocks = imageItems.map(item => {
+      let imgTarget = item.dataUrl;
+      if (item.dataUrl && item.dataUrl.startsWith('data:image/') && window.VienixImages) {
+        const imgId = window.VienixImages.saveImage(item.dataUrl);
+        if (imgId) {
+          imgTarget = `vienix-img://${imgId}`;
+        }
       }
-    }
+      return `![${item.altText || 'صورة'}](${imgTarget})`;
+    });
 
-    const imgMarkdown = `\n![${altText}](${imgTarget})\n\n`;
-    activeEl.value = val.substring(0, start) + imgMarkdown + val.substring(end);
-    const newPos = start + imgMarkdown.length;
+    // إدراج جميع الصور تحت بعضها البعض بالتسلسل المحدد
+    const combinedMarkdown = `\n\n${mdBlocks.join('\n\n')}\n\n`;
+    activeEl.value = val.substring(0, start) + combinedMarkdown + val.substring(end);
+    const newPos = start + combinedMarkdown.length;
     try {
       activeEl.setSelectionRange(newPos, newPos);
     } catch (e) {}
@@ -9441,6 +9537,11 @@ function exportDocument(format) {
 
     recordHistorySnapshot();
     updateHistoryButtonStates();
+  };
+
+  // إدراج صورة واحدة مدمجة ونظيفة عبر منظومة VienixImages في موضع المؤشر بالمحرر
+  window.insertImageIntoEditor = function (dataUrl, altText = 'صورة') {
+    window.insertMultipleImagesIntoEditor([{ dataUrl, altText }]);
   };
 
   // إدراج ورفع صورة من الجهاز مباشرة
@@ -11051,7 +11152,8 @@ function exportDocument(format) {
           node.nodeName === 'IMG' &&
           (node.hasAttribute('data-attachment-url') ||
            node.hasAttribute('data-attachment-id') ||
-           (node.getAttribute('src') || '').startsWith('data:image/'))
+           (node.getAttribute('src') || '').startsWith('data:image/') ||
+           (node.getAttribute('src') || '').startsWith('blob:'))
         );
       },
       replacement: function (content, node) {
@@ -11073,7 +11175,25 @@ function exportDocument(format) {
           if (src.startsWith('data:image/') && window.VienixImages) {
             const id = window.VienixImages.saveImage(src);
             attachmentUrl = `vienix-img://${id}`;
-          } else {
+          } else if (src.startsWith('blob:') && window.VienixImages) {
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = node.naturalWidth || node.width || 800;
+              canvas.height = node.naturalHeight || node.height || 600;
+              const ctx = canvas.getContext('2d');
+              if (ctx && canvas.width > 0 && canvas.height > 0) {
+                ctx.drawImage(node, 0, 0);
+                const dataUrl = canvas.toDataURL('image/webp', 0.82);
+                if (dataUrl && dataUrl.startsWith('data:image/')) {
+                  const id = window.VienixImages.saveImage(dataUrl);
+                  attachmentUrl = `vienix-img://${id}`;
+                  node.setAttribute('data-attachment-id', id);
+                  node.setAttribute('data-attachment-url', attachmentUrl);
+                }
+              }
+            } catch (e) {}
+          }
+          if (!attachmentUrl) {
             attachmentUrl = src;
           }
         }
@@ -11187,6 +11307,28 @@ function exportDocument(format) {
             wrapper.parentNode.replaceChild(img, wrapper);
           } else {
             wrapper.remove();
+          }
+        });
+
+        // 2b. تحويل أي صور تحمل مسارات blob مؤقتة داخل المعاينة إلى وسوم دائمة في مخزن VienixImages
+        clone.querySelectorAll('img').forEach(img => {
+          const src = img.getAttribute('src') || '';
+          if (src.startsWith('blob:') && !img.hasAttribute('data-attachment-url') && window.VienixImages) {
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.naturalWidth || img.width || 800;
+              canvas.height = img.naturalHeight || img.height || 600;
+              const ctx = canvas.getContext('2d');
+              if (ctx && canvas.width > 0 && canvas.height > 0) {
+                ctx.drawImage(img, 0, 0);
+                const dataUrl = canvas.toDataURL('image/webp', 0.82);
+                if (dataUrl && dataUrl.startsWith('data:image/')) {
+                  const id = window.VienixImages.saveImage(dataUrl);
+                  img.setAttribute('data-attachment-id', id);
+                  img.setAttribute('data-attachment-url', `vienix-img://${id}`);
+                }
+              }
+            } catch (e) {}
           }
         });
 
@@ -11902,6 +12044,28 @@ function exportDocument(format) {
 
       previewContent.addEventListener('input', (e) => {
         if (!isWysiwygActive) return;
+
+        // رصد فوري لأي صور يتم إدراجها بمسارات blob عبر لوحة المفاتيح وتحويلها فوراً إلى مخزن VienixImages
+        const blobImgs = previewContent.querySelectorAll('img[src^="blob:"]');
+        if (blobImgs.length > 0) {
+          blobImgs.forEach(img => {
+            if (img.hasAttribute('data-attachment-url')) return;
+            const src = img.getAttribute('src');
+            fetch(src)
+              .then(r => r.blob())
+              .then(async blob => {
+                const optUrl = await optimizeImageFile(blob);
+                if (optUrl && window.VienixImages) {
+                  const id = window.VienixImages.saveImage(optUrl);
+                  img.src = optUrl;
+                  img.setAttribute('data-attachment-id', id);
+                  img.setAttribute('data-attachment-url', `vienix-img://${id}`);
+                  syncPreviewToMarkdown(true);
+                }
+              })
+              .catch(err => console.warn('Failed to convert pasted blob image:', err));
+          });
+        }
 
         // طبقة الحماية الثالثة (Fail-Safe): إذا قام محرك أندرويد Gboard بدمج السطر قسرياً متجاوزاً beforeinput
         if (_lastAtListStart && (Date.now() - _lastAtListStart.time < 1200)) {

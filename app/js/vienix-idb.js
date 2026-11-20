@@ -96,7 +96,16 @@
               // localStorage has the authoritative new data — force it to win over stale IDB values.
               if (sessionStorage.getItem('vienix_just_restored')) {
                 sessionStorage.removeItem('vienix_just_restored');
-                // Authoritative source is localStorage: wipe memoryCache so deleted IDB keys cannot linger
+
+                // حماية مرفقات وصور فينيكس الحالية لمنع مسحها نهائياً، لأن الصور لا تُخزن في localStorage لصغر حجمه
+                const preservedImages = {};
+                Object.keys(this.memoryCache).forEach(k => {
+                  if (k.startsWith('vienix_image_') || k.startsWith('vienix_attachment_')) {
+                    preservedImages[k] = this.memoryCache[k];
+                  }
+                });
+
+                // Authoritative source for text/settings is localStorage: wipe memoryCache so deleted IDB keys cannot linger
                 this.memoryCache = {};
                 try {
                   for (let i = 0; i < localStorage.length; i++) {
@@ -107,7 +116,10 @@
                   }
                 } catch (e) {}
 
-                // Sync IDB store so deleted keys are also completely purged from IndexedDB
+                // إعادة دمج جميع الصور والمرفقات بأمان تام في الذاكرة
+                Object.assign(this.memoryCache, preservedImages);
+
+                // Sync IDB store so deleted keys are also completely purged from IndexedDB, with all images fully intact
                 if (this.db) {
                   try {
                     const tx = this.db.transaction([STORE_NAME], 'readwrite');

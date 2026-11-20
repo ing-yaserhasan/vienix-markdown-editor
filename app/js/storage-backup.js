@@ -498,7 +498,11 @@
         const restoreSet = (k, v) => {
           if (v === null || v === undefined) return;
           const strVal = typeof v === 'string' ? v : JSON.stringify(v);
-          try { localStorage.setItem(k, strVal); } catch (e) {}
+          // تجنب حشر الصور والمرفقات الكبيرة في localStorage منعاً لخطأ QuotaExceededError على الموبايل
+          const isImageAsset = k.startsWith('vienix_image_') || k.startsWith('vienix_attachment_');
+          if (!isImageAsset && strVal.length < 50000) {
+            try { localStorage.setItem(k, strVal); } catch (e) {}
+          }
           if (window.VienixIDB && typeof window.VienixIDB.set === 'function') {
             idbPromises.push(window.VienixIDB.set(k, strVal));
           } else if (window.VienixIDB && window.VienixIDB.memoryCache) {
@@ -885,7 +889,10 @@
         const mergeSet = (k, v) => {
           if (v === null || v === undefined) return;
           const strVal = typeof v === 'string' ? v : JSON.stringify(v);
-          try { localStorage.setItem(k, strVal); } catch (e) {}
+          const isImageAsset = k.startsWith('vienix_image_') || k.startsWith('vienix_attachment_');
+          if (!isImageAsset && strVal.length < 50000) {
+            try { localStorage.setItem(k, strVal); } catch (e) {}
+          }
           if (window.VienixIDB && typeof window.VienixIDB.set === 'function') {
             idbPromises.push(window.VienixIDB.set(k, strVal));
           } else if (window.VienixIDB && window.VienixIDB.memoryCache) {
