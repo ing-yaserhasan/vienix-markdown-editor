@@ -4,8 +4,8 @@
  * Provides offline capabilities, instant caching, and PWA support.
  */
 
-const CACHE_NAME = 'vienix-md-editor-v1.2.5';
-const RUNTIME_CACHE = 'vienix-runtime-v1.2.5';
+const CACHE_NAME = 'vienix-md-editor-v1.2.6';
+const RUNTIME_CACHE = 'vienix-runtime-v1.2.6';
 
 // Core assets required for 100% offline functionality
 const PRECACHE_ASSETS = [
@@ -159,24 +159,24 @@ self.addEventListener('fetch', (event) => {
   }
 
   // B. Local App Static Assets (CSS, JS, Fonts, Images, Icons)
+  // Network-First for core application code so updates are INSTANT on mobile and desktop
   event.respondWith(
-    caches.match(request, { ignoreSearch: true }).then((cachedResponse) => {
-      const fetchPromise = fetch(request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return networkResponse;
-        })
-        .catch(() => {
-          // Fallback handled by cachedResponse if available
-        });
-
-      return cachedResponse || fetchPromise;
-    })
+    fetch(request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, responseClone);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(async () => {
+        // Fallback to cache when offline
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        return caches.match(request, { ignoreSearch: true });
+      })
   );
 });
 

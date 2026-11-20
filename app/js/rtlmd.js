@@ -11991,6 +11991,92 @@ function exportDocument(format) {
         return p;
       }
 
+      // تسوية وحل دمج عناصر القائمة على هواتف أندرويد (Mobile Reconciliation)
+      // أندرويد كروم يتجاهل preventDefault أحياناً في beforeinput ويدمج العنصر قسرياً،
+      // هذه الدالة تكشف وتصلح هذا الدمج فوراً وتعيد فصله إلى فقرة مستقلة.
+      function reconcileListExit(exitState) {
+        if (!exitState || exitState.handled) return;
+        exitState.handled = true;
+
+        const { li, list, prevLi, prevLiHtml, isFirst, prevBlock, prevBlockHtml, liNodes } = exitState;
+        const sel = window.getSelection();
+
+        const p = document.createElement('p');
+        if (liNodes && liNodes.length > 0) {
+          liNodes.forEach(node => p.appendChild(node.cloneNode(true)));
+        }
+        if (!p.childNodes.length || p.textContent.replace(/[\s\u200B\u00A0\uFEFF]/g, '') === '') {
+          p.innerHTML = '<br>';
+        }
+
+        // إذا كان li ما زال موجوداً في DOM (المتصفح احترم preventDefault مثل الكمبيوتر)
+        if (li && li.parentNode === list) {
+          if (isFirst) {
+            list.parentNode.insertBefore(p, list);
+          } else if (li === list.lastElementChild) {
+            list.parentNode.insertBefore(p, list.nextSibling);
+          } else {
+            const newList = document.createElement(list.tagName);
+            let isAfter = false;
+            Array.from(list.children).forEach(child => {
+              if (child === li) { isAfter = true; return; }
+              if (isAfter) newList.appendChild(child);
+            });
+            list.parentNode.insertBefore(p, list.nextSibling);
+            if (newList.children.length > 0) {
+              p.parentNode.insertBefore(newList, p.nextSibling);
+            }
+          }
+          li.remove();
+          if (list.children.length === 0) list.remove();
+        } else {
+          // المتصفح نفّذ الدمج القسري وحذف li (مثل Android Chrome) → نقوم باسترجاع الحالة وفصلها كفقرة
+          if (prevLi && prevLiHtml !== null) {
+            prevLi.innerHTML = prevLiHtml;
+            // جمع العناصر المتبقية بعد prevLi إن وُجدت
+            const remaining = [];
+            let isAfter = false;
+            Array.from(list.children).forEach(child => {
+              if (child === prevLi) { isAfter = true; return; }
+              if (isAfter) remaining.push(child);
+            });
+
+            list.parentNode.insertBefore(p, list.nextSibling);
+            if (remaining.length > 0) {
+              const newList = document.createElement(list.tagName);
+              remaining.forEach(child => newList.appendChild(child));
+              p.parentNode.insertBefore(newList, p.nextSibling);
+            }
+          } else if (isFirst) {
+            if (prevBlock && prevBlockHtml !== null) {
+              prevBlock.innerHTML = prevBlockHtml;
+            }
+            list.parentNode.insertBefore(p, list);
+          }
+          if (list && list.children.length === 0) {
+            list.remove();
+          }
+        }
+
+        // وضع المؤشر في بداية الفقرة
+        if (sel) {
+          try {
+            const newRange = document.createRange();
+            const firstText = p.firstChild;
+            if (firstText && firstText.nodeType === 3) {
+              newRange.setStart(firstText, 0);
+            } else {
+              newRange.setStart(p, 0);
+            }
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+          } catch (_) {}
+        }
+
+        syncPreviewToMarkdown(true);
+      }
+
       // دمج فقرة عادية مع آخر عنصر في القائمة السابقة (الضغطة الثانية للـ Backspace)
       function mergeBlockIntoLastListItem(block, list) {
         if (!block || !list) return;
@@ -12138,7 +12224,24 @@ function exportDocument(format) {
           if (li && li.closest('ol, ul')) {
             if (isCursorAtStartOfBlock(li, sel, range)) {
               e.preventDefault();
-              exitListItem(li);
+              const list = li.closest('ol, ul');
+              const prevLi = li.previousElementSibling;
+              const prevBlock = list.previousElementSibling;
+              const exitState = {
+                li: li,
+                list: list,
+                prevLi: prevLi,
+                prevLiHtml: prevLi ? prevLi.innerHTML : null,
+                isFirst: (li === list.firstElementChild),
+                prevBlock: prevBlock,
+                prevBlockHtml: prevBlock ? prevBlock.innerHTML : null,
+                liNodes: Array.from(li.childNodes).map(n => n.cloneNode(true)),
+                handled: false
+              };
+              // تسوية فورية لحماية حالة الـ DOM على متصفحات أندرويد
+              setTimeout(() => {
+                reconcileListExit(exitState);
+              }, 0);
               return;
             }
           }
