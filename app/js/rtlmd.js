@@ -11877,20 +11877,20 @@ function exportDocument(format) {
       });
 
       // ══════════════════════════════════════════════════════════════════════
-      // معالجة Enter في القوائم: استمرار ترقيم القائمة تلقائياً
+      // معالجة Enter/Backspace في القوائم (المرقمة والنقطية)
       // ══════════════════════════════════════════════════════════════════════
       previewContent.addEventListener('keydown', (e) => {
         if (!isWysiwygActive) return;
 
-        // ═══ ENTER: استمرار القائمة ═══
+        // ═══ ENTER: استمرار القائمة أو الخروج منها ═══
         if (e.key === 'Enter' && !e.shiftKey) {
           const sel = window.getSelection();
           if (!sel || sel.rangeCount === 0) return;
           const anchorNode = sel.anchorNode;
           const li = anchorNode ? (anchorNode.nodeType === 1 ? anchorNode.closest('li') : anchorNode.parentElement ? anchorNode.parentElement.closest('li') : null) : null;
           if (!li) return;
-          const ol = li.closest('ol');
-          if (!ol) return; // فقط القوائم المرقمة
+          const list = li.closest('ol, ul');
+          if (!list) return;
 
           const liText = li.textContent.trim();
           if (liText === '') {
@@ -11898,11 +11898,11 @@ function exportDocument(format) {
             e.preventDefault();
             const p = document.createElement('p');
             p.innerHTML = '<br>';
-            ol.parentNode.insertBefore(p, ol.nextSibling);
+            list.parentNode.insertBefore(p, list.nextSibling);
             li.remove();
             // إذا أصبحت القائمة فارغة، احذفها
-            if (ol.querySelectorAll('li').length === 0) {
-              ol.remove();
+            if (list.querySelectorAll('li').length === 0) {
+              list.remove();
             }
             // ضع المؤشر في الفقرة الجديدة
             const range = document.createRange();
@@ -11914,9 +11914,7 @@ function exportDocument(format) {
             return;
           }
 
-          // العنصر يحتوي نص → إنشاء عنصر جديد بالرقم التالي
-          // (المتصفح يتعامل مع هذا تلقائياً في <ol> عادةً)
-          // لا نتدخل، نترك المتصفح يعمل
+          // العنصر يحتوي نص → نترك المتصفح يتعامل مع إنشاء عنصر جديد تلقائياً
           return;
         }
 
@@ -15683,11 +15681,17 @@ function exportDocument(format) {
       const allPhrases = Array.from(previewContent.querySelectorAll('.pronunciation-phrase'));
       if (allPhrases.length < 2) return;
       
-      // دالة مساعدة: هل هذا العنصر/العقدة "جسر" بين عبارتين (عنصر inline أو مسافة بيضاء)
+      // دالة مساعدة: هل هذا العنصر/العقدة "جسر" بين عبارتين (عنصر inline أو مسافة بيضاء أو ترقيم بسيط)
       function isBridgeNode(node) {
         if (!node) return false;
-        // عقدة نصية فارغة أو مسافة فقط
-        if (node.nodeType === 3) return node.textContent.trim() === '';
+        // عقدة نصية فارغة أو مسافة فقط أو تحتوي فقط فواصل/نقاط ومسافات
+        if (node.nodeType === 3) {
+          const t = node.textContent.trim();
+          if (t === '') return true;
+          // السماح بالفواصل وعلامات الترقيم البسيطة كجسر (مثل ", " أو "; " أو ":")
+          if (/^[,;:\-–—·\s]+$/.test(t)) return true;
+          return false;
+        }
         if (node.nodeType !== 1) return false;
         // عنصر inline يحتوي phrase بداخله
         if (INLINE_TAGS.has(node.tagName) && node.querySelector && node.querySelector('.pronunciation-phrase')) return true;
@@ -15705,10 +15709,13 @@ function exportDocument(format) {
         // امشِ على الأشقاء التاليين
         let next = current.nextSibling;
         while (next) {
-          // تخطّي المسافات البيضاء
-          if (next.nodeType === 3 && next.textContent.trim() === '') {
-            next = next.nextSibling;
-            continue;
+          // تخطّي المسافات البيضاء والفواصل البسيطة (مثل ", " بين العبارات)
+          if (next.nodeType === 3) {
+            const t = next.textContent.trim();
+            if (t === '' || /^[,;:\-–—·\s]+$/.test(t)) {
+              next = next.nextSibling;
+              continue;
+            }
           }
           // إذا وصلنا لعبارة مباشرة
           if (next.nodeType === 1 && next.classList && next.classList.contains('pronunciation-phrase')) {
