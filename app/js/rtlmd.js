@@ -11862,8 +11862,57 @@ function exportDocument(format) {
     setupFloatingFormatToolbar();
 
     if (previewContent) {
-      previewContent.addEventListener('input', () => {
+      let _lastAtListStart = null;
+
+      // تتبع مستمر لموقع المؤشر لكشف وجوده في بداية عنصر القائمة (لأجهزة أندرويد)
+      document.addEventListener('selectionchange', () => {
+        if (!isWysiwygActive) {
+          _lastAtListStart = null;
+          return;
+        }
+        try {
+          const sel = window.getSelection();
+          if (!sel || sel.rangeCount === 0) return;
+          const range = sel.getRangeAt(0);
+          if (!range.collapsed) return;
+
+          const li = getActiveListItem(sel, range);
+          if (li && li.closest('ol, ul')) {
+            if (isCursorAtStartOfBlock(li, sel, range)) {
+              const list = li.closest('ol, ul');
+              const prevLi = li.previousElementSibling;
+              _lastAtListStart = {
+                li: li,
+                list: list,
+                prevLi: prevLi,
+                prevLiHtml: prevLi ? prevLi.innerHTML : null,
+                isFirst: (li === list.firstElementChild),
+                prevBlock: list.previousElementSibling,
+                prevBlockHtml: list.previousElementSibling ? list.previousElementSibling.innerHTML : null,
+                liNodes: Array.from(li.childNodes).map(n => n.cloneNode(true)),
+                handled: false,
+                time: Date.now()
+              };
+              return;
+            }
+          }
+          _lastAtListStart = null;
+        } catch (_) {}
+      });
+
+      previewContent.addEventListener('input', (e) => {
         if (!isWysiwygActive) return;
+
+        // طبقة الحماية الثالثة (Fail-Safe): إذا قام محرك أندرويد Gboard بدمج السطر قسرياً متجاوزاً beforeinput
+        if (_lastAtListStart && (Date.now() - _lastAtListStart.time < 1200)) {
+          if (e && e.inputType && e.inputType.startsWith('delete')) {
+            const state = _lastAtListStart;
+            _lastAtListStart = null;
+            reconcileListExit(state);
+            return;
+          }
+        }
+
         if (saveStatus) {
           saveStatus.textContent = 'جارٍ الحفظ والكتابة في المعاينة...';
           saveStatus.className = 'save-badge saving';
@@ -11881,6 +11930,50 @@ function exportDocument(format) {
       // تدعم المتصفحات المكتبية وهواتف الموبايل (Android / iOS)
       // ══════════════════════════════════════════════════════════════════════
 
+      // الكشف الذكي عن عنصر القائمة النشط مهما اختلفت شجرة Selection في أندرويد
+      function getActiveListItem(sel, range) {
+        if (!sel) return null;
+        if (!range && sel.rangeCount > 0) range = sel.getRangeAt(0);
+
+        // الحالة 1: anchorNode داخل li أو هو li
+        let node = sel.anchorNode;
+        if (node) {
+          let li = node.nodeType === 1 ? node.closest('li') : node.parentElement?.closest('li');
+          if (li) return li;
+        }
+
+        // الحالة 2: startContainer داخل li أو هو li
+        if (range && range.startContainer) {
+          let rNode = range.startContainer;
+          let li = rNode.nodeType === 1 ? rNode.closest('li') : rNode.parentElement?.closest('li');
+          if (li) return li;
+        }
+
+        // الحالة 3: anchorNode يشير إلى الحاوية الأم ul/ol وموقع الإزاحة يحدد الـ li
+        if (node && (node.nodeName === 'UL' || node.nodeName === 'OL')) {
+          let offset = sel.anchorOffset;
+          if (offset >= 0 && offset < node.childNodes.length) {
+            let child = node.childNodes[offset];
+            if (child && child.nodeName === 'LI') return child;
+          }
+          if (offset > 0 && offset <= node.childNodes.length) {
+            let child = node.childNodes[offset - 1];
+            if (child && child.nodeName === 'LI') return child;
+          }
+        }
+
+        // الحالة 4: startContainer يشير إلى الحاوية الأم ul/ol
+        if (range && (range.startContainer.nodeName === 'UL' || range.startContainer.nodeName === 'OL')) {
+          let offset = range.startOffset;
+          if (offset >= 0 && offset < range.startContainer.childNodes.length) {
+            let child = range.startContainer.childNodes[offset];
+            if (child && child.nodeName === 'LI') return child;
+          }
+        }
+
+        return null;
+      }
+
       // فحص هل المؤشر في بداية كتلة نصية (قبل أي نص مرئي)
       function isCursorAtStartOfBlock(block, sel, range) {
         if (!block) return false;
@@ -11891,6 +11984,9 @@ function exportDocument(format) {
         // فحص مباشر إذا كان المؤشر عند بداية العنصر نفسه
         if (range.startContainer === block && range.startOffset === 0) return true;
 
+        // إذا كان startContainer هو الحاوية الأم للقائمة
+        if (range.startContainer === block.parentNode) return true;
+
         try {
           const checkRange = document.createRange();
           checkRange.setStart(block, 0);
@@ -11899,25 +11995,26 @@ function exportDocument(format) {
           const textBefore = checkRange.toString().replace(/[\s\u200B\u00A0\uFEFF]/g, '');
           if (textBefore.length === 0) return true;
         } catch (_) {
-          // بديل احتياطي عند تعذر استخدام Range
-          let node = range.startContainer;
-          let offset = range.startOffset;
-          if (offset === 0) {
-            let isFirst = true;
-            while (node && node !== block) {
-              let prev = node.previousSibling;
+          // بديل احتياطي بفحص جميع العقد السابقة داخل الكتلة
+          try {
+            let node = range.startContainer;
+            let textBefore = '';
+            if (node.nodeType === 3) {
+              textBefore = node.textContent.substring(0, range.startOffset);
+            }
+            let curr = node;
+            while (curr && curr !== block) {
+              let prev = curr.previousSibling;
               while (prev) {
-                if (prev.textContent && prev.textContent.replace(/[\s\u200B\u00A0\uFEFF]/g, '').length > 0) {
-                  isFirst = false;
-                  break;
-                }
+                textBefore = prev.textContent + textBefore;
                 prev = prev.previousSibling;
               }
-              if (!isFirst) break;
-              node = node.parentNode;
+              curr = curr.parentNode;
             }
-            if (isFirst) return true;
-          }
+            if (textBefore.replace(/[\s\u200B\u00A0\uFEFF]/g, '').length === 0) {
+              return true;
+            }
+          } catch (__) {}
         }
         return false;
       }
@@ -12142,8 +12239,7 @@ function exportDocument(format) {
         if ((e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey) {
           const sel = window.getSelection();
           if (!sel || sel.rangeCount === 0) return;
-          const anchorNode = sel.anchorNode;
-          const li = anchorNode ? (anchorNode.nodeType === 1 ? anchorNode.closest('li') : anchorNode.parentElement?.closest('li')) : null;
+          const li = getActiveListItem(sel);
           if (li && li.closest('ol, ul')) {
             if (li.textContent.trim() === '') {
               // عنصر فارغ → خروج من القائمة
@@ -12163,10 +12259,8 @@ function exportDocument(format) {
           const range = sel.getRangeAt(0);
           if (!range.collapsed) return;
 
-          const anchorNode = sel.anchorNode;
-
           // الحالة أ: المؤشر في بداية عنصر قائمة (سواء كان فارغاً أو به نص) → تحويله لفقرة
-          const li = anchorNode ? (anchorNode.nodeType === 1 ? anchorNode.closest('li') : anchorNode.parentElement?.closest('li')) : null;
+          const li = getActiveListItem(sel, range);
           if (li && li.closest('ol, ul')) {
             if (isCursorAtStartOfBlock(li, sel, range)) {
               e.preventDefault();
@@ -12176,6 +12270,7 @@ function exportDocument(format) {
           }
 
           // الحالة ب: المؤشر في بداية فقرة تلي قائمة مباشرة (الضغطة الثانية) → دمجها في القائمة
+          const anchorNode = sel.anchorNode;
           const block = anchorNode ? (anchorNode.nodeType === 1 ? anchorNode.closest('p, div:not(#preview-content)') : anchorNode.parentElement?.closest('p, div:not(#preview-content)')) : null;
           if (block && block !== previewContent) {
             const prevSibling = block.previousElementSibling;
@@ -12198,8 +12293,7 @@ function exportDocument(format) {
         if (e.inputType === 'insertParagraph' || e.inputType === 'insertLineBreak') {
           const sel = window.getSelection();
           if (!sel || sel.rangeCount === 0) return;
-          const anchorNode = sel.anchorNode;
-          const li = anchorNode ? (anchorNode.nodeType === 1 ? anchorNode.closest('li') : anchorNode.parentElement?.closest('li')) : null;
+          const li = getActiveListItem(sel);
           if (li && li.closest('ol, ul')) {
             if (li.textContent.trim() === '') {
               e.preventDefault();
@@ -12210,17 +12304,15 @@ function exportDocument(format) {
           return;
         }
 
-        // 2. Backspace على الموبايل
-        if (e.inputType === 'deleteContentBackward') {
+        // 2. Backspace على الموبايل (يشمل deleteContentBackward وأي حذف آخر)
+        if (e.inputType && e.inputType.startsWith('delete')) {
           const sel = window.getSelection();
           if (!sel || sel.rangeCount === 0) return;
           const range = sel.getRangeAt(0);
           if (!range.collapsed) return;
 
-          const anchorNode = sel.anchorNode;
-
           // الحالة أ: المؤشر في بداية عنصر قائمة → تحويله لفقرة عادية
-          const li = anchorNode ? (anchorNode.nodeType === 1 ? anchorNode.closest('li') : anchorNode.parentElement?.closest('li')) : null;
+          const li = getActiveListItem(sel, range);
           if (li && li.closest('ol, ul')) {
             if (isCursorAtStartOfBlock(li, sel, range)) {
               e.preventDefault();
@@ -12238,6 +12330,7 @@ function exportDocument(format) {
                 liNodes: Array.from(li.childNodes).map(n => n.cloneNode(true)),
                 handled: false
               };
+              _lastAtListStart = exitState;
               // تسوية فورية لحماية حالة الـ DOM على متصفحات أندرويد
               setTimeout(() => {
                 reconcileListExit(exitState);
@@ -12247,6 +12340,7 @@ function exportDocument(format) {
           }
 
           // الحالة ب: المؤشر في بداية فقرة تلي قائمة مباشرة → دمجها في القائمة
+          const anchorNode = sel.anchorNode;
           const block = anchorNode ? (anchorNode.nodeType === 1 ? anchorNode.closest('p, div:not(#preview-content)') : anchorNode.parentElement?.closest('p, div:not(#preview-content)')) : null;
           if (block && block !== previewContent) {
             const prevSibling = block.previousElementSibling;
