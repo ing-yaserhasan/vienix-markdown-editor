@@ -11918,7 +11918,7 @@ function exportDocument(format) {
           return;
         }
 
-        // ═══ BACKSPACE: الخروج من القائمة عند عنصر فارغ ═══
+        // ═══ BACKSPACE: الخروج من القائمة أو دمج العناصر ═══
         if (e.key === 'Backspace') {
           const sel = window.getSelection();
           if (!sel || sel.rangeCount === 0) return;
@@ -11933,49 +11933,119 @@ function exportDocument(format) {
 
           const liText = li.textContent.trim();
 
-          // إذا العنصر فارغ أو المؤشر في بداية العنصر
-          const isAtStart = (range.collapsed && sel.anchorOffset === 0 && (anchorNode === li || anchorNode === li.firstChild || (anchorNode.nodeType === 3 && anchorNode === li.childNodes[0])));
-          
-          if (liText === '' || isAtStart) {
-            if (liText === '') {
-              // العنصر فارغ تماماً → تحويل إلى فقرة عادية (الخطوة الوسيطة)
-              e.preventDefault();
-              const p = document.createElement('p');
-              p.innerHTML = '<br>';
-              
-              // إذا كان أول عنصر في القائمة، ضع الفقرة قبل القائمة
-              // وإلا ضعها بعد القائمة (أو قسّم القائمة)
-              if (li === list.firstElementChild) {
-                list.parentNode.insertBefore(p, list);
-              } else if (li === list.lastElementChild) {
-                list.parentNode.insertBefore(p, list.nextSibling);
-              } else {
-                // عنصر في الوسط - قسّم القائمة
-                const newList = document.createElement(list.tagName);
-                let moveNext = false;
-                Array.from(list.children).forEach(child => {
-                  if (child === li) { moveNext = true; return; }
-                  if (moveNext) newList.appendChild(child);
-                });
-                list.parentNode.insertBefore(p, list.nextSibling);
-                if (newList.children.length > 0) {
-                  p.parentNode.insertBefore(newList, p.nextSibling);
+          // فحص هل المؤشر في بداية العنصر
+          // نتعامل مع حالات متعددة: المؤشر في أول text node، أو في أول عنصر فرعي
+          let isAtStart = false;
+          if (range.collapsed && sel.anchorOffset === 0) {
+            // المؤشر في بداية عقدة ما - تحقق أنها أول عقدة نصية في الـ li
+            let node = anchorNode;
+            isAtStart = true;
+            while (node && node !== li) {
+              if (node.previousSibling) {
+                // هل كل الأشقاء السابقين فارغين؟
+                let prev = node.previousSibling;
+                while (prev) {
+                  if (prev.textContent && prev.textContent.length > 0 && 
+                      !prev.classList?.contains('pronunciation-speaker-btn') &&
+                      !prev.classList?.contains('pronunciation-trans-btn')) {
+                    isAtStart = false;
+                    break;
+                  }
+                  prev = prev.previousSibling;
                 }
+                if (!isAtStart) break;
               }
-              li.remove();
-              if (list.querySelectorAll('li').length === 0) {
-                list.remove();
-              }
-              // ضع المؤشر في الفقرة الجديدة
-              const newRange = document.createRange();
-              newRange.setStart(p, 0);
-              newRange.collapse(true);
-              sel.removeAllRanges();
-              sel.addRange(newRange);
-              syncPreviewToMarkdown(true);
-              return;
+              node = node.parentNode;
             }
           }
+          
+          if (!isAtStart) return; // المؤشر ليس في البداية، اترك المتصفح يعمل
+
+          if (liText === '') {
+            // ══ الحالة 1: العنصر فارغ تماماً → تحويل إلى فقرة عادية ══
+            e.preventDefault();
+            const p = document.createElement('p');
+            p.innerHTML = '<br>';
+            
+            if (li === list.firstElementChild) {
+              list.parentNode.insertBefore(p, list);
+            } else if (li === list.lastElementChild) {
+              list.parentNode.insertBefore(p, list.nextSibling);
+            } else {
+              // عنصر في الوسط - قسّم القائمة
+              const newList = document.createElement(list.tagName);
+              let moveNext = false;
+              Array.from(list.children).forEach(child => {
+                if (child === li) { moveNext = true; return; }
+                if (moveNext) newList.appendChild(child);
+              });
+              list.parentNode.insertBefore(p, list.nextSibling);
+              if (newList.children.length > 0) {
+                p.parentNode.insertBefore(newList, p.nextSibling);
+              }
+            }
+            li.remove();
+            if (list.querySelectorAll('li').length === 0) {
+              list.remove();
+            }
+            const newRange = document.createRange();
+            newRange.setStart(p, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+            syncPreviewToMarkdown(true);
+            return;
+          }
+
+          // ══ الحالة 2: المؤشر في بداية عنصر غير فارغ ══
+          e.preventDefault();
+          const prevLi = li.previousElementSibling;
+          if (prevLi && prevLi.tagName === 'LI') {
+            // دمج محتوى هذا العنصر مع العنصر السابق
+            // ضع المؤشر في نهاية العنصر السابق قبل الدمج
+            const prevLastNode = prevLi.lastChild;
+            const offsetBefore = prevLastNode ? (prevLastNode.nodeType === 3 ? prevLastNode.textContent.length : prevLi.childNodes.length) : 0;
+            
+            // انقل كل محتويات li الحالي إلى نهاية prevLi
+            while (li.firstChild) {
+              prevLi.appendChild(li.firstChild);
+            }
+            li.remove();
+            
+            // ضع المؤشر في نقطة الدمج
+            const newRange = document.createRange();
+            if (prevLastNode && prevLastNode.nodeType === 3) {
+              newRange.setStart(prevLastNode, offsetBefore);
+            } else {
+              newRange.setStart(prevLi, Math.min(offsetBefore, prevLi.childNodes.length));
+            }
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+          } else {
+            // لا يوجد عنصر سابق → تحويل هذا العنصر لفقرة عادية
+            const p = document.createElement('p');
+            while (li.firstChild) {
+              p.appendChild(li.firstChild);
+            }
+            
+            if (li === list.firstElementChild) {
+              list.parentNode.insertBefore(p, list);
+            } else {
+              list.parentNode.insertBefore(p, list.nextSibling);
+            }
+            li.remove();
+            if (list.querySelectorAll('li').length === 0) {
+              list.remove();
+            }
+            // ضع المؤشر في بداية الفقرة
+            const newRange = document.createRange();
+            newRange.setStart(p, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+          }
+          syncPreviewToMarkdown(true);
         }
       });
     }
