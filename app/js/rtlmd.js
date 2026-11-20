@@ -11918,43 +11918,46 @@ function exportDocument(format) {
           return;
         }
 
-        // ═══ BACKSPACE: الخروج من القائمة أو دمج العناصر ═══
+        // ═══ BACKSPACE: الخروج من القائمة عند ضغط Backspace على عنصر فارغ ═══
+        // السلوك: فقط نتدخل عندما يكون عنصر القائمة فارغاً تماماً
+        // في أي حالة أخرى نترك المتصفح يتعامل مع الأمر بشكل طبيعي
         if (e.key === 'Backspace') {
-          const sel = window.getSelection();
-          if (!sel || sel.rangeCount === 0) return;
-          const range = sel.getRangeAt(0);
-          if (!range.collapsed) return; // هناك تحديد نص، اترك المتصفح يعمل
+          try {
+            const sel = window.getSelection();
+            if (!sel || sel.rangeCount === 0) return;
+            const range = sel.getRangeAt(0);
+            if (!range.collapsed) return; // يوجد تحديد نص → اترك المتصفح
 
-          // تحقق أن المؤشر داخل li
-          const anchorNode = sel.anchorNode;
-          const li = anchorNode ? (anchorNode.nodeType === 1 ? anchorNode.closest('li') : anchorNode.parentElement ? anchorNode.parentElement.closest('li') : null) : null;
-          if (!li) return;
-          const list = li.closest('ol, ul');
-          if (!list) return;
+            // تحقق أن المؤشر داخل li
+            const anchorNode = sel.anchorNode;
+            const li = anchorNode
+              ? (anchorNode.nodeType === 1
+                  ? anchorNode.closest('li')
+                  : anchorNode.parentElement
+                    ? anchorNode.parentElement.closest('li')
+                    : null)
+              : null;
+            if (!li) return;
+            const list = li.closest('ol, ul');
+            if (!list) return;
 
-          // طريقة موثوقة: مقارنة موضع المؤشر مع بداية الـ li
-          // نستخدم compareBoundaryPoints لأنها تعمل مع HTML وليس فقط text
-          const liStart = document.createRange();
-          liStart.setStart(li, 0);
-          liStart.collapse(true);
-          // إذا كان المؤشر بعد بداية li، isAtStart = false
-          const isAtStart = range.compareBoundaryPoints(Range.START_TO_START, liStart) <= 0;
+            // نتدخل فقط عندما يكون العنصر فارغاً تماماً
+            const liText = li.textContent.trim();
+            if (liText !== '') return; // ليس فارغاً → اترك المتصفح يعمل
 
-          if (!isAtStart) return; // المؤشر ليس في البداية، اترك المتصفح يعمل (Backspace عادي)
-
-          const liText = li.textContent.trim();
-          if (liText === '') {
-            // ══ الحالة 1: العنصر فارغ تماماً → تحويل إلى فقرة عادية ══
+            // ══ العنصر فارغ → أخرجه من القائمة ══
             e.preventDefault();
             const p = document.createElement('p');
             p.innerHTML = '<br>';
-            
+
             if (li === list.firstElementChild) {
+              // أول عنصر → ضع فقرة قبل القائمة
               list.parentNode.insertBefore(p, list);
             } else if (li === list.lastElementChild) {
+              // آخر عنصر → ضع فقرة بعد القائمة
               list.parentNode.insertBefore(p, list.nextSibling);
             } else {
-              // عنصر في الوسط - قسّم القائمة
+              // عنصر في الوسط → قسّم القائمة وضع فقرة بينهما
               const newList = document.createElement(list.tagName);
               let moveNext = false;
               Array.from(list.children).forEach(child => {
@@ -11967,67 +11970,19 @@ function exportDocument(format) {
               }
             }
             li.remove();
-            if (list.querySelectorAll('li').length === 0) {
-              list.remove();
-            }
+            if (list.children.length === 0) list.remove();
+
+            // ضع المؤشر في الفقرة الجديدة
             const newRange = document.createRange();
             newRange.setStart(p, 0);
             newRange.collapse(true);
             sel.removeAllRanges();
             sel.addRange(newRange);
             syncPreviewToMarkdown(true);
-            return;
+          } catch(err) {
+            // في حالة أي خطأ، اترك المتصفح يعمل بشكل طبيعي
+            console.warn('[WYSIWYG-BS] error:', err);
           }
-
-          // ══ الحالة 2: المؤشر في بداية عنصر غير فارغ ══
-          e.preventDefault();
-          const prevLi = li.previousElementSibling;
-          if (prevLi && prevLi.tagName === 'LI') {
-            // دمج محتوى هذا العنصر مع العنصر السابق
-            // ضع المؤشر في نهاية العنصر السابق قبل الدمج
-            const prevLastNode = prevLi.lastChild;
-            const offsetBefore = prevLastNode ? (prevLastNode.nodeType === 3 ? prevLastNode.textContent.length : prevLi.childNodes.length) : 0;
-            
-            // انقل كل محتويات li الحالي إلى نهاية prevLi
-            while (li.firstChild) {
-              prevLi.appendChild(li.firstChild);
-            }
-            li.remove();
-            
-            // ضع المؤشر في نقطة الدمج
-            const newRange = document.createRange();
-            if (prevLastNode && prevLastNode.nodeType === 3) {
-              newRange.setStart(prevLastNode, offsetBefore);
-            } else {
-              newRange.setStart(prevLi, Math.min(offsetBefore, prevLi.childNodes.length));
-            }
-            newRange.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(newRange);
-          } else {
-            // لا يوجد عنصر سابق → تحويل هذا العنصر لفقرة عادية
-            const p = document.createElement('p');
-            while (li.firstChild) {
-              p.appendChild(li.firstChild);
-            }
-            
-            if (li === list.firstElementChild) {
-              list.parentNode.insertBefore(p, list);
-            } else {
-              list.parentNode.insertBefore(p, list.nextSibling);
-            }
-            li.remove();
-            if (list.querySelectorAll('li').length === 0) {
-              list.remove();
-            }
-            // ضع المؤشر في بداية الفقرة
-            const newRange = document.createRange();
-            newRange.setStart(p, 0);
-            newRange.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(newRange);
-          }
-          syncPreviewToMarkdown(true);
         }
       });
     }

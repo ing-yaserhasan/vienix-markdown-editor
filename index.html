@@ -3806,7 +3806,7 @@
   <script src="app/js/vienix-idb.js?v=2.2"></script>
 
   <!-- Application Main Script -->
-  <script src="app/js/rtlmd.js?v=obsidian104"></script>
+  <script src="app/js/rtlmd.js?v=obsidian105"></script>
 
   <!-- Storage Health Monitor & Full Workspace Backup Module (Phase 0) -->
   <script src="app/js/storage-backup.js?v=2.3"></script>
@@ -5049,10 +5049,22 @@
                 if (newWorker) {
                   newWorker.addEventListener('statechange', function () {
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                      console.log('[Vienix PWA] New version available.');
+                      console.log('[Vienix PWA] New version available. Activating...');
+                      // أرسل رسالة للـ SW الجديد ليأخذ السيطرة فوراً
+                      newWorker.postMessage({ action: 'skipWaiting' });
+                    }
+                    if (newWorker.state === 'activated') {
+                      console.log('[Vienix PWA] New version activated. Reloading...');
+                      location.reload();
                     }
                   });
                 }
+              });
+
+              // عند تغيير SW النشط، أعد تحميل الصفحة لتطبيق الكود الجديد
+              navigator.serviceWorker.addEventListener('controllerchange', function () {
+                console.log('[Vienix PWA] Controller changed. Reloading for new version...');
+                location.reload();
               });
             })
             .catch(function (err) {
