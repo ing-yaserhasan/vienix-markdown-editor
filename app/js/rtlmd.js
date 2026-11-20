@@ -11925,24 +11925,22 @@ function exportDocument(format) {
           const range = sel.getRangeAt(0);
           if (!range.collapsed) return; // هناك تحديد نص، اترك المتصفح يعمل
 
-          // تحقق أن المؤشر في بداية العنصر
+          // تحقق أن المؤشر داخل li
           const anchorNode = sel.anchorNode;
           const li = anchorNode ? (anchorNode.nodeType === 1 ? anchorNode.closest('li') : anchorNode.parentElement ? anchorNode.parentElement.closest('li') : null) : null;
           if (!li) return;
           const list = li.closest('ol, ul');
           if (!list) return;
 
-          // طريقة موثوقة لفحص هل المؤشر في بداية الـ li:
-          // ننشئ range من بداية li إلى موضع المؤشر ونفحص طوله
-          const testRange = document.createRange();
-          testRange.setStart(li, 0);
-          testRange.setEnd(range.startContainer, range.startOffset);
-          const textBeforeCursor = testRange.toString();
-          const isAtStart = textBeforeCursor.length === 0;
-          
-          console.log('[WYSIWYG-BS]', { isAtStart, liText: li.textContent.trim(), textBeforeCursor: JSON.stringify(textBeforeCursor), anchorOffset: sel.anchorOffset, anchorNodeType: anchorNode.nodeType, anchorNodeName: anchorNode.nodeName });
-          
-          if (!isAtStart) return; // المؤشر ليس في البداية، اترك المتصفح يعمل
+          // طريقة موثوقة: مقارنة موضع المؤشر مع بداية الـ li
+          // نستخدم compareBoundaryPoints لأنها تعمل مع HTML وليس فقط text
+          const liStart = document.createRange();
+          liStart.setStart(li, 0);
+          liStart.collapse(true);
+          // إذا كان المؤشر بعد بداية li، isAtStart = false
+          const isAtStart = range.compareBoundaryPoints(Range.START_TO_START, liStart) <= 0;
+
+          if (!isAtStart) return; // المؤشر ليس في البداية، اترك المتصفح يعمل (Backspace عادي)
 
           const liText = li.textContent.trim();
           if (liText === '') {
