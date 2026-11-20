@@ -11985,6 +11985,82 @@ function exportDocument(format) {
           }
         }
       });
+
+      // ══════════════════════════════════════════════════════════════════════
+      // beforeinput: Backspace في بداية عنصر قائمة → خروج من القائمة
+      // يستخدم beforeinput لأنه أكثر موثوقية من keydown على الموبايل
+      // السلوك: Backspace في بداية li (فارغ أو غير فارغ) → يصبح فقرة مستقلة
+      // ══════════════════════════════════════════════════════════════════════
+      previewContent.addEventListener('beforeinput', (e) => {
+        if (!isWysiwygActive) return;
+        if (e.inputType !== 'deleteContentBackward') return;
+
+        try {
+          const sel = window.getSelection();
+          if (!sel || sel.rangeCount === 0) return;
+          const range = sel.getRangeAt(0);
+          if (!range.collapsed) return; // يوجد تحديد → اترك المتصفح
+
+          const anchorNode = sel.anchorNode;
+          const li = anchorNode
+            ? (anchorNode.nodeType === 1
+                ? anchorNode.closest('li')
+                : anchorNode.parentElement?.closest('li'))
+            : null;
+          if (!li) return;
+          const list = li.closest('ol, ul');
+          if (!list) return;
+
+          // فحص هل المؤشر في بداية الـ li بالضبط (لا يوجد نص قبله)
+          const checkRange = document.createRange();
+          checkRange.setStart(li, 0);
+          checkRange.setEnd(range.startContainer, range.startOffset);
+          const textBefore = checkRange.toString();
+          if (textBefore !== '') return; // يوجد نص قبل المؤشر → Backspace عادي
+
+          // ══ المؤشر في بداية li → خروج من القائمة ══
+          e.preventDefault();
+
+          const liContent = document.createDocumentFragment();
+          while (li.firstChild) liContent.appendChild(li.firstChild);
+
+          const p = document.createElement('p');
+          p.appendChild(liContent);
+          if (!p.childNodes.length || p.textContent.trim() === '') {
+            p.innerHTML = '<br>';
+          }
+
+          if (li === list.firstElementChild) {
+            list.parentNode.insertBefore(p, list);
+          } else if (li === list.lastElementChild) {
+            list.parentNode.insertBefore(p, list.nextSibling);
+          } else {
+            // وسط القائمة → قسّمها
+            const newList = document.createElement(list.tagName);
+            let after = false;
+            Array.from(list.children).forEach(child => {
+              if (child === li) { after = true; return; }
+              if (after) newList.appendChild(child);
+            });
+            list.parentNode.insertBefore(p, list.nextSibling);
+            if (newList.children.length > 0) {
+              p.parentNode.insertBefore(newList, p.nextSibling);
+            }
+          }
+          li.remove();
+          if (list.children.length === 0) list.remove();
+
+          // ضع المؤشر في بداية الفقرة الجديدة
+          const newRange = document.createRange();
+          newRange.setStart(p, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+          syncPreviewToMarkdown(true);
+        } catch (err) {
+          console.warn('[WYSIWYG-BI] Backspace error:', err);
+        }
+      });
     }
   }
 
