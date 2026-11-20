@@ -11923,6 +11923,7 @@ function exportDocument(format) {
           const sel = window.getSelection();
           if (!sel || sel.rangeCount === 0) return;
           const range = sel.getRangeAt(0);
+          if (!range.collapsed) return; // هناك تحديد نص، اترك المتصفح يعمل
 
           // تحقق أن المؤشر في بداية العنصر
           const anchorNode = sel.anchorNode;
@@ -11931,36 +11932,19 @@ function exportDocument(format) {
           const list = li.closest('ol, ul');
           if (!list) return;
 
-          const liText = li.textContent.trim();
-
-          // فحص هل المؤشر في بداية العنصر
-          // نتعامل مع حالات متعددة: المؤشر في أول text node، أو في أول عنصر فرعي
-          let isAtStart = false;
-          if (range.collapsed && sel.anchorOffset === 0) {
-            // المؤشر في بداية عقدة ما - تحقق أنها أول عقدة نصية في الـ li
-            let node = anchorNode;
-            isAtStart = true;
-            while (node && node !== li) {
-              if (node.previousSibling) {
-                // هل كل الأشقاء السابقين فارغين؟
-                let prev = node.previousSibling;
-                while (prev) {
-                  if (prev.textContent && prev.textContent.length > 0 && 
-                      !prev.classList?.contains('pronunciation-speaker-btn') &&
-                      !prev.classList?.contains('pronunciation-trans-btn')) {
-                    isAtStart = false;
-                    break;
-                  }
-                  prev = prev.previousSibling;
-                }
-                if (!isAtStart) break;
-              }
-              node = node.parentNode;
-            }
-          }
+          // طريقة موثوقة لفحص هل المؤشر في بداية الـ li:
+          // ننشئ range من بداية li إلى موضع المؤشر ونفحص طوله
+          const testRange = document.createRange();
+          testRange.setStart(li, 0);
+          testRange.setEnd(range.startContainer, range.startOffset);
+          const textBeforeCursor = testRange.toString();
+          const isAtStart = textBeforeCursor.length === 0;
+          
+          console.log('[WYSIWYG-BS]', { isAtStart, liText: li.textContent.trim(), textBeforeCursor: JSON.stringify(textBeforeCursor), anchorOffset: sel.anchorOffset, anchorNodeType: anchorNode.nodeType, anchorNodeName: anchorNode.nodeName });
           
           if (!isAtStart) return; // المؤشر ليس في البداية، اترك المتصفح يعمل
 
+          const liText = li.textContent.trim();
           if (liText === '') {
             // ══ الحالة 1: العنصر فارغ تماماً → تحويل إلى فقرة عادية ══
             e.preventDefault();

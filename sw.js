@@ -4,8 +4,8 @@
  * Provides offline capabilities, instant caching, and PWA support.
  */
 
-const CACHE_NAME = 'vienix-md-editor-v1.2.0';
-const RUNTIME_CACHE = 'vienix-runtime-v1.2.0';
+const CACHE_NAME = 'vienix-md-editor-v1.2.1';
+const RUNTIME_CACHE = 'vienix-runtime-v1.2.1';
 
 // Core assets required for 100% offline functionality
 const PRECACHE_ASSETS = [
